@@ -1,0 +1,17 @@
+{
+  "title": "Template with made-up numbers, not a real song",
+  "artist": "Nobody",
+  "source": "https://example.invalid/the-page-these-labels-came-from",
+  "audio": {
+    "file": "artist-title.mp3",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "duration_s": 64.0
+  },
+  "sections": [
+    { "type": "other", "start_s": 0.0, "end_s": 7.5 },
+    { "type": "derecho", "start_s": 8.0, "end_s": 23.5 },
+    { "type": "majao", "start_s": 24.0, "end_s": 39.5 },
+    { "type": "mambo", "start_s": 40.0, "end_s": 55.5 },
+    { "type": "other", "start_s": 56.0, "end_s": 63.5 }
+  ]
+}
