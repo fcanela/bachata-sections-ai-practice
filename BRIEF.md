@@ -35,14 +35,17 @@ Each slice takes a song and shows a visible result.
 
 ## Reference material
 
-- Testing songs. The owner will provide them.
-- A website that has songs with their sections labelled. The owner has identified it; it is not named in this repository yet.
+- The website is emusicality.co.uk. It publishes songs as separate instrument tracks, with a breakdown of each song's parts and rhythms.
+- The owner keeps the material in `fixtures/audio/`, which git ignores. Nothing from the site is committed, neither the audio nor the labels. `fixtures/audio/README.md` describes it.
+- Three songs come from the site, each with its tracks, a mix of them and a label file: Me Emborrachare (the main song), Eso Es Amor and Old Town Road (bachata remix).
+- Two commercial recordings with vocals have no labels: the full Me Emborracharé and El Perdedor.
 
 ## Limits
 
 - Everything runs locally. No paid API.
 - No backward compatibility, no extra features, no abstractions for later.
-- Running everything in the browser would be a big win. It is not decided.
+- The analysis runs on the local server, not in the browser. Decided on 2026-10-05: on the server the beat tracker runs as its authors published it, and more tools are available for the later slices. The cost is that every song is sent to the machine that serves the application.
+- Uploaded songs are kept in one library on the server. Everyone who can reach the application can play every song in it.
 
 ## The other three files
 
