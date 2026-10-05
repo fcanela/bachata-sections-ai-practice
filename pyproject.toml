@@ -1,0 +1,42 @@
+[project]
+name = "bachata-sections"
+version = "0.1.0"
+description = "Takes a bachata song and marks its sections."
+requires-python = "==3.12.*"
+dependencies = [
+    "beat-this==1.1.0",
+    "madmom",
+    "numpy==2.5.3",
+    "starlette==1.7.0",
+    "torch==2.14.1",
+    "torchaudio==2.11.0",
+    "uvicorn==0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2==2.13.1",
+    "playwright==1.63.0",
+    "pytest==9.1.1",
+]
+
+# CPU-only torch. Without this the default index brings the CUDA build, about 2 GB more.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchaudio = { index = "pytorch-cpu" }
+# madmom's last release is from 2018 and does not install on this Python. This is its
+# main branch, at the commit that was tried. It builds from source: Cython and numpy are
+# fetched for the build, as its own pyproject.toml asks.
+madmom = { git = "https://github.com/CPJKU/madmom", rev = "27f032e8947204902c675e5e341a3faf5dc86dae" }
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["bachata", "fixtures", "scripts", "web", "e2e"]
+python_files = ["*_test.py"]

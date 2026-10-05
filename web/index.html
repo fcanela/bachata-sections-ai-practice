@@ -4,9 +4,38 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bachata sections</title>
+    <link rel="stylesheet" href="/style.css">
+    <script type="module" src="/app.js"></script>
   </head>
   <body>
-    <h1>Bachata sections</h1>
-    <p>Setup only. No feature yet.</p>
+    <main>
+      <h1>Bachata sections</h1>
+
+      <section aria-labelledby="add-heading">
+        <h2 id="add-heading">Add a song</h2>
+        <label class="button" for="file">Choose an mp3 or m4a file</label>
+        <input id="file" class="hidden-input" type="file" accept=".mp3,.m4a,audio/mpeg,audio/mp4">
+        <p id="message" role="status"></p>
+      </section>
+
+      <section id="player" aria-labelledby="song-name" hidden>
+        <h2 id="song-name"></h2>
+        <div class="controls">
+          <button id="play" type="button">Play</button>
+          <span id="position">0:00</span>
+          <span>/</span>
+          <span id="duration">0:00</span>
+          <span class="tempo"><span id="bpm">–</span> BPM</span>
+          <label class="switch"><input id="click" type="checkbox" checked> Click on every beat</label>
+        </div>
+        <canvas id="strip" height="64" aria-label="The beats of the song. Click to move the playing position."></canvas>
+      </section>
+
+      <section aria-labelledby="songs-heading">
+        <h2 id="songs-heading">Songs</h2>
+        <p id="empty">No song yet.</p>
+        <ul id="songs"></ul>
+      </section>
+    </main>
   </body>
 </html>

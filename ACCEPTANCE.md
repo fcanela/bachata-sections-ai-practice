@@ -4,6 +4,8 @@ An item is ticked only after its check has been run and the result is in `LOG.md
 
 Items marked *proposed* contain a number or a rule that is not in the brief. The owner confirms or changes them.
 
+A ticked item names the check behind it. `uv run pytest` runs all of them; the ones in a browser need a machine where a browser can start and play.
+
 ## How a song result is judged
 
 Against the reference material in `fixtures/audio/dev/`, which is not committed. Each song from the site has a folder there with a `mix.m4a` and a `labels.json`. `fixtures/audio/README.md` describes the format.
@@ -11,17 +13,17 @@ Against the reference material in `fixtures/audio/dev/`, which is not committed.
 - **The checks read those files where they are.** When the material is not on the machine they print "skipped: no reference material". A song item cannot be ticked from a run that skipped.
 - **The input is always the mix**, never the separate instrument tracks. Someone using the application uploads a whole recording.
 - **The labels give every beat.** Each label file has a tempo, the time of the first beat and a number of beats, so beat *n* is at `first beat + n × 60 / bpm`.
-- **The audio decides where a beat is.** The labels' tempo and beat counts are exact, but their times are early by a constant amount per song (104, 72 and 49 ms, measured in session 2). The first-beat time is therefore measured on the percussion of each mix and written into `labels.json` as a new field, beside the sha256 of the mix it was measured on. A mix whose hash no longer matches is measured again before anything is compared with it.
-- **Same beat:** two times are the same beat when they are within 70 ms of each other. The owner allows up to 120 ms if the measurements show that 70 is too tight; the reason then goes in `LOG.md`.
+- **The audio decides where a beat is.** The labels' tempo and beat counts are exact, but their times are early by a constant amount per song: 95, 62 and 40 ms, as `scripts/measure_first_beat.py` measures the start of the attacks. The script measures the first beat on the percussion tracks of each mix and writes it into `labels.json` as `first_beat_s`, beside `mix_sha256`, the mix it was measured on. A mix whose hash no longer matches is measured again before anything is compared with it: the checks refuse it until then.
+- **Same beat:** two times are the same beat when they are within 90 ms of each other. It was 70 ms, and the owner allowed up to 120 ms if the measurements showed 70 to be too tight. They did, in session 3: on Old Town Road, from 108 to 114 s, the sound of the mix sits 50 ms after the labels' grid, and three beats are 73, 76 and 84 ms from their label. `LOG.md` has the measurement. *For the owner to confirm: the 90. It depends on where in an attack the beat is put: the script puts it at the very start, and with the beat 15 ms later, as in `fixtures/audio/README.md`, 70 ms holds on all three mixes.*
 - **Songs without labels** are the two commercial recordings. They get one automatic check on the tempo, and the owner's ear is the final word.
 
 ## Setup
 
-- [x] `npm start` serves the page, on 127.0.0.1 only.
-- [x] `npm test` passes.
-- [x] The reference material has a fixture format, a place in the repository and a validator.
+- [x] `uv run python -m bachata` serves the page, on 127.0.0.1 only. `bachata/server_test.py` starts the program and reads its listening sockets from the kernel.
+- [x] `uv run pytest` passes.
+- [x] The reference material has a place outside git, `fixtures/audio/dev/`, a validator for the site's label format, `fixtures/validate.py`, and a script that measures the first beat of each mix.
 
-These three are true of the Node program of session 1. A Python program replaces it in slice 1 and the validator changes to the site's label format. The three items are then reworded and checked again.
+The three were reworded in session 3, when the Python program replaced the Node one, and checked again.
 
 ## The whole application
 
@@ -48,62 +50,64 @@ Slice 1 is done when every item below holds, on all three mixes and both commerc
 
 **The three mixes, checked automatically**
 
-- [ ] From the first labelled beat to the last, every labelled beat has exactly one detected beat that is the same beat, and there is no detected beat without a labelled one. If a part with no clear pulse makes this impossible, the numbers go to the owner, who decides. The item is not loosened any other way.
-- [ ] At every labelled beat, the shown BPM is within 4% of the label's BPM. That is the tempo a dancer counts, not half or double. *Proposed: the 4%.*
+- [x] From the first labelled beat to the last, every labelled beat has exactly one detected beat that is the same beat, and there is no detected beat without a labelled one. If a part with no clear pulse makes this impossible, the numbers go to the owner, who decides. The item is not loosened any other way. `bachata/songs_test.py`: 396, 505 and 416 beats, all found. It holds with the window at 90 ms; at 70 ms three beats of Old Town Road are outside.
+- [x] At every labelled beat, the shown BPM is within 4% of the label's BPM. That is the tempo a dancer counts, not half or double. `bachata/songs_test.py`.
 
 **The two commercial recordings**
 
-- [ ] The shown BPM is within 4% of 124 on the full Me Emborracharé and of 128 on El Perdedor, once the owner confirms those are the counts a dancer steps. Both figures come from a rough measurement in session 2. *Proposed: the 4%.*
+- [ ] The shown BPM is within 4% of 124 on the full Me Emborracharé and of 128 on El Perdedor, once the owner confirms those are the counts a dancer steps. Both figures come from a rough measurement in session 2. *Waits for the owner. Measured in session 3: El Perdedor is within 4% at every beat. The full Me Emborracharé is within 4% from 0:19 to the end; its first 18.5 seconds read between 102 and 141 BPM. The automatic check, in `bachata/songs_test.py`, is on the median and passes for both.*
 - [ ] By the owner's ear: with the click on, the click is on the beat wherever the owner can count the song.
 
 **The page**
 
-- [ ] It shows the strip, the moving marker, the BPM at the playing position and the click switch.
+- [x] It shows the strip, the moving marker, the BPM at the playing position and the click switch. `e2e/page_test.py`, in Chrome and Firefox. It also checks that every beat gets one click, at its own time on the clock the song plays on.
 - [ ] By the owner's ear: with the click on, the click is on the beat through the whole song, on each of the three mixes.
 
 **The library**
 
-- [ ] An uploaded song is kept on the server with its results. It appears in the list in every browser, with its name and its state: waiting, being analysed, ready or failed.
-- [ ] A song opened from the list plays and shows its beats in a browser that never had the file. Nothing is uploaded and nothing is analysed.
-- [ ] A file that is already in the library, byte for byte, is not uploaded, not stored twice, and not analysed twice by the same version of the analysis. The stored song opens.
-- [ ] A result made by an older version of the analysis is replaced: the server analyses the song again from the stored sound, with no upload.
-- [ ] The name comes from the file's title and artist tags when it has them, and from the file name without its extension otherwise.
-- [ ] Songs are analysed one at a time, in the order they arrived. A song whose analysis fails is marked failed and does not stop the next one.
-- [ ] Any song can be deleted, with one confirmation, whatever its state. Deleting a waiting song takes it out of the queue.
-- [ ] The library and the queue survive a restart of the program.
+- [x] An uploaded song is kept on the server with its results. It appears in the list in every browser, with its name and its state: waiting, being analysed, ready or failed. The four states: `bachata/server_test.py` and `bachata/queue_test.py`. Two browsers: `e2e/page_test.py`.
+- [x] A song opened from the list plays and shows its beats in a browser that never had the file. Nothing is uploaded and nothing is analysed. `e2e/page_test.py`.
+- [x] A file that is already in the library, byte for byte, is not uploaded, not stored twice, and not analysed twice by the same version of the analysis. The stored song opens. `e2e/page_test.py` and `bachata/server_test.py`.
+- [x] A result made by an older version of the analysis is replaced: the server analyses the song again from the stored sound, with no upload. `bachata/server_test.py` and `bachata/queue_test.py`.
+- [x] The name comes from the file's title and artist tags when it has them, and from the file name without its extension otherwise. `web/song.test.js` and `e2e/page_test.py`.
+- [x] Songs are analysed one at a time, in the order they arrived. A song whose analysis fails is marked failed and does not stop the next one. `bachata/queue_test.py`.
+- [x] Any song can be deleted, with one confirmation, whatever its state. Deleting a waiting song takes it out of the queue. The states: `bachata/server_test.py` and `bachata/queue_test.py`. The confirmation: `e2e/page_test.py`.
+- [x] The library and the queue survive a restart of the program. `bachata/server_test.py`, `bachata/store_test.py` and `bachata/queue_test.py`.
 
 **What is refused, part of G7**
 
 By the page, before anything is sent:
 
-- [ ] A file that is not mp3 or m4a, or that the browser cannot decode.
-- [ ] A song shorter than 20 seconds or longer than 15 minutes.
+- [x] A file that is not mp3 or m4a, or that the browser cannot decode. The type is read from the first bytes of the file, not from its name. `e2e/page_test.py` and `web/song.test.js`.
+- [x] A song shorter than 20 seconds or longer than 15 minutes. `e2e/page_test.py`.
 
 By the server, which cannot trust what a page checked:
 
-- [ ] Anything from another machine: the program listens on 127.0.0.1 only.
-- [ ] Any request that changes the library (an upload, a deletion, a removal from the queue) and does not come from the application's own page.
-- [ ] A body that is not the expected sample format, or that holds less than 20 seconds or more than 15 minutes of sound.
-- [ ] A song id that is not well formed, and a name longer than 200 characters. *Proposed: the 200.*
-- [ ] A new song when the library has reached 20 GB.
+All of these are checked in `bachata/server_test.py`, unless another file is named.
+
+- [x] Anything from another machine: the program listens on 127.0.0.1 only. A request that names another host is refused too.
+- [x] Any request that changes the library (an upload, a deletion, a removal from the queue) and does not come from the application's own page. Removing a song from the queue is deleting it while it waits.
+- [x] A body that is not the expected sample format, or that holds less than 20 seconds or more than 15 minutes of sound.
+- [x] A song id that is not well formed, and a name longer than 200 characters.
+- [x] A new song when the library has reached 20 GB. Tested with a small limit.
 
 What the server never does:
 
-- [ ] It never reads a media file made elsewhere. It receives plain samples and stores the sound in its own packing.
-- [ ] It writes only inside one data folder. File names on disk come from the song's id, never from text a page sent.
-- [ ] It sends stored sound back only as sound data, never as a page. Names are always shown as plain text.
-- [ ] It sends every answer with the security headers.
+- [x] It never reads a media file made elsewhere. It receives plain samples and stores those samples as they are.
+- [x] It writes only inside one data folder. File names on disk come from the song's id, never from text a page sent. Also `bachata/store_test.py`.
+- [x] It sends stored sound back only as sound data, never as a page. Names are always shown as plain text: `e2e/page_test.py`.
+- [x] It sends every answer with the security headers.
 
 **How these are tested**
 
-- Logic is covered by unit tests beside the code.
-- Whole flows through the page are covered by end-to-end tests in a real browser: an upload, the list, opening a song in a browser that never had the file, a second upload of the same file, a deletion, a file of the wrong type, a song that is too short.
+- Logic is covered by unit tests beside the code. The page's logic is in `web/song.js`, with tests for Node's own runner that `pytest` also runs.
+- Whole flows through the page are covered by end-to-end tests in a real browser, in `e2e/page_test.py`: an upload, the list, opening a song in a browser that never had the file, a second upload of the same file, a deletion, a file of the wrong type, a song that is too short, a song that is too long, a name with markup in it, the clicks, and the exact samples that play. They run in the installed Chrome and in Playwright's Firefox, and skip a browser that cannot start.
 - The two by-ear items are the owner's.
 
 **Not verified in slice 1**
 
-- Following a tempo change. None of the five songs has one that a rough measurement can see, so there is nothing to check it against. The tracker must still not assume one tempo for the whole song. If the owner hears a shift in El Perdedor with the click on, that moment becomes a test spot.
-- Analysis time. It is measured and logged, with no limit to pass.
+- Following a tempo change. No acceptance check covers it. Session 3 measured it on two mixes whose second half was sped up or slowed with `ffmpeg`: a change of 8% is followed with every beat found, a jump of 20% on one mix of two. The intro of the full Me Emborracharé reads about 102 BPM before the song settles at 124, which the owner can hear with the click on. If the owner hears a shift in El Perdedor, that moment becomes a test spot.
+- Analysis time. It is measured and logged, with no limit to pass: about 4 seconds for a song of 4 minutes, and 6 to 8 seconds from picking a file to seeing its beats.
 
 ### 2. The grid of ochos
 

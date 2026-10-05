@@ -2,6 +2,225 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-05, session 3: slice 1 built
+
+The owner asked for all of slice 1, in the order of `NEXT.md`, in one instruction: the items marked *proposed* are accepted, the points under "To settle while building" are decided here, and the session stops after 6 hours at most. Anything started had to use port 8081. All twelve steps were done. What is left is the owner's: the checks by ear and three confirmations, listed in `NEXT.md`.
+
+### Runs
+
+Audio for the measurements was decoded by `ffmpeg` to 44.1 kHz. Scripts that are not in the repository ran from the session's scratch folder.
+
+**Setup**
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| `sha256sum` on the two commercial recordings | Already in `fixtures/audio/dev/` as `original.mp3`, with the hashes of session 2. Nothing was copied and the downloads folder was not read | not timed |
+| `uv add` of the runtime packages on Python 3.12.13 | 25 packages installed, torch as the CPU build | 25 s |
+| `curl` of the two Beat This checkpoints | 200 for both (sizes and hashes under Downloads) | 10.6 s and 3.0 s |
+| Beat This, full model, on the Me Emborrachare mix, as a first try | 395 beats for 396 labelled, in steps of 20 ms. Loading the model takes 0.2 s | 4.8 s |
+| `PORT=8081 uv run python -m bachata`, then `curl` | 200 for `/` with the security headers. 404 for `/server.py`, `/../pyproject.toml` and `POST /`. 400 for `Host: evil.example`. `ss -ltn` shows 127.0.0.1:8081 only | not timed |
+| `uv run python scripts/measure_first_beat.py` | The labels are early by 95, 62 and 40 ms (see the first table below) | 2.0 s |
+| Installing librosa and madmom in two throwaway environments, for the comparison | Both installed, madmom from its main branch. Neither reached the 30 minute limit | 30 s and 47 s |
+
+**The first beat of each mix**, as `scripts/measure_first_beat.py` wrote it into `labels.json`.
+
+| Song | On the percussion tracks | On the mix | `first_beat_s` |
+| --- | --- | --- | --- |
+| Me Emborrachare | 95 ms (güira, bongos) | 97 ms | 0.345 |
+| Eso Es Amor | 62 ms (bongos, güira, kick drum) | 65 ms | 1.862 |
+| Old Town Road | 40 ms (percussion) | 41 ms | 1.94 |
+
+These are 9 to 10 ms less than the 104, 72 and 49 ms of session 2. The script reads the start of an attack: the point where the energy of the next 10 ms is highest against the 10 ms before. On a made-up signal whose attacks start 83 ms late it answers 83 ms, within 2 ms. Session 2's throwaway measure read about one window later.
+
+There are now three measurements of the same thing, and the script's is the earliest. They place the beat at different points of an attack that lasts some 10 ms. The table gives, for each, the median distance of the detected beats from the labelled ones, and the beats further than 70 ms.
+
+| The first beat as measured by | Lags, in ms | Me Emborrachare | Eso Es Amor | Old Town Road |
+| --- | --- | --- | --- | --- |
+| The script, which is what the checks use | 95, 62, 40 | +7 ms, none beyond 70 | +7 ms, none | +15 ms, three beyond: 73, 76 and 84 ms |
+| Session 2 | 104, 72, 49 | -2 ms, none | -3 ms, none | +6 ms, one beyond: 75 ms |
+| `fixtures/audio/README.md`, "about" | 100, 67, 55 | +2 ms, none | +2 ms, none | 0 ms, none: the worst is 69 ms |
+
+So whether 70 ms holds on Old Town Road depends on where in the attack the beat is put. The analysis places its beats 7 to 15 ms after the start of the attack, close to where the README's figures put it.
+
+**The trackers on the three mixes**, as published. Missed and extra beats against the labelled ones, with the 70 ms window.
+
+| Tracker | Me Emborrachare, 396 beats | Eso Es Amor, 505 | Old Town Road, 416 | Time per song |
+| --- | --- | --- | --- | --- |
+| Beat This, full | 1 missed, 0 extra | 8 missed, 11 extra | 47 missed, 0 extra | 4.0 to 4.9 s |
+| Beat This, small | 0, 0 | 3 missed, 9 extra | 52 missed, 14 extra | 2.1 to 2.8 s |
+| madmom (its own network and DBN) | 1 missed, 0 extra | 0, 0 | 5 missed, 5 extra | 17.8 to 21.1 s |
+| librosa `beat_track` | 161 missed, 156 extra | 2 missed, 1 extra | 91 missed, 89 extra | 0.4 to 0.5 s |
+| Beat This, full, with the DBN it ships (`dbn=True`, 55 to 215 BPM) | 0, 0 | 0, 0 | 47 missed, 3 extra | 0.3 s more |
+| Beat This, full, with that DBN held to 90 to 175 BPM. **Chosen** | 0, 0 | 0, 0 | 3 beats found 73, 76 and 84 ms from their label | 0.1 s more |
+
+A DBN for beats only, at 90 to 180 BPM, was also tried on the Beat This output: 2 beats outside the window on Old Town Road, and a worst distance of 46 ms on Me Emborrachare against 30 ms. It was not kept: the pairing Beat This ships is the one with downbeats.
+
+**The trackers on the two commercial recordings.** Median shown BPM, and beats whose shown BPM is more than 4% from the expected one.
+
+| Tracker | Full Me Emborracharé, expected 124 | El Perdedor, expected 128 |
+| --- | --- | --- |
+| Beat This, full | 123.7, 31 beats | 127.7, 12 beats |
+| Beat This, small | 124.4, 122 beats | 127.7, 0 |
+| madmom | 124.0, 38 beats | 128.0, 11 beats |
+| librosa | 123.8, 12 beats | 127.6, 0 |
+| Chosen | 123.7, 33 beats, all in the first 18.5 s | 127.7, 0 |
+
+**What goes wrong with Beat This as published**, measured on its output and on the tracks.
+
+- **Old Town Road, 89 to 119 s and 178 to 191 s.** These are the Trap parts and the verse after the first one. Beat This is certain of a beat on every other labelled beat and certain of none between: 1.00 and 0.00 in turn. It hears half the tempo, 66 BPM. The DBN it ships follows it down, because 66 is inside its range.
+- **Eso Es Amor, 24.6 to 29.6 s**, inside a Derecho verse. For 11 beats Beat This rates the off-beat higher than the beat: about 0.9 against 0.1 to 0.6. The DBN stays on the beat.
+- **Me Emborrachare, the last three labelled beats**, 190.5 to 191.5 s. The güira and the bongos stop at 190.0 s; their tracks are at -44 dB and below after that, and only the bass rings. Beat This rates the three beats 0.65, 0.51 and 0.23, and drops the last one. The DBN carries the pulse to the end.
+- **Old Town Road, 108 to 114.5 s.** The percussion is thin there. The attacks of the mix sit 50 ms after the labels' grid, where they sit within 5 ms of it in the bachata parts and 30 ms after it in the Trap parts. Every tracker follows the sound: madmom is beyond 70 ms on 5 beats there, the chosen analysis on 3.
+
+**The analysis as built**, through `bachata.analysis.analyse`. Times on this machine, CPU only, 8 threads.
+
+| Song | Length | Analysis | Beats | Against the labels | Shown BPM at the labelled beats |
+| --- | --- | --- | --- | --- | --- |
+| Me Emborrachare, mix | 195.5 s | 3.9 s | 398 | 396 of 396 within 70 ms. 2 beats after the last label | 123.0 to 125.0, label 124 |
+| Eso Es Amor, mix | 234.1 s | 3.8 s | 514 | 505 of 505 within 70 ms. 4 before the first label, 5 after the last | 130.4 to 132.6, label 132 |
+| Old Town Road, mix | 200.1 s | 3.4 s | 425 | 413 of 416 within 70 ms, 416 within 90 ms. 4 before, 5 after | 129.7 to 134.1, label 132 |
+| Me Emborracharé, full version | 239.5 s | 4.4 s | 488 | no labels | median 123.7. 33 beats more than 4% from 124, all before 18.5 s. From 30 s on: 123.1 to 125.0 |
+| El Perdedor | 215.3 s | 3.9 s | 457 | no labels | median 127.7. No beat more than 4% from 128 |
+
+- The intro of the full Me Emborracharé reads 116 BPM at the start and about 102 from 6 to 13 s. The reading then climbs to 141 at 17 s and settles at 124 by 19 s. Session 2's rough measure saw 101.5 there too.
+- The three spots of that recording that read about 165 BPM in session 2, near 1:08, 2:16 and 3:28, read 124 here.
+- With the window at 70 ms the check reports six problems on Old Town Road: the three beats, once as a detected beat without a label and once as a label without a beat. At 90 ms it reports none on any mix.
+
+**A tempo change made with `ffmpeg`.** The second half of a mix was sped up or slowed with `atempo` and its labels scaled to match. Compared with the 90 ms window. This is a measurement, not an acceptance check.
+
+| Mix | Change | Beats matched | Beats whose shown BPM is more than 4% off | Shown 10 s after the change |
+| --- | --- | --- | --- | --- |
+| Me Emborrachare | 124 to 133.9, at 96 s | 396 of 396 | 1, at the change | 133.3 |
+| | 124 to 114.1 | 396 of 396 | 0 | 114.3 |
+| | 124 to 148.8 | 396 of 396 | 6, from 94.7 to 96.9 s | 148.1 |
+| Eso Es Amor | 132 to 142.6, at 116 s | 505 of 505 | 2, at the change | 142.0 |
+| | 132 to 121.4 | 505 of 505 | 1 | 121.2 |
+| | 132 to 158.4 | 501 of 505: four beats right after the change are late | 5 | 158.9 |
+
+**Stored sound: FLAC against plain samples.** A song was uploaded, stored as FLAC, fetched and decoded in the browser at 44.1 kHz, and compared with the samples that were sent.
+
+| Browser | Song | Samples that differ | By how much |
+| --- | --- | --- | --- |
+| Chrome 154 | made-up song, 24.5 s | 24 of 2,160,900 | 1 unit of 16 bits, on positive samples above 16383 |
+| Chrome 154 | El Perdedor | 106,428 of 18,991,104 | the same |
+
+Same length and no shift in both. Firefox was not measured: Chrome had already answered the question. The five songs take 34.5, 41.3, 35.3, 42.2 and 38.0 MB as plain samples.
+
+**Tests**
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| `uv run pytest`, inside the session's sandbox | 100 passed, 13 skipped. Chrome does not start there, which skips its 10 flows. Playwright's Firefox does start but has no sound output, which skips the 3 flows that play | 64 s |
+| The same command outside the sandbox, with the test programs on port 8081 | 113 passed, 0 skipped. 93 are unit tests and the song checks, 20 are ten flows through the page in Chrome and in Firefox | 110 s |
+| The song checks alone, `uv run pytest bachata/songs_test.py` | 10 passed: the material is there, the three mixes twice, the two recordings, and one mix through the upload address | 26 s |
+| The unit tests of the page's logic, `node --test web/`, also run by `pytest` | 12 passed | 0.1 s |
+| The tests on a copy broken on purpose, eight ways (see the table below) | Seven failed in the expected test. One passed and showed a weak test, which was fixed and then failed as expected | about 60 s |
+| A 35 MB upload refused before its body is read, from the page, three times in each browser | Chrome and Firefox both receive the 409 and its text | not timed |
+
+**Broken on purpose.**
+
+| The break | Tests that failed |
+| --- | --- |
+| One security header removed | None at first: the tests read the list of headers from the program itself. They now carry their own list, and three fail |
+| Listening on 0.0.0.0 | the loopback test |
+| The own-page check always says yes | 21 tests: every refusal of an upload and of a deletion |
+| The DBN with its published range, 55 to 215 BPM | the two Old Town Road checks and two unit tests of the analysis |
+| The host check accepts any host | the host test |
+| The page does not cut a long name | the page's unit tests |
+| The server does not check that a song lasts 20 seconds | the length test |
+| The window back at 70 ms | the Old Town Road checks |
+
+**The five real songs through the page**, outside the sandbox, each browser on an empty library. Chrome is the one installed, 154. Firefox is Playwright's build, 155; the installed Firefox is 157 and Playwright cannot drive it.
+
+| Song | Chrome: from picking the file to ready | Firefox | Of which analysis |
+| --- | --- | --- | --- |
+| Me Emborrachare, mix | 8.4 s | 6.0 s | 5.3 and 4.7 s. The first song of a run also loads the model |
+| Eso Es Amor, mix | 6.6 s | 6.4 s | 4.2 and 4.0 s |
+| Old Town Road, mix | 5.9 s | 5.9 s | 3.9 and 3.8 s |
+| Me Emborracharé, full version | 7.4 s | 6.4 s | 5.0 and 4.6 s |
+| El Perdedor | 6.5 s | 5.9 s | 4.2 and 4.0 s |
+
+- For all five songs, the beats and the BPM from a Chrome upload and from a Firefox upload are identical to those from `ffmpeg`'s decoding, which is what the song checks use.
+- The five were then loaded into the real library, `data/`, through Chrome. A Firefox that never had the files lists them, opens each in 0.2 s and plays it. Picking a file that is in the library sends nothing.
+- A first timing gave 12 to 18 s. It is discarded: the measuring script was reading every 40 MB request back out of the browser.
+
+### Downloads
+
+| What | From | Size |
+| --- | --- | --- |
+| torch 2.14.1, CPU build | download.pytorch.org | 187.2 MiB |
+| torchaudio 2.11.0, CPU build | download.pytorch.org | not in the lockfile; 2.8 MB installed |
+| playwright 1.63.0 | PyPI | 48.2 MB |
+| scipy 1.18.1, needed by madmom | PyPI | 35.3 MB |
+| numpy 2.5.3 | PyPI | 16.7 MB |
+| The 32 other packages of the lockfile | PyPI | 13.9 MB together |
+| madmom, main branch at commit `27f032e`, built from source | GitHub | 37 MB installed. Cython and numpy are fetched again for the build; they are not in the lockfile |
+| Beat This checkpoint `final0.ckpt`, the full model | cloud.cp.jku.at, the address in `beat_this/inference.py` | 81,058,141 bytes, sha256 `8c328b45f59d8dd3dff219253ff6a8d6482be57d0133a29140e2febbf8eb8331` |
+| Beat This checkpoint `small0.ckpt`, for the comparison only | the same | 8,451,101 bytes, sha256 `6074be2c4d490c5f6101fcc374a1ec72ae93456e23bb6019783b849f5dc7d47b` |
+| Playwright's Firefox, build 1543, and its ffmpeg, into `.playwright/` | cdn.playwright.dev | 311 MB on disk |
+| librosa and madmom with their packages, in two throwaway environments | PyPI and GitHub | 402 and 173 MB on disk. Outside the repository |
+| soundfile 0.14.0 | PyPI | 1.3 MiB. Installed, then removed with the FLAC packing |
+
+The environment takes 1.2 GB on disk, `models/` 86 MB. Python 3.12.13 was already on the machine.
+
+### Cost
+
+- Paid APIs: none used, $0.
+- Network: the downloads above and the lookups of package versions on PyPI.
+- Dependencies added: Beat This, madmom, torch, torchaudio, numpy, Starlette and uvicorn to run; pytest, httpx2 and Playwright to test. Node stays as a tool for one test file, with no package.
+- Commands outside the sandbox: 15, all to drive a browser. Every program they started was on port 8081 and was stopped at the end.
+- Time: the work took about 79 minutes of the 6 hours allowed, by the machine's clock.
+- Cost of the Claude Code session itself: not measured from inside the session.
+
+### Decisions
+
+**The owner's, from the instruction that opened the session**
+
+- The 4% tolerance on the BPM and the 200 characters of a name are accepted. They are no longer marked *proposed*.
+
+**The analysis**. Mine.
+
+- **Beat This, full model, decoded by the DBN it ships, held to 90 to 175 BPM.** As published, no tracker passes the every-beat item (see the tables). The pairing is the authors' own and its settings are theirs; only the range is new.
+- **The range is the tempos a bachata dancer steps.** It spans less than a factor of two, so a tempo and its half or its double are never both allowed, and a half-time part keeps the count of the song. The cost: a song a dancer counts below 90 or above 175 BPM would be shown wrong. No song here is near either end.
+- **The DBN does not assume one tempo.** The tempo may change at every beat and a change costs more the larger it is. The measurement above shows it following a change of 8% in both songs and of 20% in one of two.
+- **madmom is a dependency for its DBN only.** Its own networks are not used.
+- **The window grew from 70 to 90 ms**, as `ACCEPTANCE.md` allows. Reason: Old Town Road from 108 to 114.5 s, where the mix itself sits 50 ms after the labels' grid and three beats are 73, 76 and 84 ms from their label. 90 is the smallest round figure that holds.
+- **The window had to grow partly because of how the script measures the first beat.** It puts the beat at the start of the attack, 9 ms earlier than session 2 and 15 ms earlier than the README on that song. With session 2's figure one beat is still outside 70 ms, at 75. With the README's, none is. The other choice is therefore to put the beat later in the attack and keep 70 ms. It was not taken here: it would have moved the reference to fit the result. It is the owner's to choose.
+- **The shown BPM at a beat** is the mean tempo from four beats before it to four beats after it, one ocho. Beat times come in steps of 20 ms, so one interval alone is only good to 4%. The page shows the value of the last beat before the playing position, rounded to a whole number. The server computes it and stores it with the beats, so the tests and the page read the same number.
+- **The check on the two commercial recordings** is the median of the shown BPM, within 4%. The test also prints how many beats are further off and where. The intro of the full Me Emborracharé is why it is not "every beat": the owner decides what that intro is.
+- **Beats are not shown as they are found.** An analysis takes about 4 s.
+- **The analysis has a version number, 1.** It is raised whenever the same song could give different beats.
+
+**The points to settle while building**. Mine.
+
+- **Stored sound: plain samples, not FLAC.** Chrome does not decode FLAC back to the samples that were stored, and `NEXT.md` said to store raw samples in that case. The page needs no decoder for them, so they are the same in every browser by construction. The cost is about twice the room: roughly 10 MB a minute.
+- **The format of an upload**: `PUT /api/songs/<id>?name=…&rate=44100&frames=N`, and a body of N × 4 bytes: 16 bits, little-endian, left and right in turn. `Content-Length` must be exactly N × 4. The stored sound comes back as the same bytes.
+- **Reading tags**: a small reader written here, in `web/song.js`, with no library. It reads the ID3 tag at the start of an mp3 (versions 2.2 to 2.4, the four ways text is written), the old tag at its end, and the iTunes tags of an m4a.
+- **Building a name**: "Artist - Title" when the file has both, the title alone, or the file name without its extension. Control characters become spaces, and the name is cut to 200 characters.
+- **The end-to-end tool**: Playwright for Python, under pytest, pinned. It drives the installed Chrome, and its own build of Firefox.
+- **Deleting the song that is being analysed**: the analysis finishes and its result is discarded. The tracker works on a whole song and cannot be stopped half way.
+
+**The library and the server**. Mine.
+
+- **A request for another host is refused**, with a 400: only `127.0.0.1` and `localhost` are answered. Without it, a foreign domain pointed at 127.0.0.1 would be the "own page" for the next check.
+- **A request is from the own page** when its `Origin` is the address the program was asked at, and its `Sec-Fetch-Site`, when the browser sends one, is `same-origin`. A program that is not a browser sends no `Origin` and is refused.
+- **A fourth security header**, `Cross-Origin-Resource-Policy: same-origin`: no other site may embed a stored sound.
+- **A song found half analysed at startup** has no result, so it waits again. Whatever an interrupted upload left is removed at startup.
+- **A failed song is tried again only by a newer version** of the analysis.
+- **The 20 GB are 20 × 10⁹ bytes**, counted on disk. A song longer than 15 minutes is refused from the length the request states, before its 159 MB are read.
+- **One confirmation for a deletion**: the row asks "Delete this song?", with no dialog.
+- **The page asks for the list every 2 seconds**, which is how a song shows in every browser.
+- **The data folder** is `data/`, or the folder `BACHATA_DATA` names. The port is 8080, or the one `PORT` names. A test that starts the program takes an unused port, or the one `BACHATA_TEST_PORT` names.
+- **`.python-version` pins 3.12.13.** Torch and Beat This on 3.13 were not tried.
+
+### Machine
+
+- Inside the sandbox every network host has to be allowed for the command that needs it. `uv` needs `UV_CACHE_DIR`, as before.
+- Chrome does not start inside the sandbox, as in session 2. Playwright's Firefox does, but nothing plays there: its audio clock never runs. A test about playing asks an audio clock of its own first, and skips when that one does not run either.
+- Chrome started by Playwright dies with "Socket path too long" when `TMPDIR` is a long path. The browser runs used `TMPDIR=/tmp/claude-1000/e2e`.
+- Playwright cannot evaluate a string inside the page, `wait_for_function("…")`: the page's content security policy forbids it. The tests wait on what the page shows instead.
+- The files of the reference material carry poor tags. Two of the mixes have the title "track0", and the other three files have none. In the library they are named "mix", "track0", "track0", "original" and "original".
+
 ## 2026-10-05, session 2: questions and decisions for slice 1
 
 A question-and-answer session with the owner: four rounds on beats and tempo, then three more on the upload and on remembering songs. It changed the four docs and no code. Nothing was implemented.
