@@ -489,10 +489,12 @@ main {
 }
 
 /* The figure sits on the middle line of the band, level with the beats. Under it, what
-   it measures, and the time the song is at. */
+   it measures, and the time the song is at. In a low window they keep clear of the
+   band's edges; the beats beside them run to the edges on purpose. */
 .figure {
   display: grid;
   grid-template-rows: 1fr auto 1fr;
+  padding-block: 0.75rem;
 }
 
 /* Read from three metres: it is as tall as the band allows. */
