@@ -1,5 +1,8 @@
 """End-to-end tests: whole flows through the page, in a real browser, against the real program.
 
+The beats of a song are drawn on two canvases. The page says in attributes of those
+canvases which beat is lit and where the marks of the song are, and the tests read them.
+
     uv run pytest e2e
 
 They start the program on its own data folder and drive Chrome and Firefox with Playwright.
@@ -125,13 +128,16 @@ def browser(request, playwright):
     started.close()
 
 
-# Notes every sound the page hands to the audio clock, and every volume control it makes.
+# Notes every sound the page hands to the audio clock, with the loop it was given, the
+# clock itself, and every volume control the page makes.
 SPY = """
 window.started = []
 window.volumes = []
 const start = AudioBufferSourceNode.prototype.start
 AudioBufferSourceNode.prototype.start = function (when = 0, offset = 0) {
-  window.started.push({ seconds: this.buffer.duration, when, offset })
+  window.clock = this.context
+  const loop = this.loop ? { loopStart: this.loopStart, loopEnd: this.loopEnd } : {}
+  window.started.push({ seconds: this.buffer.duration, when, offset, loop: this.loop, ...loop })
   return start.apply(this, arguments)
 }
 const createGain = BaseAudioContext.prototype.createGain
@@ -146,8 +152,8 @@ BaseAudioContext.prototype.createGain = function () {
 class Visitor:
     """Someone with a browser that has never been on the page. Notes what the browser sends."""
 
-    def __init__(self, browser, address):
-        self.context = browser.new_context()
+    def __init__(self, browser, address, path="/", **settings):
+        self.context = browser.new_context(**settings)
         self.context.add_init_script(SPY)
         self.page = self.context.new_page()
         self.sent = []
@@ -155,10 +161,13 @@ class Visitor:
         self.page.on("request", lambda request: self.sent.append((request.method, request.url.removeprefix(address))))
         self.page.on("pageerror", lambda error: self.errors.append(str(error)))
         self.page.on("console", lambda message: message.type == "error" and self.errors.append(message.text))
-        self.page.goto(address)
+        self.page.goto(address + path)
 
     def uploads(self):
         return [url for method, url in self.sent if method == "PUT"]
+
+    def renamings(self):
+        return [url for method, url in self.sent if method == "PATCH"]
 
     def pick(self, file):
         self.page.set_input_files("#file", str(file))
@@ -169,6 +178,32 @@ class Visitor:
     def row(self, name):
         return self.page.locator("#songs li", has=self.page.get_by_text(name, exact=True))
 
+    def beats(self, name):
+        """The beats of a song, as the server has them."""
+        song_id = self.row(name).get_attribute("data-id")
+        return self.page.evaluate("id => fetch(`/api/songs/${id}/result`).then((answer) => answer.json())", song_id)["beats"]
+
+    def lit(self):
+        """The beat whose mark is lit, or -1 before the first one."""
+        lit = self.page.locator("#now").get_attribute("data-lit")
+        return int(lit) if lit else -1
+
+    def point_of(self, beat):
+        """Where the mark of a beat is on the page. The song says where it puts its marks."""
+        song = self.page.locator("#map")
+        box = song.bounding_box()
+        step, row, left, top, per_row, seat = (float(song.get_attribute(f"data-{name}")) for name in MAP)
+        return box["x"] + left + (beat % per_row + 0.5) * step, box["y"] + top + (beat // per_row) * row + seat
+
+    def press_beat(self, beat):
+        self.page.mouse.click(*self.point_of(beat))
+
+    def drag_across(self, first, last):
+        self.page.mouse.move(*self.point_of(first))
+        self.page.mouse.down()
+        self.page.mouse.move(*self.point_of(last), steps=6)
+        self.page.mouse.up()
+
     def close(self):
         self.context.close()
 
@@ -177,8 +212,8 @@ class Visitor:
 def visit(browser, program):
     visitors = []
 
-    def new():
-        visitors.append(Visitor(browser, program))
+    def new(path="/", **settings):
+        visitors.append(Visitor(browser, program, path, **settings))
         return visitors[-1]
 
     yield new
@@ -189,6 +224,13 @@ def visit(browser, program):
 
 
 READY = 60_000  # ms: an analysis takes a few seconds, the first one loads the model too
+
+# What the canvas of the song says about itself, in the order point_of() reads it.
+MAP = ("step", "row", "left", "top", "per-row", "seat")
+
+
+def clock(seconds):
+    return f"{int(seconds) // 60}:{int(seconds) % 60:02d}"
 
 
 def needs_sound(page):
@@ -225,33 +267,33 @@ def test_an_uploaded_song_is_analysed_listed_and_played(visit, files):
     assert len(visitor.uploads()) == 1
     assert "rate=44100" in visitor.uploads()[0]
 
-    # It opens by itself: the strip with one tick per beat, the tempo, the click switch.
+    # It opens by itself: the tempo as the largest figure, the beats, the click switch.
     expect(page.locator("#player")).to_be_visible(timeout=READY)
     expect(page.locator("#song-name")).to_have_text(TAGGED)
     expect(page.locator("#duration")).to_have_text("0:24")
-    beats = int(page.locator("#strip").get_attribute("data-beats"))
-    assert 44 <= beats <= 50, beats
+    beats = visitor.beats(TAGGED)
+    assert 44 <= len(beats) <= 50, len(beats)
+    assert int(page.locator("#now").get_attribute("data-beats")) == len(beats)
     assert abs(int(page.locator("#bpm").inner_text()) / BPM - 1) <= 0.04
+    # The tempo is the largest figure on the page, until the count takes its place.
+    sizes = page.evaluate(
+        """() => Object.fromEntries([...document.querySelectorAll('body *')].map(
+            (part) => [part.id || part.className || part.tagName, parseFloat(getComputedStyle(part).fontSize)]))"""
+    )
+    assert sizes["bpm"] == max(sizes.values()) >= 100
     expect(page.locator("#click")).to_be_checked()
     expect(page.locator("#position")).to_have_text("0:00")
+    # The list says which song is open, in words.
+    expect(row).to_have_attribute("aria-current", "true")
+    expect(row).to_contain_text("Open now")
 
-    # Playing moves the marker along the strip.
-    def marker_at():
-        return page.evaluate(
-            """() => {
-                const canvas = document.getElementById('strip')
-                const row = canvas.getContext('2d').getImageData(0, 2, canvas.width, 1).data
-                for (let x = 0; x < canvas.width; x++) if (row[4 * x + 3] > 200) return x / canvas.width
-                return null
-            }"""
-        )
-
-    assert marker_at() < 0.01
+    # No beat has sounded yet, so none is lit. Playing lights them one after the other.
+    assert visitor.lit() == -1
     page.locator("#play").click()
     expect(page.locator("#play")).to_have_text("Pause")
     needs_sound(page)
     expect(page.locator("#position")).to_have_text("0:02", timeout=10_000)
-    assert 0.05 < marker_at() < 0.2
+    assert 2 <= visitor.lit() <= 5
     page.locator("#click").uncheck()
     page.locator("#click").check()
     page.locator("#play").click()
@@ -260,11 +302,18 @@ def test_an_uploaded_song_is_analysed_listed_and_played(visit, files):
     page.wait_for_timeout(1200)
     assert page.locator("#position").inner_text() == stopped
 
-    # A press on the strip moves the playing position.
-    box = page.locator("#strip").bounding_box()
-    page.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] / 2)
-    expect(page.locator("#position")).to_have_text("0:12")
-    assert 0.45 < marker_at() < 0.55
+    # A press on a beat of the song moves the playing position onto it.
+    visitor.press_beat(24)
+    expect(page.locator("#now")).to_have_attribute("data-lit", "24")
+    expect(page.locator("#position")).to_have_text(clock(beats[24]))
+    # A press on one of the large beats does too: the fourth is the one that is lit.
+    large = page.locator("#now").bounding_box()
+    page.mouse.click(large["x"] + large["width"] * 5.5 / 8, large["y"] + large["height"] / 2)
+    expect(page.locator("#now")).to_have_attribute("data-lit", "26")
+    # And so does the position control of the transport bar.
+    page.locator("#seek").fill("5")
+    expect(page.locator("#position")).to_have_text("0:05")
+    assert visitor.lit() == max(n for n, beat in enumerate(beats) if beat <= 5)
 
 
 def test_a_click_is_placed_on_every_beat_and_can_be_switched_off(visit, files):
@@ -273,9 +322,8 @@ def test_a_click_is_placed_on_every_beat_and_can_be_switched_off(visit, files):
     visitor = visit()
     page = visitor.page
     visitor.pick(files["tagged"])
-    row = visitor.row(TAGGED)
     expect(page.locator("#player")).to_be_visible(timeout=READY)
-    beats = page.evaluate("id => fetch(`/api/songs/${id}/result`).then((answer) => answer.json())", row.get_attribute("data-id"))["beats"]
+    beats = visitor.beats(TAGGED)
 
     def placed():
         """The beat each click was placed on, from when it and the song were started."""
@@ -295,14 +343,13 @@ def test_a_click_is_placed_on_every_beat_and_can_be_switched_off(visit, files):
     assert len(clicks) >= 6
     assert clicks == beats[: len(clicks)]
 
-    # From the middle of the song, the first click is on the first beat after that point.
-    box = page.locator("#strip").bounding_box()
-    page.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] / 2)
+    # From a beat in the middle of the song, the first click is on that beat.
+    visitor.press_beat(24)
     page.locator("#play").click()
-    expect(page.locator("#position")).to_have_text("0:14", timeout=10_000)
+    expect(page.locator("#position")).to_have_text(clock(beats[24] + 2), timeout=10_000)
     offset, clicks = placed()
-    assert 12 < offset < 12.5
-    later = [beat for beat in beats if beat >= offset]
+    assert offset == beats[24]
+    later = beats[24:]
     assert len(clicks) >= 3
     assert clicks == later[: len(clicks)]
 
@@ -312,6 +359,353 @@ def test_a_click_is_placed_on_every_beat_and_can_be_switched_off(visit, files):
     assert page.evaluate("window.volumes.map((volume) => volume.gain.value)") == [0]
     page.locator("#click").check()
     assert page.evaluate("window.volumes.map((volume) => volume.gain.value)") == [1]
+
+
+def test_the_lit_beat_is_the_beat_that_clicks(visit, files):
+    """The mark that is lit and the click are the same beat: both follow the clock the song
+    plays on, and the mark allows for the time the sound takes to reach the speakers."""
+    visitor = visit()
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    beats = visitor.beats(TAGGED)
+
+    page.locator("#play").click()
+    needs_sound(page)
+    lit = set()
+    for _ in range(20):
+        page.wait_for_timeout(150)
+        now = page.evaluate(
+            """() => {
+                const song = window.started.find((sound) => sound.seconds > 1)
+                const heard = window.clock.currentTime - (window.clock.outputLatency || 0)
+                return { lit: document.getElementById('now').dataset.lit, position: heard - song.when + song.offset }
+            }"""
+        )
+        if now["position"] < beats[0] + 0.1:
+            continue
+        beat = int(now["lit"])
+        lit.add(beat)
+        # The mark is drawn once for every picture of the screen, so it may be one picture late.
+        assert beats[beat] - 0.08 <= now["position"] < beats[beat + 1] + 0.08, now
+    assert len(lit) >= 4
+    # Each of those beats got its click, at its own time.
+    started = page.evaluate("window.started")
+    song = next(sound for sound in started if sound["seconds"] > 1)
+    clicks = [round(sound["when"] - song["when"] + song["offset"], 3) for sound in started if sound["seconds"] < 1]
+    assert all(beats[beat] in clicks for beat in lit)
+
+
+def test_a_marked_range_plays_in_a_loop_with_a_click_on_every_beat_of_every_pass(visit, files):
+    visitor = visit()
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    beats = visitor.beats(TAGGED)
+    expect(page.locator("#loop")).to_be_disabled()
+    expect(page.locator("#loop-range")).to_have_text("Drag across beats")
+
+    # Dragging across four beats marks them and switches the loop on. It is two seconds long.
+    first, last = 8, 11
+    visitor.drag_across(first, last)
+    expect(page.locator("#loop")).to_be_checked()
+    expect(page.locator("#loop-range")).to_have_text(f"{clock(beats[first])} to {clock(beats[last + 1] - 0.02)}")
+    length = beats[last + 1] - beats[first]
+
+    page.locator("#play").click()
+    expect(page.locator("#player")).to_have_attribute("data-state", "looping")
+    needs_sound(page)
+    for _ in range(11):
+        page.wait_for_timeout(500)
+        # The position never leaves the range. It starts a moment before its first beat.
+        assert first - 1 <= visitor.lit() <= last
+    page.locator("#play").click()
+
+    started = page.evaluate("window.started.splice(0)")
+    songs = [sound for sound in started if sound["seconds"] > 1]
+    assert len(songs) == 1
+    song = songs[0]
+    # The sound goes round by itself, from just before the first beat to just before the
+    # beat after the last one: there is no gap to hear between two passes.
+    assert song["loop"] is True
+    assert song["offset"] == song["loopStart"]
+    assert beats[first] - 0.05 < song["loopStart"] <= beats[first]
+    assert abs(song["loopEnd"] - song["loopStart"] - length) < 1e-6
+
+    # On every pass each beat inside the range gets one click, at its own time.
+    passes = {}
+    for sound in started:
+        if sound["seconds"] < 1:
+            played = sound["when"] - song["when"] + song["offset"]
+            turn = int((played - song["loopStart"]) // length)
+            passes.setdefault(turn, []).append(round(played - turn * length, 3))
+    assert len(passes) >= 3
+    whole = [turn for turn in sorted(passes)[:-1]]
+    assert len(whole) >= 2
+    for turn in whole:
+        assert passes[turn] == beats[first : last + 1], turn
+    assert passes[max(passes)] == beats[first : first + len(passes[max(passes)])]
+
+    # With the loop switched off the song plays on, past the end of the range.
+    page.locator("#loop").uncheck()
+    page.locator("#play").click()
+    expect(page.locator("#player")).to_have_attribute("data-state", "playing")
+    expect(page.locator("#now")).to_have_attribute("data-lit", str(last + 3), timeout=10_000)
+    page.locator("#play").click()
+    assert [sound["loop"] for sound in page.evaluate("window.started.splice(0)") if sound["seconds"] > 1] == [False]
+
+    # The two ends can also be set at the playing position, one at a time.
+    visitor.press_beat(20)
+    page.locator("#loop-start").click()
+    expect(page.locator("#loop-range")).to_have_text(f"From {clock(beats[20])}")
+    expect(page.locator("#loop")).to_be_disabled()
+    visitor.press_beat(23)
+    page.locator("#loop-end").click()
+    expect(page.locator("#loop-range")).to_have_text(f"{clock(beats[20])} to {clock(beats[24] - 0.02)}")
+    expect(page.locator("#loop")).to_be_checked()
+    # An end set before the start drops the start.
+    visitor.press_beat(16)
+    page.locator("#loop-end").click()
+    expect(page.locator("#loop-range")).to_have_text(f"To {clock(beats[16])}")
+    expect(page.locator("#loop")).not_to_be_checked()
+
+
+def test_every_beat_has_its_own_mark_and_nothing_groups_them_in_light_and_in_dark(visit, files):
+    """Before the count exists, the beats of the song are one even row after the other."""
+    visitor = visit(viewport={"width": 1280, "height": 720}, color_scheme="light")
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    count = len(visitor.beats(TAGGED))
+    song = page.locator("#map")
+    step, row, left, top, per_row, seat = (float(song.get_attribute(f"data-{name}")) for name in MAP)
+    assert step >= 20
+    assert per_row < count, "the test song must fill its first row"
+
+    seen = {}
+    for scheme in ("light", "dark"):
+        # The page follows the system, and draws the song again in the colours of each.
+        page.emulate_media(color_scheme=scheme)
+        page.wait_for_timeout(300)
+        # Where there is ink along the middle of the marks of the first row, and its colour.
+        marks = page.evaluate(
+            """([y, from]) => {
+                const canvas = document.getElementById('map')
+                const scale = canvas.width / canvas.clientWidth
+                const inked = canvas.getContext('2d').getImageData(0, Math.round(y * scale), canvas.width, 1).data
+                const marks = []
+                let start = null
+                for (let x = Math.round(from * scale); x <= canvas.width; x++) {
+                    const ink = x < canvas.width && inked[4 * x + 3] > 128
+                    if (ink && start === null) start = x
+                    if (!ink && start !== null) {
+                        const middle = Math.floor((start + x) / 2)
+                        marks.push({ x: (start + x) / 2 / scale, light: inked[4 * middle] + inked[4 * middle + 1] + inked[4 * middle + 2] })
+                        start = null
+                    }
+                }
+                return marks
+            }""",
+            [top + seat, left],
+        )
+        # One mark for every beat of the row, all the same distance apart: no count, no group.
+        assert len(marks) == per_row, scheme
+        for n, mark in enumerate(marks):
+            assert abs(mark["x"] - (left + (n + 0.5) * step)) <= 1, (scheme, n)
+        ground = page.evaluate("getComputedStyle(document.body).backgroundColor")
+        seen[scheme] = (sum(int(part) for part in ground[4:-1].split(",")), marks[0]["light"])
+    # Dark marks on a light ground, then light marks on a dark one.
+    assert seen["light"][0] > seen["light"][1] and seen["dark"][0] < seen["dark"][1], seen
+    # Nothing is written beside the beats: the only text where the song is shown is the
+    # tempo and the time.
+    assert page.locator("#player").inner_text().split() == [page.locator("#bpm").inner_text(), "BPM", "0:00"]
+
+
+def test_a_song_is_renamed_in_its_row_and_in_the_top_bar(visit, files):
+    visitor = visit()
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    row = visitor.row(TAGGED)
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    other = visit()
+    expect(other.row(TAGGED)).to_be_visible()
+
+    # In the row: the field holds the name, and Enter keeps the new one.
+    row.get_by_role("button", name="Rename").click()
+    field = page.locator("#songs input")
+    expect(field).to_be_focused()
+    expect(field).to_have_value(TAGGED)
+    field.fill("  Grupo Extra -\tMe Emborracharé  ")
+    field.press("Enter")
+    renamed = visitor.row("Grupo Extra - Me Emborracharé")
+    expect(renamed).to_be_visible()
+    expect(page.locator("#songs input")).to_have_count(0)
+    expect(renamed.get_by_role("button", name="Rename")).to_be_focused()
+    # The open song shows its new name in the top bar, and every browser gets it.
+    expect(page.locator("#song-name")).to_have_text("Grupo Extra - Me Emborracharé")
+    expect(other.row("Grupo Extra - Me Emborracharé")).to_be_visible(timeout=10_000)
+    assert len(visitor.renamings()) == 1
+
+    # Escape leaves the name as it was, and nothing is sent.
+    renamed.get_by_role("button", name="Rename").click()
+    page.locator("#songs input").fill("Not this")
+    page.locator("#songs input").press("Escape")
+    expect(visitor.row("Grupo Extra - Me Emborracharé")).to_be_visible()
+    assert len(visitor.renamings()) == 1
+    # A name of spaces is refused where it was typed, and the field stays.
+    renamed.get_by_role("button", name="Rename").click()
+    page.locator("#songs input").fill("   ")
+    page.locator("#songs input").press("Enter")
+    expect(page.locator("#songs li .note")).to_have_text("A song needs a name.")
+    expect(page.locator("#songs li .note")).to_contain_class("refused")
+    expect(page.locator("#songs input")).to_be_focused()
+    page.get_by_role("button", name="Cancel").click()
+    assert len(visitor.renamings()) == 1
+
+    # In the top bar, with a name that looks like markup and one that is too long.
+    page.locator("#rename-open").click()
+    field = page.locator("#title input")
+    expect(field).to_be_focused()
+    field.fill("<i>cursiva</i> " + "ñ" * 300)
+    page.locator("#title").get_by_role("button", name="Save").click()
+    name = "<i>cursiva</i> " + "ñ" * 185
+    expect(page.locator("#song-name")).to_have_text(name)
+    expect(visitor.row(name)).to_be_visible()
+    expect(other.row(name)).to_be_visible(timeout=10_000)
+    assert page.locator("i").count() == 0 and other.page.locator("i").count() == 0
+    assert len(visitor.renamings()) == 2
+    assert other.renamings() == []
+
+
+def test_the_keyboard_plays_moves_the_position_and_reaches_every_control(visit, files):
+    visitor = visit()
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    # The song opened by itself: the keyboard is on Play.
+    expect(page.locator("#play")).to_be_focused()
+
+    # Space plays and pauses, from anywhere that has no use of its own for the key.
+    page.locator("#seek").focus()
+    page.keyboard.press("Space")
+    expect(page.locator("#play")).to_have_text("Pause")
+    page.keyboard.press("Space")
+    expect(page.locator("#play")).to_have_text("Play")
+
+    # The position control: the song is silent while it is dragged, and goes on from
+    # where it is let go.
+    page.keyboard.press("Space")
+    bar = page.locator("#seek").bounding_box()
+    page.mouse.move(bar["x"] + bar["width"] * 0.3, bar["y"] + bar["height"] / 2)
+    page.mouse.down()
+    expect(page.locator("#play")).to_have_text("Play")
+    page.mouse.move(bar["x"] + bar["width"] * 0.6, bar["y"] + bar["height"] / 2, steps=8)
+    assert 13 < float(page.locator("#seek").input_value()) < 16.5
+    page.mouse.up()
+    expect(page.locator("#play")).to_have_text("Pause")
+    page.keyboard.press("Space")
+    expect(page.locator("#play")).to_have_text("Play")
+    assert 13 < float(page.locator("#seek").input_value()) < 19
+
+    # The arrows move the position by a beat.
+    visitor.press_beat(10)
+    expect(page.locator("#now")).to_have_attribute("data-lit", "10")
+    page.keyboard.press("ArrowRight")
+    page.keyboard.press("ArrowRight")
+    expect(page.locator("#now")).to_have_attribute("data-lit", "12")
+    page.keyboard.press("ArrowLeft")
+    expect(page.locator("#now")).to_have_attribute("data-lit", "11")
+    page.locator("#loop-start").focus()
+    page.keyboard.press("ArrowLeft")
+    expect(page.locator("#now")).to_have_attribute("data-lit", "10")
+
+    # The loop, from the keyboard alone: its two ends, then its switch.
+    page.keyboard.press("Enter")
+    page.keyboard.press("ArrowRight")
+    page.keyboard.press("ArrowRight")
+    page.keyboard.press("ArrowRight")
+    page.locator("#loop-end").focus()
+    page.keyboard.press("Enter")
+    expect(page.locator("#loop")).to_be_checked()
+    page.locator("#loop").focus()
+    page.keyboard.press("Space")
+    expect(page.locator("#loop")).not_to_be_checked()
+    expect(page.locator("#play")).to_have_text("Play")
+
+    # In a field, the keys type: a space does not start the song.
+    visitor.row(TAGGED).get_by_role("button", name="Rename").focus()
+    page.keyboard.press("Enter")
+    page.keyboard.type("a b")
+    page.keyboard.press("ArrowLeft")
+    expect(page.locator("#songs input")).to_have_value("a b")
+    expect(page.locator("#play")).to_have_text("Play")
+    expect(page.locator("#now")).to_have_attribute("data-lit", "13")
+    page.keyboard.press("Escape")
+
+    # Tab goes through every control, and each one shows where the keyboard is.
+    # From the top of the page: a press on its heading is where the keyboard starts from.
+    page.locator("h1").click()
+    reached = {}
+    for _ in range(20):
+        page.keyboard.press("Tab")
+        on = page.evaluate(
+            """() => {
+                const on = document.activeElement
+                // The file input is driven by its label, which shows the ring for it.
+                const shown = getComputedStyle(on.id === 'file' ? document.querySelector('label[for="file"]') : on)
+                return { name: on.id || on.dataset.focus || on.tagName, ring: shown.outlineStyle !== 'none' && parseFloat(shown.outlineWidth) >= 2 }
+            }"""
+        )
+        # After the last control the keyboard leaves the page.
+        if on["name"] not in ("BODY", "HTML"):
+            reached[on["name"]] = on["ring"] and reached.get(on["name"], True)
+    controls = {"rename-open", "file", "rename", "delete", "play", "seek", "loop", "loop-start", "loop-end", "click"}
+    assert controls <= set(reached), controls - set(reached)
+    assert all(reached.values()), reached
+
+
+def test_a_message_appears_beside_its_cause_and_the_list_says_which_song_is_open(visit, files):
+    visitor = visit()
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#song-name")).to_have_text(TAGGED, timeout=READY)
+    visitor.pick(files["untagged"])
+    expect(page.locator("#song-name")).to_have_text("Sin etiquetas", timeout=READY)
+    first, second = visitor.row(TAGGED), visitor.row("Sin etiquetas")
+    expect(second).to_have_attribute("aria-current", "true")
+    expect(first).not_to_have_attribute("aria-current", "true")
+    # What adding a song says is beside the control that adds one.
+    assert page.locator(".add #message").count() == 1
+
+    # A song that cannot be opened says so in its own row, and the open song stays.
+    page.route("**/api/songs/*/sound", lambda route: route.fulfill(status=404, body="Not found\n"))
+    first.get_by_role("button", name="Open").click()
+    expect(first.locator(".note")).to_have_text(f"{TAGGED} could not be opened.")
+    expect(first.locator(".note")).to_contain_class("refused")
+    expect(second.locator(".note")).to_have_count(0)
+    expect(page.locator("#song-name")).to_have_text("Sin etiquetas")
+    expect(second).to_have_attribute("aria-current", "true")
+
+    # Opened for good, it is the one the list marks, and its row says nothing more.
+    page.unroute("**/api/songs/*/sound")
+    first.get_by_role("button", name="Open").click()
+    expect(page.locator("#song-name")).to_have_text(TAGGED)
+    expect(first).to_have_attribute("aria-current", "true")
+    expect(first).to_contain_text("Open now")
+    expect(first.locator(".note")).to_have_count(0)
+    expect(second).not_to_have_attribute("aria-current", "true")
+    expect(second.get_by_role("button", name="Open")).to_be_visible()
+
+    # A song deleted in another browser closes here, and the page says why.
+    other = visit()
+    row = other.row(TAGGED)
+    row.get_by_role("button", name="Delete").click()
+    expect(row.get_by_role("button", name="Keep")).to_be_focused()
+    row.get_by_role("button", name="Yes, delete").click()
+    expect(page.locator("#player")).to_be_hidden(timeout=10_000)
+    expect(page.locator("#nothing-text")).to_have_text("The song was deleted.")
+    expect(page.locator("#title")).to_be_hidden()
+    expect(page.locator("#play")).to_be_disabled()
 
 
 def test_a_song_opens_in_a_browser_that_never_had_the_file(visit, files):
@@ -327,7 +721,7 @@ def test_a_song_opens_in_a_browser_that_never_had_the_file(visit, files):
     row.get_by_role("button", name="Open").click()
     expect(other.page.locator("#player")).to_be_visible()
     expect(other.page.locator("#song-name")).to_have_text("Sin etiquetas")
-    assert int(other.page.locator("#strip").get_attribute("data-beats")) >= 40
+    assert int(other.page.locator("#now").get_attribute("data-beats")) >= 40
     other.page.locator("#play").click()
     needs_sound(other.page)
     expect(other.page.locator("#position")).to_have_text("0:01", timeout=10_000)
@@ -413,7 +807,7 @@ def test_a_name_is_shown_as_plain_text(visit, files):
     name = "<img src=x onerror=document.title='broken'><b>bold</b>"
     expect(visitor.row(name)).to_have_attribute("data-state", "ready", timeout=READY)
     expect(visitor.page.locator("#song-name")).to_have_text(name, timeout=READY)
-    assert visitor.page.locator("#songs img, #songs b, #player img, #player b").count() == 0
+    assert visitor.page.locator("img, b").count() == 0
     assert visitor.page.title() == "Bachata sections"
 
 

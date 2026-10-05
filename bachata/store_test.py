@@ -73,6 +73,27 @@ def test_the_library_survives_a_restart(tmp_path):
     assert np.array_equal(again.samples(ID_A), some_samples())
 
 
+def test_a_renamed_song_keeps_everything_but_its_name(tmp_path):
+    store = Store(tmp_path)
+    samples = some_samples()
+    add(store, ID_A, "track0", samples)
+    store.write_result(ID_A, {"version": 1, "beats": [1.0], "bpm": [120.0]})
+    before = store.song(ID_A)["added"]
+
+    assert store.rename(ID_A, "Grupo Extra - Me Emborracharé") is True
+    for library in (store, Store(tmp_path)):
+        song = library.song(ID_A)
+        assert (song["name"], song["frames"], song["added"]) == ("Grupo Extra - Me Emborracharé", RATE, before)
+        assert song["result"] == {"version": 1, "beats": [1.0], "bpm": [120.0]}
+        assert np.array_equal(library.samples(ID_A), samples)
+    # The name is in song.json only, and nothing is left on the way.
+    assert json.loads((tmp_path / "songs" / ID_A / "song.json").read_text()).keys() == {"id", "name", "frames", "added"}
+    assert files_under(tmp_path) == [f"songs/{ID_A}/{name}" for name in ("result.json", "song.json", "sound.raw")]
+
+    assert store.rename(ID_B, "Not there") is False
+    assert files_under(tmp_path) == [f"songs/{ID_A}/{name}" for name in ("result.json", "song.json", "sound.raw")]
+
+
 def test_a_deleted_song_leaves_nothing_behind(tmp_path):
     store = Store(tmp_path)
     add(store, ID_A)

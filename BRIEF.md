@@ -38,6 +38,9 @@ Also answered on 2026-10-05, in session 4.
 - While a song plays, the first thing the dancer reads is where the song is now: the section and the count. What comes next, and the shape of the whole song, come second.
 - One screen serves the desk and the distance. There is no separate view for practising.
 - The user can jump to a section, replay a part of the song in a loop, and rename a song. Play, pause and the position also work from the keyboard.
+- A replay is of one section by itself, without the change into the next one. Until the application finds sections, the user marks the range to loop by hand. Decided on 2026-10-05, in session 5.
+- The page has a light and a dark ground, and takes the one the system is set to. Decided on 2026-10-05, in session 5.
+- The page looks after airport sign systems. Where the song is hangs as a yellow sign band with black type; everything else is on black panels, over a ground of concrete grey by day and black by night. A beat is a small square, and the one that is sounding gets the large square a sign keeps for its pictogram. The typeface is Hind. The owner chose this among three designs on 2026-10-05, in session 5.
 
 ## What we know about the music
 

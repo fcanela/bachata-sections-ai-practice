@@ -8,34 +8,60 @@
     <script type="module" src="/app.js"></script>
   </head>
   <body>
-    <main>
+    <header class="top">
       <h1>Bachata sections</h1>
-
-      <section aria-labelledby="add-heading">
-        <h2 id="add-heading">Add a song</h2>
-        <label class="button" for="file">Choose an mp3 or m4a file</label>
-        <input id="file" class="hidden-input" type="file" accept=".mp3,.m4a,audio/mpeg,audio/mp4">
-        <p id="message" role="status"></p>
-      </section>
-
-      <section id="player" aria-labelledby="song-name" hidden>
+      <div id="title" class="title" hidden>
         <h2 id="song-name"></h2>
-        <div class="controls">
-          <button id="play" type="button">Play</button>
-          <span id="position">0:00</span>
-          <span>/</span>
-          <span id="duration">0:00</span>
-          <span class="tempo"><span id="bpm">–</span> BPM</span>
-          <label class="switch"><input id="click" type="checkbox" checked> Click on every beat</label>
+        <button id="rename-open" class="quiet" type="button">Rename</button>
+      </div>
+      <div class="add">
+        <p id="message" role="status"></p>
+        <progress id="sending" max="1" hidden aria-label="Sending the song"></progress>
+        <input id="file" class="hidden-input" type="file" accept=".mp3,.m4a,audio/mpeg,audio/mp4">
+        <label class="button primary" for="file" title="Choose an mp3 or m4a file">Add a song</label>
+      </div>
+    </header>
+
+    <nav class="rail" aria-labelledby="songs-heading">
+      <h2 id="songs-heading">Songs</h2>
+      <p id="empty">No song yet.</p>
+      <ul id="songs"></ul>
+    </nav>
+
+    <main>
+      <div id="nothing" class="nothing">
+        <p id="nothing-text" role="status"></p>
+      </div>
+
+      <section id="player" class="player" aria-labelledby="song-name" hidden>
+        <div class="now">
+          <p class="figure">
+            <output id="bpm">–</output>
+            <span class="under"><span class="unit">BPM</span> <span id="where" aria-hidden="true">0:00</span></span>
+          </p>
+          <canvas id="now" aria-label="The beats around the playing position. The one that is sounding is lit."></canvas>
         </div>
-        <canvas id="strip" height="64" aria-label="The beats of the song. Click to move the playing position."></canvas>
+        <div id="song" class="song">
+          <div id="song-size">
+            <canvas id="map" aria-label="Every beat of the song. Press one to move the playing position there. Drag across several to mark a loop."></canvas>
+          </div>
+        </div>
       </section>
 
-      <section aria-labelledby="songs-heading">
-        <h2 id="songs-heading">Songs</h2>
-        <p id="empty">No song yet.</p>
-        <ul id="songs"></ul>
-      </section>
+      <footer class="transport">
+        <button id="play" class="primary" type="button" disabled>Play</button>
+        <p class="time"><span id="position">0:00</span> <span aria-hidden="true">/</span> <span id="duration">0:00</span></p>
+        <input id="seek" type="range" min="0" max="1" step="any" value="0" disabled aria-label="Position in the song">
+        <div class="loop" role="group" aria-labelledby="loop-label">
+          <div class="marked">
+            <label class="switch"><input id="loop" type="checkbox" disabled> <span id="loop-label">Loop</span></label>
+            <span id="loop-range" class="range">Drag across beats</span>
+          </div>
+          <button id="loop-start" type="button" disabled>Start here</button>
+          <button id="loop-end" type="button" disabled>End here</button>
+        </div>
+        <label class="switch"><input id="click" type="checkbox" checked> Click on every beat</label>
+      </footer>
     </main>
   </body>
 </html>

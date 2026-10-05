@@ -1,6 +1,6 @@
 // What the page works out about a song without the screen or the sound card:
-// the type of a file, its id, its name from its tags, the samples to send, and
-// what to show at a playing position. song.test.js checks it.
+// the type of a file, its id, its name from its tags, the samples to send, what to
+// show at a playing position, and where a loop and its clicks fall. song.test.js checks it.
 
 // What the page decodes to and sends. The server checks the same numbers again.
 export const RATE = 44100
@@ -122,15 +122,20 @@ function m4aTags(bytes) {
   return tags
 }
 
+// A name as the server takes it: one line, no longer than 200 characters. Empty when
+// nothing is left of it.
+export function cleanName(text) {
+  const name = (text ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim()
+  // Cut by characters, as the server counts them, and not in the middle of one.
+  return [...name].slice(0, MAX_NAME).join('').trim()
+}
+
 // The name of a song: artist and title when the file has both, the title alone, or the
 // file name without its extension. Never empty, and never longer than the server takes.
 export function nameFor(tags, fileName) {
-  const clean = (text) => (text ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim()
-  const title = clean(tags.title)
-  const artist = clean(tags.artist)
-  const name = (title && artist ? `${artist} - ${title}` : title) || clean(fileName.replace(/\.[^.]*$/, '')) || 'Unnamed song'
-  // Cut by characters, as the server counts them, and not in the middle of one.
-  return [...name].slice(0, MAX_NAME).join('').trim()
+  const title = cleanName(tags.title)
+  const artist = cleanName(tags.artist)
+  return cleanName(title && artist ? `${artist} - ${title}` : title) || cleanName(fileName.replace(/\.[^.]*$/, '')) || 'Unnamed song'
 }
 
 // The samples to send: 16 bits, left and right in turn.
@@ -172,6 +177,62 @@ export function beatsUntil(beats, position) {
 export function bpmAt(result, position) {
   if (result.beats.length === 0) return null
   return Math.round(result.bpm[Math.max(0, beatsUntil(result.beats, position) - 1)])
+}
+
+// Where a position is among the beats, as a number that moves evenly from one beat to
+// the next: 3 on the fourth beat, 3.5 half way to the fifth. Before the first beat and
+// after the last one it carries on at the pace of the nearest two beats.
+export function beatPosition(beats, position) {
+  if (beats.length === 0) return 0
+  if (beats.length === 1) return position < beats[0] ? -1 : 0
+  const last = beats.length - 1
+  const before = Math.min(Math.max(beatsUntil(beats, position) - 1, 0), last - 1)
+  return before + (position - beats[before]) / (beats[before + 1] - beats[before])
+}
+
+// A loop starts this long before its first beat, and ends as long before the beat after
+// its last one. The cut then falls just ahead of an attack and not inside it.
+const LOOP_LEAD = 0.02
+
+// The seconds a loop over the beats `first` to `last` plays, both included. From one
+// pass to the next the beats stay as far apart as they are in the song.
+export function loopOf(beats, first, last, duration) {
+  const lead = Math.min(LOOP_LEAD, beats[first])
+  // The last beat of a song lasts as long as the one before it.
+  const after = last + 1 < beats.length ? beats[last + 1] : last > 0 ? Math.min(duration, 2 * beats[last] - beats[last - 1]) : duration
+  return { start: beats[first] - lead, end: after - lead }
+}
+
+// Where the song is after `seconds` of playing that started at the beginning of the
+// song, when the playing goes round `loop`. Without a loop it is `seconds` itself.
+export function wrapped(seconds, loop) {
+  if (!loop || seconds < loop.end) return seconds
+  return loop.start + ((seconds - loop.start) % (loop.end - loop.start))
+}
+
+// The clicks to hand to the audio clock, up to `until`: one for every beat, on every
+// pass of the loop. `from` is where the last call stopped: the next beat, and how many
+// times the loop has gone round. Each click says its beat and when it sounds, in the
+// same seconds as `until`: the seconds of playing, counted from the start of the song.
+export function clicksUntil(beats, loop, from, until) {
+  const clicks = []
+  const length = loop ? loop.end - loop.start : 0
+  let { beat, pass } = from
+  for (;;) {
+    if (loop && (beat >= beats.length || beats[beat] >= loop.end)) {
+      // The end of the range: the next pass starts on the first beat inside it.
+      beat = beats.findIndex((time) => time >= loop.start)
+      pass++
+      // A range with no beat in it has no click.
+      if (beat < 0 || beats[beat] >= loop.end) break
+    }
+    if (beat >= beats.length) break
+    const at = beats[beat] + pass * length
+    if (at >= until) break
+    clicks.push({ beat, at })
+    beat++
+  }
+  return { clicks, next: { beat, pass } }
 }
 
 // 75.4 seconds is shown as 1:15.

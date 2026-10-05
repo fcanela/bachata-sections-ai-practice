@@ -2,6 +2,147 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-05, session 5: the redesigned page, three designs and the one that stays
+
+The owner asked for the redesigned page with what slice 1 has, in the three designs of session 4, built in order: Dominó, The counts sheet, Terminal signs. Nothing was to be committed before the owner chooses one. The session built one page with a temporary switch between the three, the server's request for renaming, and the tests for both. It stopped for the owner's choice. The owner looked at the three, chose Terminal signs, and the session deleted the other two with the switch and committed.
+
+### Runs
+
+Everything the session started was on port 8081. Scripts that are not in the repository ran from the session's scratch folder, on a copy of the library.
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| `impeccable context`, the design plugin's start command | It finds `PRODUCT.md` and no design file. It asked for `impeccable.style` and the sandbox refused; it finished without | not timed |
+| `impeccable surface-brief write web/index.html` | The direction for the page is in `.impeccable/surfaces/web-index-html.md`, which git ignores | not timed |
+| `node --test web/` | 31 pass: 18 of the page's logic, 13 of the colours | under 1 s |
+| `uv run --offline pytest bachata web fixtures scripts`, inside the sandbox | 107 passed | 26 s |
+| `uv run --offline pytest e2e -k firefox`, inside the sandbox | 10 passed, 1 failed, 5 skipped: Firefox plays nothing there. The failure was the new test of the Tab key, which expected the keyboard to go round the page and back to the top. It now starts from the top, and passed when run alone | 66 s |
+| `TMPDIR=/tmp/claude-1000/e2e BACHATA_TEST_PORT=8081 .venv/bin/python -m pytest`, outside the sandbox | 139 passed, none skipped: Chrome and Firefox both started and played. Run twice: before the review, and again after its fixes | 191 s and 190 s |
+| A screenshot script with Playwright's Firefox, inside the sandbox | It draws the page: 12 pictures over three rounds, with a song open, a loop marked, a renaming and a deletion being asked | not timed |
+| The same with the installed Chrome, outside the sandbox | 12 pictures: each design playing, light and dark, at 1920 by 1080, and paused at 1280 by 720. Chrome logs one 404, for `/favicon.ico`. Taken twice: for the review, and again after its fixes | not timed |
+| `impeccable detect --json` over the page and its style sheets | One finding: the headings and the text are too close in size (14, 16 and 18 pixels). The open song's name went up to 22 pixels. Not run again | not timed |
+| The plugin's reviewer, an agent that reads the pictures and the code against the written direction | Its word was "fix", with eight points and one about this log, which had no entry yet. All eight were applied in one batch (see Decisions) | 6 min 40 s |
+| The same reviewer, on the pictures taken again | It scored the eight fixes and the point about the log as resolved, and its word was "ship". That covers those nine points, not the whole page. It named two small things it did not count as fixes (see Decisions) | 43 s |
+
+**After the owner's choice**
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| `PORT=8081 .venv/bin/python -m bachata`, outside the sandbox, for the owner to look at the three | The page answered with 200. A program started inside the sandbox cannot be reached from the owner's browser: the sandbox has a network of its own. Stopped before the clean-up | not timed |
+| A search of `web/`, `bachata/` and `e2e/` for the names of the two deleted designs, their typefaces and the switch | Nothing found | not timed |
+| `node --test web/` | 23 pass: 18 of the page's logic, 5 of the colours | under 1 s |
+| `uv run --offline pytest bachata web fixtures scripts`, inside the sandbox | 107 passed | 28 s |
+| `uv run --offline pytest e2e -k firefox`, inside the sandbox | 11 passed, 5 skipped for want of sound | 67 s |
+| The whole suite outside the sandbox, as above | 139 passed, none skipped | 192 s |
+| Two pictures of the final page with Playwright's Firefox, inside the sandbox, light and dark | The page is as it was in the Terminal signs pictures, without the two controls of the switch | not timed |
+
+**What the pictures and the tests measured**
+
+| | Dominó | The counts sheet | Terminal signs |
+| --- | --- | --- | --- |
+| Marks of the song, apart, in a window of 1280 | 30 px | 28 px | 32 px |
+| Rows for the mix of 3:15 (398 beats), at 1920 by 1080 | 8 | 8 | 9 |
+| The large beats, apart, at 1920 by 1080 | about 128 px | about 140 px | about 147 px |
+
+- The mix of 3:15 shows whole at 1920 by 1080 in all three. No longer song was looked at.
+- In a window of 1280 by 720 the same mix needs scrolling in all three: the song follows the playing position.
+
+### Downloads
+
+| What | From | Size | Licence |
+| --- | --- | --- | --- |
+| Rubik, weights 300 to 900, Latin subset, `web/fonts/rubik.woff2` | fonts.gstatic.com | 35,348 bytes | SIL Open Font License 1.1 |
+| Atkinson Hyperlegible Next, weights 200 to 800, Latin subset, `atkinson-next.woff2` | fonts.gstatic.com | 33,996 bytes | the same |
+| Atkinson Hyperlegible Mono, weights 200 to 800, Latin subset, `atkinson-mono.woff2` | fonts.gstatic.com | 17,752 bytes | the same |
+| Hind, weight 500, Latin subset, `hind-500.woff2` | fonts.gstatic.com | 16,788 bytes | the same |
+| Hind, weight 700, Latin subset, `hind-700.woff2` | fonts.gstatic.com | 16,268 bytes | the same |
+| The list of those files | fonts.googleapis.com | 6,878 bytes, not kept | |
+| The licence text of each family | raw.githubusercontent.com, `google/fonts` | about 4.4 kB each. One copy is kept, in `web/fonts/LICENSE.txt`, with the four copyright lines | |
+
+The typefaces took 120,152 bytes together. After the owner's choice the two files of Hind are kept, 33,056 bytes, and the other three are deleted.
+
+### Cost
+
+- Paid APIs: none used, $0.
+- Network: the downloads above, to three hosts. The plugin's `context` command asked for `impeccable.style` once and was refused. The plugin's message about which direction was chosen was not sent, as in session 4.
+- Dependencies: none added. The typefaces are files the program serves.
+- Commands outside the sandbox: 7. Three ran the whole test suite, two took the pictures in Chrome, and two started the program for the owner: once to look at the three designs, and once at the end with the final page. Everything was on port 8081. The last program is left running for the owner and stops by itself after two hours.
+- Agents: one, the plugin's reviewer of the finished page, asked twice. It used about 187,000 tokens.
+- Cost of the Claude Code session itself: not measured from inside the session.
+
+### Decisions
+
+**The owner's, from the instruction that opened the session**
+
+- The three designs are built, Dominó first. Nothing is committed until one is chosen.
+- Mambo is a rhythm. Each design has a light and a dark ground.
+- A replay is of a section by itself, without the change into the next one. For now the loop is a range marked by hand.
+- The proposed items of the page are accepted, with one change: a mark for every beat of the whole song does not have to be on screen all the time.
+- The phrases and the count from 1 to 8 are what matters most. Both come with slice 2: until then no count and no grouping is shown, their place is kept, and the beats around the position are shown large enough to check each one against the sound.
+
+These are written into `BRIEF.md`, `ACCEPTANCE.md` and the brief in `NEXT.md`.
+
+**The owner's, after looking at the three**
+
+- The three have the same layout and look like different skins. The owner asked whether that is what the plugin is expected to give.
+- Terminal signs is the final choice.
+
+**Mine**
+
+- **One page with a switch, and no worktrees.** The brief asks for three designs on one layout. A design is one style sheet and one small script for its marks; everything else is shared. Worktrees were offered, not asked for, and would have made three copies of the shared part.
+- **The message came as pasted text**, so the session asked before acting on it. The owner said to carry it out as written.
+- **The eight large beats slide past a fixed line.** A window that showed eight and then the next eight would draw groups of eight from the first beat on, which no analysis has produced. Three beats are behind the line, the lit one has just crossed it, and four are coming. Under the reduced-motion setting they step.
+- **The lit beat swells for a moment.** The swell fades in about 0.2 s. A beat that has sounded is drawn fainter.
+- **Light and dark.** The page follows the system unless the address or the control says otherwise. A script sets it before the first paint. Whether a control stays after the choice is the owner's.
+- **Colours.**
+  - Dominó: green table, bone and black, brass for what can be pressed on the green. Light is the bone as ground with the table as frame, dark is the table.
+  - The counts sheet: black writes, red is where the song is, blue is what can be pressed, green is the loop.
+  - Terminal signs: the band is the yellow sign in both grounds, the rest is concrete by day and black by night.
+- **Typefaces.**
+  - Rubik for Dominó: its rounded corners are the tile's.
+  - Atkinson Hyperlegible for the sheet: it was drawn to keep figures apart, and its Mono puts the tempo in even squares.
+  - Hind for the signs: it is close to the Frutiger of airport signs.
+- **The loop.**
+  - The sound goes round by itself, through the loop points of the audio source, so there is no gap.
+  - A loop starts 20 ms before its first beat and ends 20 ms before the beat after its last, so the cut is not inside an attack.
+  - A position before the range plays into it. A position after it plays on to the end of the song, as in a sound editor.
+  - Marking a range switches the loop on. A range is marked by a drag, or by "Start here" and "End here" at the playing position, which is how the keyboard does it.
+- **Renaming is `PATCH /api/songs/<id>?name=…`**, answered with 204. The name travels as it does in an upload and goes through the same check.
+- **An upload is now sent with `XMLHttpRequest`**, the only way a browser reports how much has left. The request is the same.
+- **Messages.** What adding a song says is beside "Add a song". What goes wrong with a song is said in its row, or beside its name in the top bar when it was renamed there. Three sentences are new: "A song needs a name.", "The server refused the name." and "… could not be renamed."
+- **Keys.** Space plays and pauses unless the keyboard is on a button, a checkbox or a field. The arrows move by a beat unless it is in a field or a list of choices. Going back while the song plays, a beat that started under a quarter of a second ago counts as reached.
+- **Sizes.** The band takes 36% of the window's height, and the figure up to 256 pixels. The page keeps its layout down to 1024 pixels wide and scrolls sideways under that: the brief wants no phone layout.
+- **The song's canvas is as tall as its rows** and scrolls inside its part of the page, following the playing position.
+- **`ACCEPTANCE.md`.** The two items the owner's change touched are replaced, the others lost "proposed", and the ones a test checks are ticked. Two are left to the owner's eye. One was added for light and dark.
+- **`DESIGN.md` was not written.** The plugin ends a build with it. It would be a new top-level file describing two designs about to be deleted, so it waits for the owner's choice and the owner's word.
+- **The reviewer's eight points, all applied.**
+  - The time the song is at was only in the transport bar. It is now in the band too, under the figure.
+  - Dominó's sounding pip was a green disc with a bone eye, which read as a ringed pip: a form the brief keeps for a rhythm. It is now a black pip on a brass disc with a black edge.
+  - The sheet's circle is red where the written direction said blue. The direction was changed, not the colour: blue is what can be pressed.
+  - The sheet's strokes were too light to read from a distance. They are heavier, and the squares of the song went from 22 to 28 pixels.
+  - The sheet's dark ground was a blue-black like any dark screen. It is now a warm black paper with a grey rule that shows.
+  - The signs drew a beat as a dot on the band and a square in the song. It is a square in both, and the sounding one is a black square with a yellow mark in both.
+  - At 1280 the position control was about 110 pixels wide. The loop's range moved under the word "Loop", and the control is now about 185 to 220.
+- **Where the reviewer was not followed to the letter.** It asked for the time at a third of the figure's height. It is about a fifth: the brief says the time is small. The reviewer accepted that.
+- **Left as they are, and the reviewer did not count them as fixes.**
+  - The time's right end sits a little to the right of the figure's last digit, by a different amount in each design.
+  - The sheet's large strokes and its figure do not sit on the squares of the paper.
+  - A beat leaving the left edge of the large view shows as a sliver for a moment. The reviewer took it for a possible fault in one picture; it is the mark being cut by the edge.
+- **Dragging the position control pauses the song until it is let go.** Without that, every step of the drag started the sound again.
+- **To the owner's question about skins.** Yes: the brief of session 4 fixed one layout for the three, and the plugin lets a design of a tool differ only in typeface, colours, density and one move of its own. With slice 1's data the parts that would set the three apart are not drawn yet. A round on the layout itself was offered, with the advice to hold it until slice 2 is on screen. The owner took the choice and not the round.
+- **After the choice.**
+  - The two other designs, the switch and three typeface files are deleted. They were never committed. The pictures under `.impeccable/review/` are what is left of them.
+  - Light and dark follow the system, with no control on the page. The script that set them before the first paint went with the switch.
+  - With one design there is one style sheet and one file that draws. The colours moved into `web/style.css`, and how a beat is drawn into `web/draw.js`. The properties that only existed so that the three could differ are gone.
+  - The design is described in `BRIEF.md`, under "The interface". `DESIGN.md` is still not written: it waits for the owner's word.
+- **One exception for the plugin's hook.** When the session stopped, the hook raised the finding about sizes again. It compares the heading tags with the text, 14 to 22 pixels, and does not count the band, where the tempo is up to 256 pixels and the time up to 52. The headings are quiet on purpose. `impeccable hooks ignore-value` switched that one rule off for `web/index.html` only. It is in `.impeccable/config.json`, which git ignores, with the reason and that it was my decision.
+
+### Machine
+
+- Playwright's Firefox draws the page inside the sandbox, without sound. Screenshots that need no playing were taken there.
+- Chrome asks for `/favicon.ico` on every visit and logs the 404. The program has never served one.
+- A canvas in a grid row with no set height grows to its own default shape: the band's row had to be given the band's height.
+
 ## 2026-10-05, session 4: who it is for
 
 The owner ran two commands of the Impeccable design plugin. `init` asks who the product is for and writes the answers down for later design work: three rounds of questions. `shape` plans a screen before any code: four more rounds, and a page of cards for choosing between visual directions. The session changed `BRIEF.md`, `ACCEPTANCE.md`, this log, `NEXT.md` and `.gitignore`, and added `PRODUCT.md`. No code changed and no test was run.

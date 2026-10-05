@@ -53,6 +53,9 @@ class Program:
         query = {"name": "A song", "rate": RATE, "frames": len(body) // 4, **query}
         return self.client.put(f"/api/songs/{song_id}", params=query, content=body, headers=headers)
 
+    def rename(self, song_id=ID_A, name="Another name", headers=OWN_PAGE):
+        return self.client.patch(f"/api/songs/{song_id}", params={"name": name}, headers=headers)
+
     def delete(self, song_id=ID_A, headers=OWN_PAGE):
         return self.client.delete(f"/api/songs/{song_id}", headers=headers)
 
@@ -83,9 +86,30 @@ def test_the_page_is_served_with_the_security_headers(program):
     for name, value in SECURITY_HEADERS.items():
         assert page.headers[name] == value
     assert page.headers["cache-control"] == "no-cache"
-    assert program.get("/app.js").headers["content-type"] == "text/javascript; charset=utf-8"
-    assert program.get("/song.js").headers["content-type"] == "text/javascript; charset=utf-8"
+    for script in ("app", "song", "draw"):
+        assert program.get(f"/{script}.js").headers["content-type"] == "text/javascript; charset=utf-8", script
     assert program.get("/style.css").headers["content-type"] == "text/css; charset=utf-8"
+
+
+def test_the_typeface_is_served_by_the_program_itself(program):
+    # The content security policy lets the page load nothing from elsewhere.
+    fonts = sorted(path.name for path in (WEB / "fonts").glob("*.woff2"))
+    assert fonts == ["hind-500.woff2", "hind-700.woff2"]
+    for font in fonts:
+        answer = program.get(f"/fonts/{font}")
+        assert answer.status_code == 200
+        assert answer.headers["content-type"] == "font/woff2"
+        assert answer.content[:4] == b"wOF2"
+    # Every file the page asks for by name is one the program serves.
+    asked = set()
+    for sheet in WEB.glob("*.css"):
+        asked |= set(re.findall(r"url\([\"']?(/[^)\"']+)", sheet.read_text()))
+    for text in [(WEB / "index.html").read_text(), *(script.read_text() for script in WEB.glob("*.js") if ".test." not in script.name)]:
+        asked |= set(re.findall(r"""(?:href|src)=["'](/[^"']+)""", text))
+        asked |= {"/" + name for name in re.findall(r"""from ['"]\./([^'"]+)['"]""", text)}
+    assert asked == {"/style.css", "/app.js", "/song.js", "/draw.js", "/fonts/hind-500.woff2", "/fonts/hind-700.woff2"}
+    for path in sorted(asked):
+        assert program.get(path).status_code == 200, path
 
 
 def test_everything_else_is_a_404(program):
@@ -96,7 +120,11 @@ def test_everything_else_is_a_404(program):
         ("GET", "/web/index.html"),
         ("GET", "/api"),
         ("POST", "/api/songs"),
+        ("PATCH", "/api/songs"),
         ("OPTIONS", f"/api/songs/{ID_A}"),
+        ("GET", "/fonts/LICENSE.txt"),
+        ("GET", "/fonts/"),
+        ("GET", "/fonts/hind-500.woff2/x"),
         ("GET", f"/api/songs/{ID_A}/sound/more"),
     ]:
         answer = program.client.request(method, path)
@@ -109,6 +137,12 @@ def test_the_page_loads_nothing_from_outside_and_has_no_inline_code():
     assert not re.search(r"https?://", page)
     assert not re.search(r"<script(?![^>]*\bsrc=)", page)
     assert not re.search(r"<style|\sstyle=|\son\w+=", page)
+    # A style sheet may name a file of the program and nothing else.
+    for sheet in WEB.glob("*.css"):
+        assert not re.search(r"https?:|url\(\s*(?![\"']?/)|@import", sheet.read_text()), sheet.name
+    # A script must not write markup or a style attribute into the page either.
+    for script in WEB.glob("*.js"):
+        assert not re.search(r"innerHTML|outerHTML|insertAdjacentHTML|document\.write|setAttribute\(\s*['\"]style|\beval\(|new Function", script.read_text()), script.name
 
 
 # The library
@@ -206,6 +240,46 @@ def test_a_song_can_be_deleted_in_any_state(program, tmp_path):
     assert program.delete(ID_A).status_code == 404
 
 
+def test_a_song_is_renamed_and_keeps_its_state_and_its_result(tmp_path):
+    analysed = []
+    program = Program(tmp_path / "data", analyse=lambda samples, rate: analysed.append(1) or analyse(samples, rate))
+    program.put(ID_A, name="track0")
+    program.put(ID_B, a_song(first=2), name="track0")
+    program.analyse_one()
+    assert program.listed() == [("track0", "ready"), ("track0", "waiting")]
+
+    renamed = program.rename(ID_A, "Grupo Extra - Me Emborracharé")
+    assert (renamed.status_code, renamed.content) == (204, b"")
+    assert program.rename(ID_B, "Eso Es Amor").status_code == 204
+    assert program.listed() == [("Grupo Extra - Me Emborracharé", "ready"), ("Eso Es Amor", "waiting")]
+    assert program.get(f"/api/songs/{ID_A}").json()["name"] == "Grupo Extra - Me Emborracharé"
+    # The sound and the result are the ones it had, and nothing was analysed again.
+    assert program.get(f"/api/songs/{ID_A}/result").json()["beats"] == [1.0, 1.5, 1.0]
+    assert program.get(f"/api/songs/{ID_A}/sound").content == a_song().tobytes()
+    assert analysed == [1]
+
+    # The new names survive a restart, and the waiting song is still in the queue.
+    program = Program(tmp_path / "data")
+    assert program.listed() == [("Grupo Extra - Me Emborracharé", "ready"), ("Eso Es Amor", "waiting")]
+    assert program.analyse_one() is True
+
+    missing = program.rename("c" * 32, "Not there")
+    assert (missing.status_code, missing.text) == (404, "No such song\n")
+
+
+def test_a_new_name_is_checked_like_the_name_of_an_upload(program):
+    program.put(ID_A, name="Before")
+    long = program.rename(name="n" * 201)
+    assert (long.status_code, long.text) == (400, "The name is longer than 200 characters\n")
+    for name in ["", "   ", "two\nlines", "a\0b", "\x7f"]:
+        assert program.rename(name=name).status_code == 400, repr(name)
+    no_name = program.client.patch(f"/api/songs/{ID_A}", headers=OWN_PAGE)
+    assert (no_name.status_code, no_name.text) == (400, "The song has no name\n")
+    assert program.listed() == [("Before", "waiting")]
+    assert program.rename(name="ñ" * 200).status_code == 204
+    assert program.listed() == [("ñ" * 200, "waiting")]
+
+
 def test_the_queue_runs_by_itself_when_the_program_runs(tmp_path):
     app = create_app(tmp_path / "data", analyse=analyse)
     with TestClient(app, base_url="http://127.0.0.1") as client:
@@ -265,9 +339,18 @@ def test_a_deletion_that_is_not_from_the_own_page_is_refused(program, headers):
     assert program.analyse_one() is True
 
 
+@pytest.mark.parametrize("headers", NOT_THE_OWN_PAGE)
+def test_a_renaming_that_is_not_from_the_own_page_is_refused(program, headers):
+    program.put(ID_A)
+    answer = program.rename(ID_A, headers=headers)
+    assert (answer.status_code, answer.text) == (403, "Not from the application's own page\n")
+    assert program.listed() == [("A song", "waiting")]
+
+
 def test_the_own_page_may_use_either_name_of_the_program(program):
     localhost = {"Host": "localhost:8080", "Origin": "http://localhost:8080", "Sec-Fetch-Site": "same-origin"}
     assert program.put(ID_A, headers=localhost).status_code == 201
+    assert program.rename(ID_A, headers=localhost).status_code == 204
     assert program.delete(ID_A, headers=localhost).status_code == 204
     # Firefox sends no Sec-Fetch-Site to a page that is not served securely.
     assert program.put(ID_A, headers={"Origin": "http://127.0.0.1"}).status_code == 201
@@ -353,6 +436,8 @@ def test_a_song_id_that_is_not_well_formed_is_refused(program, tmp_path, song_id
     for path in (f"/api/songs/{song_id}", f"/api/songs/{song_id}/sound", f"/api/songs/{song_id}/result"):
         get = program.get(path)
         assert (get.status_code, get.text) == refused
+    rename = program.rename(song_id)
+    assert (rename.status_code, rename.text) == refused
     delete = program.delete(song_id)
     assert (delete.status_code, delete.text) == refused
     assert files_under(tmp_path) == []
@@ -398,6 +483,7 @@ def test_a_media_file_is_never_read_as_one(program):
 def test_only_the_data_folder_is_written_and_names_on_disk_come_from_the_id(program, tmp_path):
     program.put(ID_A, name="../../outside")
     program.put(ID_B, a_song(first=2), name="b" * 32 + "/../../" + "c" * 32)
+    assert program.rename(ID_B, "../../" + "d" * 32 + "/song.json").status_code == 204
     program.analyse_one()
     assert files_under(tmp_path) == [
         f"data/songs/{ID_A}/result.json",
@@ -439,6 +525,11 @@ def test_every_answer_has_the_security_headers(program):
         program.put(ID_B, headers={}),
         program.put(ID_B, rate=1),
         program.put(ID_B, a_song(first=2)),
+        program.rename(ID_B),
+        program.rename(ID_B, headers={}),
+        program.rename(ID_B, name=""),
+        program.rename("c" * 32),
+        program.get("/fonts/hind-700.woff2"),
         program.delete(ID_B, headers={}),
         program.delete(ID_B),
         program.delete(ID_B),

@@ -5,6 +5,7 @@
     PUT    /api/songs/<id>          an upload: ?name=...&rate=44100&frames=N, and the samples
     GET    /api/songs/<id>/sound    the stored sound
     GET    /api/songs/<id>/result   the beats and the tempo, once the song is ready
+    PATCH  /api/songs/<id>          a new name: ?name=...
     DELETE /api/songs/<id>          a deletion
 
 An upload is plain samples: 16 bits, little-endian, left and right in turn, at 44.1 kHz,
@@ -56,6 +57,10 @@ PAGE_FILES = {
     "/style.css": ("style.css", "text/css; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/song.js": ("song.js", "text/javascript; charset=utf-8"),
+    "/draw.js": ("draw.js", "text/javascript; charset=utf-8"),
+    # The typeface. web/fonts/LICENSE.txt says where it comes from.
+    "/fonts/hind-500.woff2": ("fonts/hind-500.woff2", "font/woff2"),
+    "/fonts/hind-700.woff2": ("fonts/hind-700.woff2", "font/woff2"),
 }
 
 # The names the program answers to. A request for any other host is refused, so a
@@ -243,6 +248,15 @@ def create_app(data, analyse=None, version=ANALYSIS_VERSION, limit=LIBRARY_LIMIT
         queue.wake()
         return answer(shown(store.song(song_id)), 201)
 
+    async def rename(request):
+        if not from_own_page(request):
+            raise Refused(403, "Not from the application's own page")
+        song_id = song_id_of(request)
+        name = checked_name(request.query_params.get("name"))
+        if not store.rename(song_id, name):
+            raise Refused(404, "No such song")
+        return Response(status_code=204)
+
     async def delete(request):
         if not from_own_page(request):
             raise Refused(403, "Not from the application's own page")
@@ -260,6 +274,7 @@ def create_app(data, analyse=None, version=ANALYSIS_VERSION, limit=LIBRARY_LIMIT
         Route("/api/songs", list_songs),
         Route("/api/songs/{id}", one_song),
         Route("/api/songs/{id}", upload, methods=["PUT"]),
+        Route("/api/songs/{id}", rename, methods=["PATCH"]),
         Route("/api/songs/{id}", delete, methods=["DELETE"]),
         Route("/api/songs/{id}/sound", sound),
         Route("/api/songs/{id}/result", result),

@@ -139,6 +139,19 @@ class Store:
             else:
                 partial.unlink()
 
+    def rename(self, song_id, name):
+        """Gives a song another name. Returns whether it was there."""
+        with self._lock:
+            song = self._songs.get(song_id)
+            if song is None:
+                return False
+            kept = {key: value for key, value in song.items() if key != "result"} | {"name": name}
+            partial = self._new_tmp(song_id)
+            partial.write_text(json.dumps(kept))
+            os.replace(partial, self._folder(song_id) / "song.json")
+            song["name"] = name
+        return True
+
     def delete(self, song_id):
         """Removes a song. Returns whether it was there."""
         with self._lock:

@@ -42,7 +42,7 @@ Each slice takes a song and shows a visible result. There are five and the numbe
 
 ### 1. Beats and tempo
 
-The owner picks a file, mp3 or m4a, or a song from the list of remembered ones. The page shows a strip with one tick per beat, a marker that moves along it while the song plays, the BPM at the playing position, and a click on every beat that can be switched off. The ticks are not numbered; the count 1 to 8 arrives in slice 2.
+The owner picks a file, mp3 or m4a, or a song from the list of remembered ones. The page shows one mark per beat, lights the mark of the beat that is sounding, shows the BPM at the playing position, and gives a click on every beat that can be switched off. The marks are not numbered; the count 1 to 8 arrives in slice 2.
 
 Uploaded songs are remembered in one library on the server, the same for everyone who can reach the application.
 
@@ -60,7 +60,7 @@ Slice 1 is done when every item below holds, on all three mixes and both commerc
 
 **The page**
 
-- [x] It shows the strip, the moving marker, the BPM at the playing position and the click switch. `e2e/page_test.py`, in Chrome and Firefox. It also checks that every beat gets one click, at its own time on the clock the song plays on.
+- [x] It shows one mark per beat, the lit mark of the beat that is sounding, the BPM at the playing position and the click switch. `e2e/page_test.py`, in Chrome and Firefox. It also checks that every beat gets one click, at its own time on the clock the song plays on. Reworded in session 5, when the page was rebuilt, and checked again: the strip and its moving marker are gone.
 - [ ] By the owner's ear: with the click on, the click is on the beat through the whole song, on each of the three mixes.
 
 **The library**
@@ -130,23 +130,27 @@ What the server never does:
 - [ ] The timeline of sections is on screen while the song plays, and the playing position sits in the section that is sounding.
 - [ ] G4, G6 and G8 hold.
 
-**The redesigned page.** The owner decided on 2026-10-05 that the screen is built ahead of slices 2 to 4: first with the beats and the BPM of slice 1, then each slice puts its result in its place. The brief is in `NEXT.md`. Every item below is *proposed*: it comes from that brief, and its numbers and its rule are not the owner's yet. No check exists for any of them.
+**The redesigned page.** The owner decided on 2026-10-05 that the screen is built ahead of slices 2 to 4: first with the beats and the BPM of slice 1, then each slice puts its result in its place. The brief is in `NEXT.md`. The items come from that brief. The owner accepted them on 2026-10-05, in session 5, with one change: a mark for every beat of the whole song does not have to be on screen all the time. The item about a song of 4 minutes showing whole in a window of 1920 by 1080 is therefore gone, and the item about the large beats is new.
 
 With what slice 1 has:
 
-- [ ] *Proposed.* Every beat of a song has its own mark, and two neighbouring marks are at least 20 pixels apart in a window 1280 pixels wide or wider.
-- [ ] *Proposed.* The mark of the beat that is sounding is lit while it sounds. With the click on, the lit mark and the click are the same beat.
-- [ ] *Proposed.* A song of 4 minutes shows whole, without scrolling, in a window of 1920 by 1080.
-- [ ] *Proposed.* Nothing is shown that an analysis has not produced: before slice 2 no count and no grouping of beats, before slice 4 no section.
-- [ ] *Proposed.* A range of the song can be marked and replays in a loop until the loop is switched off. On every pass each beat inside it gets one click, at its own time.
-- [ ] *Proposed.* A song can be renamed from the page, and the new name shows in every browser. The server treats a renaming as it treats a deletion and a name: it must come from the application's own page, and the name is at most 200 characters. Part of G7.
-- [ ] *Proposed.* Playing, pausing, moving the position, the loop, the click switch, and opening, renaming and deleting a song can all be done from the keyboard, with the focus visible.
-- [ ] *Proposed.* Nothing is told by colour alone: two marks that differ in colour also differ in form, in position or in name.
-- [ ] *Proposed.* A message appears beside what caused it, and the list shows which song is open.
-- [ ] *Proposed.* By the owner's eye: from three metres, on the screen used for practising, the largest figure and the name beside it can be read.
-- [ ] By the owner: one of the three visual directions is chosen, and the other two are deleted with the switch between them.
+- [x] Every beat of a song has its own mark, and two neighbouring marks are at least 20 pixels apart in a window 1280 pixels wide or wider. The marks are in rows that scroll under the band above them. `e2e/page_test.py` reads the canvas, in light and in dark: the marks are 32 pixels apart.
+- [ ] The beats around the playing position are shown large, eight at a time, and pass a fixed line as they sound. By the owner's eye and ear: each one can be checked against its click. *Built in session 5: the marks are about 148 pixels apart in a window of 1920 and about 85 in one of 1280.*
+- [x] The mark of the beat that is sounding is lit while it sounds. With the click on, the lit mark and the click are the same beat. `e2e/page_test.py`, in Chrome and Firefox, with sound.
+- [x] Nothing is shown that an analysis has not produced: before slice 2 no count and no grouping of beats, before slice 4 no section. `e2e/page_test.py`: the marks of a row are all the same distance apart, and the only text where the song is shown is the tempo and the time.
+- [x] A range of the song can be marked and replays in a loop until the loop is switched off. On every pass each beat inside it gets one click, at its own time. `e2e/page_test.py`, with sound, and `web/song.test.js`.
+- [x] A song can be renamed from the page, and the new name shows in every browser. The server treats a renaming as it treats a deletion and a name: it must come from the application's own page, and the name is at most 200 characters. Part of G7. `e2e/page_test.py`, `bachata/server_test.py` and `bachata/store_test.py`.
+- [x] Playing, pausing, moving the position, the loop, the click switch, and opening, renaming and deleting a song can all be done from the keyboard, with the focus visible. `e2e/page_test.py`: Space, the arrows, the loop and a renaming are done with keys alone, and Tab reaches every control with a ring on each.
+- [ ] Nothing is told by colour alone: two marks that differ in colour also differ in form, in position or in name. By the owner's eye. *Built in session 5: the lit mark is a larger square in the opposite of its ground, a marked range has a bar at each end, and the open song and a failed one say so in words.*
+- [x] A message appears beside what caused it, and the list shows which song is open. `e2e/page_test.py`.
+- [x] The page has a light and a dark ground, and takes the one the system is set to. In both, text has a contrast of 4.5 to 1 or more against what it is on, and marks and focus rings 3 to 1 or more. `web/contrast.test.js`, and `e2e/page_test.py` for the change from one to the other. Added in session 5, by the owner's decision that the page gets both.
+- [ ] By the owner's eye: from three metres, on the screen used for practising, the largest figure and the name beside it can be read.
+- [x] By the owner: one of the three visual directions is chosen, and the other two are deleted with the switch between them. The owner chose Terminal signs on 2026-10-05, in session 5. A search of `web/`, `bachata/` and `e2e/` finds no name of the other two, of their typefaces or of the switch.
 
 With later slices:
 
-- [ ] *Proposed.* From slice 2: the count is the largest figure while a song plays, and count 1 and the start of each ocho are told apart from the other beats.
-- [ ] *Proposed.* From slice 4: pressing a section plays from its first beat, and the page says which section comes next and in how many ochos.
+- [ ] From slice 2: the count is the largest figure while a song plays, and count 1 and the start of each ocho are told apart from the other beats.
+- [ ] From slice 4: pressing a section plays from its first beat, and the page says which section comes next and in how many ochos.
+- [ ] From slice 4: a section can be replayed in a loop by itself, from its first beat to its last, without the change into the next one. Until sections exist, the loop is a range marked by hand. Decided by the owner on 2026-10-05, in session 5.
+
+**How the page is tested.** As in slice 1. The end-to-end tests add these flows: the lit beat against the clicks, a loop, the marks in light and in dark, a renaming in the row and in the top bar, the keyboard, a song that cannot be opened, and a song deleted in another browser. The beats are drawn on two canvases; the page says in attributes of those canvases which beat is lit and where the marks are, and the tests read them.

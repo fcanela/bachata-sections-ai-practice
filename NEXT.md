@@ -2,17 +2,21 @@
 
 Rewritten at the end of every session.
 
-## Where things stand (2026-10-05, after session 4)
+## Where things stand (2026-10-05, after session 5)
 
-Slice 1 is built: beats and tempo, the upload and the library of remembered songs. Every item of it that a program can check is ticked in `ACCEPTANCE.md`. What is left of slice 1 is the owner's: the checks by ear and a few confirmations, listed below.
+The redesigned page is built, with what slice 1 has. The owner chose its design, Terminal signs, among three, and the other two are deleted. Every check a program can run passes. The owner's checks of slice 1 are still open, listed below.
 
-- Session 3 did the twelve steps of the previous `NEXT.md`, in order. The measurements and the decisions are in `LOG.md`, session 3.
-- Session 4 changed no code. It ran two commands of the Impeccable design plugin, `init` and `shape`.
-  - The owner said who the application is for. The answers are in `BRIEF.md`, under "Who it is for" and "The interface". `PRODUCT.md` is new: a pointer to the brief for the plugin.
-  - The owner asked for the page to be redesigned whole and confirmed a brief for it, which is below. Three visual directions are to be built and compared.
+- Session 5 built the page from the brief below. What was run and decided is in `LOG.md`, session 5.
+- The page now has a top bar, the library in a left rail, a band that says where the song is, every beat of the song in rows, and a transport bar.
+  - The band shows the BPM as the largest figure, with the time small under it, and beside it the eight beats around the playing position. They slide past a fixed line and the one that crosses it lights.
+  - A press on a beat moves the position there. A drag across beats marks a loop. "Start here" and "End here" mark its two ends at the playing position.
+  - A song is renamed in its row or in the top bar. Space plays and pauses, and the arrows move the position by a beat.
+- The server has one new request, `PATCH /api/songs/<id>?name=…`, for a renaming.
+- The page shows no count, no grouping and no section: those come with slices 2 to 4.
+- It has a light and a dark ground and takes the one the system is set to. It has no control for that.
 - The program is a Python one. The Node program is gone.
-- **To run it:** `uv run python -m bachata`, then http://127.0.0.1:8080. `PORT` changes the port and `BACHATA_DATA` the folder of the library. Session 3 used port 8081 for everything it started, as the owner asked.
-- **To test it:** `uv run pytest`. It runs the unit tests, the song checks and the flows through the page, in under 2 minutes.
+- **To run it:** `uv run python -m bachata`, then http://127.0.0.1:8080. `PORT` changes the port and `BACHATA_DATA` the folder of the library. Sessions 3 and 5 used port 8081 for everything they started, as the owner asked in session 3.
+- **To test it:** `uv run pytest`. It runs the unit tests, the song checks and the flows through the page, in a little over 3 minutes.
 - **On a new machine, once:**
   - `uv sync`
   - `uv run python scripts/fetch_model.py`, which downloads the Beat This model into `models/` and checks its hash.
@@ -29,13 +33,19 @@ Slice 1 is built: beats and tempo, the upload and the library of remembered song
   | original | 3:59 | Me Emborracharé, the full commercial version |
   | original | 3:35 | El Perdedor |
 
-## Next: the redesigned page, then the owner's checks, then slice 2
+## Next: the owner's checks, then slice 2
 
-The owner decided in session 4 that the page is redesigned whole, and that the new page is built next, with what slice 1 has. The owner's checks of slice 1 are listed after it, because the owner found the strip unreadable for checking a beat. They can also be done before it, by ear alone.
+### Left open by the redesign
+
+- **`DESIGN.md`.** The design plugin ends a build by writing one from the finished page: the colours, the typeface and the rules of the design, for later design work. It is a new top-level file, so by the owner's rule on existing files it is asked first. Until then the design is described in `BRIEF.md`, under "The interface", and its values are in `web/style.css`.
+- **A control for light and dark.** The page follows the system. A control on the page is the owner's to ask for.
+- **The layout.** The owner found that the three designs looked like skins of one layout. That is what the brief of session 4 asked for, and what the plugin does for a tool: a design gives the typeface, the colours, the density and one move of its own, and the layout stays. The plugin has a separate round that keeps the design and proposes three arrangements of the screen. It was offered and not taken now. It is worth more once slice 2 has the count and the ochos on screen.
+- **What the owner judges by eye**, in `ACCEPTANCE.md` under slice 5: each large beat against its click, the figure read from three metres, and nothing told by colour alone.
+- **One small thing the plugin's reviewer named** and did not count as a fault: the time under the large figure ends a little to the right of the figure's last digit.
 
 ### The redesigned page
 
-This is the brief the owner confirmed on 2026-10-05. Its checks are in `ACCEPTANCE.md`, under slice 5, marked *proposed*. The answers it comes from are in `LOG.md`, session 4.
+This is the brief the owner confirmed on 2026-10-05, in session 4, with the decisions of session 5 written in. It stays here because slices 2 to 4 each put their result in a place it names. Its checks are in `ACCEPTANCE.md`, under slice 5.
 
 **Who and what for**
 
@@ -51,11 +61,11 @@ This is the brief the owner confirmed on 2026-10-05. Its checks are in `ACCEPTAN
 
 **Direction**
 
-- Three worlds are built as real pages on one layout. The owner judges them with a song playing, at the desk and from three metres. Two are then deleted. A temporary switch on the page changes world, and goes with them.
+- Three worlds were built as real pages on one layout, with a temporary switch between them. The owner chose **Terminal signs** in session 5. The other two and the switch are deleted.
+- The page has a light and a dark ground. The owner's decision of session 5.
 - A world supplies four things: typeface, colours, density and one signature move. The layout and the controls are the same in all three, and the controls are ordinary web controls.
-  - **Dominó.** A deep green table, bone tiles, black pips. An ocho is a tile of two halves of four, and a half phrase is half a tile. A rhythm is told by the form of its pips (solid, ringed, doubled), then by colour.
-  - **The counts sheet.** White quadrille paper and four pen colours. The beats are the written figures 1 to 8, one group per ocho, the playing count inked heavy. Sections are pen marks of different forms.
-  - **Terminal signs.** Yellow panels and black type, after airport sign systems. Where the song is hangs as a sign band: the section's mark in a black square, its name, the count. A second band says what is ahead and how far. Rhythms differ by their mark, not by colour.
+  - **Terminal signs, the one that stays.** Yellow panels and black type, after airport sign systems. Where the song is hangs as a sign band: the section's mark in a black square, its name, the count. A second band says what is ahead and how far. Rhythms differ by their mark, not by colour.
+  - The two that went were Dominó, a green table with bone tiles and black pips, and The counts sheet, quadrille paper with four pen colours.
 - The layout's own idea: the song is wrapped into rows instead of stretched on one line, so a beat gets about 30 pixels instead of 2.
 
 **Layout and interaction**
@@ -63,17 +73,20 @@ This is the brief the owner confirmed on 2026-10-05. Its checks are in `ACCEPTAN
 - **Top bar:** the application's name, the open song's name, Add a song.
 - **Left rail:** the library. Each row shows name, length, state, and which song is open. A message appears where its cause is.
 - **Now band**, pinned above the song: the count as the largest thing on the screen, the section name second, BPM and time small. Beside the count, the ocho that is sounding, drawn large, its beats lighting on the beat.
-- **The song:** every beat, in rows of four ochos, with each row's start time and the section brackets in the margin. The target is that a song of normal length fits a screen of 1920 by 1080 without scrolling. A longer one scrolls under the pinned band.
+- **The song:** every beat, in rows of four ochos, with each row's start time and the section brackets in the margin. It scrolls under the pinned band. It does not have to be whole on screen: the owner's change of session 5.
 - **Transport bar** at the bottom: play and pause, position, loop, the click switch.
 - Pressing a beat moves the position there. Pressing a section plays from its first beat. A loop is a range marked on the song that repeats without a gap, the click staying on the beat.
+- A replay is of one section by itself, without the change into the next one. Until sections exist, the range is marked by hand. The owner's decision of session 5.
 - A song is renamed in place, in the top bar or in its row.
 - Keyboard: everything is reachable by Tab with a visible focus. Space plays and pauses. The arrow keys move the position by a beat, and by an ocho or a section once those exist.
 
 **States and ranges**
 
-- **Built next, with what slice 1 has:** beats and BPM only. The largest figure is the BPM, and the large view is the eight beats around the position, unnumbered and ungrouped. Rows are a line wrap with no meaning. No tile, no written count and no "ahead" band yet.
+- **Built in session 5, with what slice 1 has:** beats and BPM only. The largest figure is the BPM, and the large view is the eight beats around the position, unnumbered and ungrouped. Rows are a line wrap with no meaning. No tile, no written count and no "ahead" band yet.
 - **Later slices:** slice 2 puts the count in the large place and groups the beats into ochos. Slices 3 and 4 add each ocho's rhythm and the sections, and with them the jump to a section.
-- A part that is none of the three rhythms is drawn plain and has no name. It never gets a fourth colour.
+  - What the owner cares about most is the phrases and the count from 1 to 8. Their places are kept: the count takes the place of the large figure, and the BPM goes small beside the time. The ocho that is sounding takes the place of the eight sliding beats.
+  - The eight beats slide because a window that turned its page every eight beats would draw a grouping no analysis has produced. Once the ochos exist, the large view can stand still and show one ocho at a time, as the brief says.
+- There are three rhythms: derecho, majao and mambo. Mambo is a rhythm: the owner's decision of session 5. A part that is none of the three is drawn plain and has no name. It never gets a fourth colour.
 - **Song:** none open, opening (about 40 MB to fetch, with progress), paused, playing, looping, ended, deleted from another browser.
 - **Library:** empty, waiting, being analysed, ready, failed, asking to delete, being renamed. From 0 to about 470 songs, 5 today. Names run up to 200 characters, are often poor and sometimes identical.
 - **Adding:** reading, decoding, sending (with progress), already in the library, and each refusal in its own words.
@@ -92,19 +105,12 @@ This is the brief the owner confirmed on 2026-10-05. Its checks are in `ACCEPTAN
 - Per-beat marks are drawn on a canvas, on the device pixel, not as elements.
 - Never colour alone. Text contrast meets WCAG AA. Motion stops under the reduced-motion setting, and state changes still show.
 
-**Open, for the owner**
+**Where each part is in the code**
 
-1. Whether mambo is a rhythm or a part of the song. It decides how many kinds the legend has. It is the same question as under "Open" below.
-2. Whether each world has one ground, or a light and a dark one. Proposed: one, picked for an evening room with the screen three metres away.
-3. What "replay the change between two sections" spans. It can wait for slice 4.
-
-**To start the build**
-
-- Ask the design plugin for the page with this section as the brief. It reads `PRODUCT.md`, which sends it to `BRIEF.md`; it has to be pointed here as well.
-- The plugin writes the chosen direction into a file of its own under `.impeccable/` before any code. Git ignores that folder, so what the plugin keeps there is a working copy and not part of the project's record. Whether the direction is also written here is the owner's to say, by the rule on existing files.
-- The key of the roll that dealt the directions is `6e38c9ca`. The plugin asks for it. In its terms Dominó is the assigned direction, The counts sheet is its own pick, and Terminal signs is the catalogue direction `wayfinding-cartography-signage-terminal-yellow-wayfinding`.
-- The plugin reviews a finished page from screenshots. Those need a browser, so commands outside the sandbox.
-- The ticked item of slice 1 about the strip is reworded and checked again when the page is rebuilt, as the setup items were in session 3.
+- `web/index.html` and `web/style.css`: the layout, the controls, the typeface and the colours. The colours are custom properties on `:root`, for light and for dark.
+- `web/draw.js`: the two canvases. Where every mark goes, and how a beat, the place the large beats pass and a marked range are drawn.
+- `web/app.js`: everything the page does.
+- `web/song.js`: what can be worked out without the screen or the sound card, the loop and its clicks included. `web/song.test.js` checks it.
 
 ### The owner's checks
 
@@ -150,10 +156,15 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **The page has no inline script, no inline style and no `eval`.** Its content security policy blocks all three, and a test tool that evaluates a string inside the page is blocked with them.
 - **The tests of the security headers carry their own list.** A test that reads the list from the program passes when a header is removed.
 - **The page draws nothing an analysis has not produced.** Before slice 2 there is no count and no grouping of beats on screen, and before slice 4 no section. Until then a row of the song is a line wrap and nothing more.
+- **Every file of the page is named in `PAGE_FILES`**, in `bachata/server.py`, and read once when the program starts. A new file needs an entry, and a changed file needs the program started again.
+- **The tests find a beat through what the canvases say about themselves**: `data-lit` on the large beats, and the place of the marks on the song. A change to how the song is laid out keeps those attributes true.
+- **The colours of the page are plain six-digit values on `:root`** in `web/style.css`, light first and dark after. `web/contrast.test.js` reads them from there.
+- **A loop is played by the sound itself**, through the loop points of the audio source, and its clicks come from `clicksUntil` in `web/song.js`. A loop made by stopping and starting the sound would have a gap, and its clicks would drift.
 - **Product facts go in `BRIEF.md`, never in `PRODUCT.md`.** `PRODUCT.md` only points at the brief. The design plugin's `init` command offers to fill it in; a new fact goes into the brief instead.
 - **In the session's sandbox:**
   - `uv` needs `UV_CACHE_DIR` set to a writable folder, and each network host has to be allowed for the command that needs it.
   - Chrome does not start. Playwright's Firefox starts but plays nothing. `uv run pytest` then skips those tests and says so.
+  - Playwright's Firefox does draw the page, so a screenshot that needs no sound can be taken inside the sandbox.
   - The whole run needs a command outside the sandbox, which the owner allows one at a time: `TMPDIR=/tmp/claude-1000/e2e BACHATA_TEST_PORT=8081 .venv/bin/python -m pytest`. `TMPDIR` must be a short path, or Chrome dies with "Socket path too long".
 
 ## Open
@@ -161,7 +172,10 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 **For slice 1**
 
 - **The owner's checks and confirmations** above.
-- **The names in the library are only as good as the tags.** The reference files give "track0", "mix" and "original". Renaming a song is now part of the redesigned page, by the owner's decision in session 4.
+- **The names in the library are only as good as the tags.** The reference files give "track0", "mix" and "original". A song can now be renamed on the page. The five in the library have not been.
+- **The page asks for `/favicon.ico` and gets a 404**, which Chrome writes to its console on every visit. It did before the redesign as well.
+- **Nothing checks the reduced-motion setting automatically.** The large beats are built to step instead of slide under it, and the lit beat not to swell.
+- **A name is cut to 200 characters by the page**, as the server counts them, but the field itself stops at 200 units of the browser's own counting, which is fewer characters for some scripts and for emoji.
 - **The installed Firefox, 157, was not driven by the tests.** Playwright brings its own build, 155. Session 2 measured the decoding of 157 by hand; the page itself was not opened in it.
 - **The server cannot verify a song's fingerprint**, because it never sees the file. Someone inside the group could file a sound under the wrong one. Taken as acceptable for a private tool.
 - **Browser decoding matches `ffmpeg`'s for the five songs only**, in Chrome 154 and in Playwright's Firefox 155: the beats from an upload are identical to those of the song checks. A file from another encoder may decode with a shift; the rules about the page above are what make that harmless.
@@ -174,15 +188,15 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 
 **For later slices**
 
-- **Mambo.** The brief names it as one of three rhythms, and the owner confirms that. The labels treat it as a part of the song, like Verse or Chorus, whose rhythm is majao or derecho. No label has mambo as a rhythm, so G1 has nothing to compare mambo against. Settle before slice 3.
+- **Mambo.** It is a rhythm: the owner said so again in session 5, so the page will have three kinds. The labels treat it as a part of the song, like Verse or Chorus, whose rhythm is majao or derecho. No label has mambo as a rhythm, so G1 has nothing to compare mambo against. How G1 is checked for mambo is still to settle before slice 3.
 - **When a section's rhythm and its blocks disagree, which wins?** On Me Emborrachare the Bridge is labelled Derecho, and its two blocks are `-` and Majao.
 - **Which rhythms count as `other`?** The labels also have Urban, Trap, Dembow, `-` and none.
 - **A section's `end_s` in the labels is the start of the next section.** G2 speaks of the last beat, which is one beat earlier.
 - **The assumption that a section always starts on count 1** is still a proposal, unless the owner's answer to check 6 says otherwise.
 - **The last three labelled beats of Me Emborrachare have no percussion.** The analysis carries the pulse over them. Slice 2 will meet that ending again when it counts.
 - **Lining up the labels with the commercial recordings.** The full Me Emborracharé is 44 s longer than the mix and differs in places.
-- **The screen of slice 5 is built early**, with what slice 1 has, and G4 is still checked in slice 5. The strip of slice 1 has about one tick every 2 pixels for a whole song, which is why the owner could not check a beat on it.
-- **Which of the three visual directions stays** is the owner's choice, after using them. No `DESIGN.md` exists. The plugin writes one from the finished page, which is another file to weigh against the owner's rule on existing files.
+- **The screen of slice 5 is built early**, with what slice 1 has, and G4 is still checked in slice 5.
+- **No `DESIGN.md` exists.** See "Left open by the redesign" above.
 - **The design plugin's live mode is not set up.** It puts a script of its own into the page, which the page's content security policy blocks. Allowing it is the owner's decision.
 - **No measure for "fluid".**
 - **Deployment for coworkers** is out of scope. When it comes:
@@ -194,5 +208,5 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 
 **Housekeeping**
 
-- **`.claude/` and `.impeccable/` are ignored by git**, on the owner's instruction in session 4. The first holds Claude Code's settings, with paths from the owner's machine. The second is where the design plugin keeps its working files; it does not exist yet.
+- **`.claude/` and `.impeccable/` are ignored by git**, on the owner's instruction in session 4. The first holds Claude Code's settings, with paths from the owner's machine. The second is where the design plugin keeps its working files: since session 5, the direction it was given for the page, the screenshots of the three designs under `review/`, which are the only pictures left of the two that went, and in `config.json` one exception for its hook, which is explained in `LOG.md`.
 - **Not in git, and each rebuilt by one command:** `.venv/`, `models/`, `.playwright/`. `data/` is the library and is not rebuilt by anything.

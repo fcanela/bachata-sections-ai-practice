@@ -1,6 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { beatsUntil, bpmAt, channelsFrom16, clock, idOf, interleaved16, kindOf, nameFor, tagsOf } from './song.js'
+import {
+  beatPosition,
+  beatsUntil,
+  bpmAt,
+  channelsFrom16,
+  cleanName,
+  clicksUntil,
+  clock,
+  idOf,
+  interleaved16,
+  kindOf,
+  loopOf,
+  nameFor,
+  tagsOf,
+  wrapped,
+} from './song.js'
 
 const bytesOf = (...parts) =>
   Uint8Array.from(parts.flatMap((part) => (typeof part === 'string' ? [...part].map((c) => c.charCodeAt(0)) : [...part])))
@@ -123,6 +138,13 @@ test('a name is cut to 200 characters, as the server counts them', () => {
   assert.equal(nameFor({ title: 'a'.repeat(199) + ' b' }, 'x.mp3'), 'a'.repeat(199))
 })
 
+test('a typed name is made one line and cut like a name from a tag', () => {
+  assert.equal(cleanName('  Me\tEmborracharé \r\n (mix) '), 'Me Emborracharé (mix)')
+  assert.equal(cleanName(' \n '), '')
+  assert.equal(cleanName(undefined), '')
+  assert.equal([...cleanName('🎵'.repeat(300))].length, 200)
+})
+
 test('samples are sent as 16 bits, left and right in turn', () => {
   const left = Float32Array.from([0, 0.5, -0.5, 1, -1, 1.5, -1.5])
   const right = Float32Array.from([1 / 32768, -1 / 32768, 0.25, 0, 0, 0, 0])
@@ -151,6 +173,94 @@ test('the shown tempo is the one of the last beat before the playing position', 
   assert.equal(bpmAt(result, 2.0), 125)
   assert.equal(bpmAt(result, 99), 90)
   assert.equal(bpmAt({ beats: [], bpm: [] }, 5), null)
+})
+
+test('a position among the beats moves evenly from one beat to the next', () => {
+  const beats = [1.0, 1.5, 2.5, 3.0]
+  assert.equal(beatPosition(beats, 1.0), 0)
+  assert.equal(beatPosition(beats, 1.25), 0.5)
+  assert.equal(beatPosition(beats, 1.5), 1)
+  assert.equal(beatPosition(beats, 2.25), 1.75)
+  assert.equal(beatPosition(beats, 3.0), 3)
+  // Outside the beats it carries on at the pace of the nearest two.
+  assert.equal(beatPosition(beats, 0.5), -1)
+  assert.equal(beatPosition(beats, 0), -2)
+  assert.equal(beatPosition(beats, 3.25), 3.5)
+  assert.equal(beatPosition([], 5), 0)
+  assert.equal(beatPosition([2], 1), -1)
+  assert.equal(beatPosition([2], 3), 0)
+})
+
+const near = (value, expected) => assert.ok(Math.abs(value - expected) < 1e-9, `${value} is not ${expected}`)
+
+test('a loop over some beats lasts exactly from its first beat to the beat after its last', () => {
+  const beats = [0.5, 1.0, 1.5, 2.1, 2.6, 3.1]
+  const loop = loopOf(beats, 1, 3, 10)
+  near(loop.end - loop.start, 2.6 - 1.0)
+  // It starts a moment before the first beat, so the cut is not inside an attack.
+  assert.ok(loop.start < 1.0 && loop.start > 0.9)
+  // The last beat of the song lasts as long as the one before it, and no longer than the song.
+  near(loopOf(beats, 4, 5, 10).end - loopOf(beats, 4, 5, 10).start, 3.6 - 2.6)
+  near(loopOf(beats, 4, 5, 3.3).end - loopOf(beats, 4, 5, 3.3).start, 3.3 - 2.6)
+  // A first beat at the very start of the song leaves no room before it.
+  assert.deepEqual(loopOf([0, 0.5, 1.0], 0, 0, 10), { start: 0, end: 0.5 })
+  near(loopOf([0.01, 0.51, 1.01], 0, 1, 10).start, 0)
+  near(loopOf([0.01, 0.51, 1.01], 0, 1, 10).end, 1.0)
+  // A song with one beat only: the loop runs to the end of the song.
+  assert.deepEqual(loopOf([4], 0, 0, 10), { start: 3.98, end: 9.98 })
+})
+
+test('the position of a looping song goes round the loop', () => {
+  const loop = { start: 2, end: 5 }
+  assert.equal(wrapped(1.5, loop), 1.5)
+  assert.equal(wrapped(4.5, loop), 4.5)
+  assert.equal(wrapped(5, loop), 2)
+  assert.equal(wrapped(6.5, loop), 3.5)
+  assert.equal(wrapped(12.5, loop), 3.5)
+  assert.equal(wrapped(12.5, null), 12.5)
+})
+
+test('every beat gets one click, at its own time', () => {
+  const beats = [0.5, 1.0, 1.5, 2.0]
+  const first = clicksUntil(beats, null, { beat: 0, pass: 0 }, 1.2)
+  assert.deepEqual(first.clicks, [{ beat: 0, at: 0.5 }, { beat: 1, at: 1.0 }])
+  // The next call goes on where this one stopped, and the song ends with its last beat.
+  const rest = clicksUntil(beats, null, first.next, 99)
+  assert.deepEqual(rest.clicks, [{ beat: 2, at: 1.5 }, { beat: 3, at: 2.0 }])
+  assert.deepEqual(clicksUntil(beats, null, rest.next, 999).clicks, [])
+  // Playing from the middle: the beats before that point get none.
+  assert.deepEqual(clicksUntil(beats, null, { beat: 2, pass: 0 }, 99).clicks.map((click) => click.beat), [2, 3])
+})
+
+test('on every pass of a loop each beat inside it gets one click, at its own time', () => {
+  const beats = [0.5, 1.0, 1.5, 2.1, 2.6, 3.1, 3.6]
+  const loop = loopOf(beats, 2, 4, 10)
+  const length = loop.end - loop.start
+  near(length, 3.1 - 1.5)
+
+  // The playing starts before the loop: the beats on the way in sound once.
+  let placed = clicksUntil(beats, loop, { beat: 0, pass: 0 }, 2.0)
+  assert.deepEqual(placed.clicks.map((click) => click.beat), [0, 1, 2])
+  const clicks = [...placed.clicks]
+  // Handed over in small steps, as the page does, nothing is lost and nothing comes twice.
+  for (let until = 2.3; until < 12; until += 0.3) {
+    placed = clicksUntil(beats, loop, placed.next, until)
+    clicks.push(...placed.clicks)
+  }
+  assert.deepEqual(clicks.slice(0, 11).map((click) => click.beat), [0, 1, 2, 3, 4, 2, 3, 4, 2, 3, 4])
+  for (const [n, click] of clicks.entries()) {
+    const pass = n < 5 ? 0 : Math.floor((n - 5) / 3) + 1
+    near(click.at, beats[click.beat] + pass * length)
+    // The song is on that beat when the click sounds.
+    near(wrapped(click.at, loop), beats[click.beat])
+  }
+  // The clicks of the loop are as far apart as the beats are, across the turn as well.
+  near(clicks[5].at - clicks[4].at, 3.1 - 2.6)
+  assert.ok(clicks.length >= 5 + 3 * 5)
+
+  // A range with no beat in it has no click, and the call still returns.
+  assert.deepEqual(clicksUntil(beats, { start: 1.1, end: 1.4 }, { beat: 2, pass: 0 }, 99).clicks, [])
+  assert.deepEqual(clicksUntil(beats, { start: 5, end: 6 }, { beat: 7, pass: 0 }, 99).clicks, [])
 })
 
 test('a position is shown as minutes and seconds', () => {
