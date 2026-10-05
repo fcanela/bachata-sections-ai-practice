@@ -129,3 +129,24 @@ What the server never does:
 
 - [ ] The timeline of sections is on screen while the song plays, and the playing position sits in the section that is sounding.
 - [ ] G4, G6 and G8 hold.
+
+**The redesigned page.** The owner decided on 2026-10-05 that the screen is built ahead of slices 2 to 4: first with the beats and the BPM of slice 1, then each slice puts its result in its place. The brief is in `NEXT.md`. Every item below is *proposed*: it comes from that brief, and its numbers and its rule are not the owner's yet. No check exists for any of them.
+
+With what slice 1 has:
+
+- [ ] *Proposed.* Every beat of a song has its own mark, and two neighbouring marks are at least 20 pixels apart in a window 1280 pixels wide or wider.
+- [ ] *Proposed.* The mark of the beat that is sounding is lit while it sounds. With the click on, the lit mark and the click are the same beat.
+- [ ] *Proposed.* A song of 4 minutes shows whole, without scrolling, in a window of 1920 by 1080.
+- [ ] *Proposed.* Nothing is shown that an analysis has not produced: before slice 2 no count and no grouping of beats, before slice 4 no section.
+- [ ] *Proposed.* A range of the song can be marked and replays in a loop until the loop is switched off. On every pass each beat inside it gets one click, at its own time.
+- [ ] *Proposed.* A song can be renamed from the page, and the new name shows in every browser. The server treats a renaming as it treats a deletion and a name: it must come from the application's own page, and the name is at most 200 characters. Part of G7.
+- [ ] *Proposed.* Playing, pausing, moving the position, the loop, the click switch, and opening, renaming and deleting a song can all be done from the keyboard, with the focus visible.
+- [ ] *Proposed.* Nothing is told by colour alone: two marks that differ in colour also differ in form, in position or in name.
+- [ ] *Proposed.* A message appears beside what caused it, and the list shows which song is open.
+- [ ] *Proposed.* By the owner's eye: from three metres, on the screen used for practising, the largest figure and the name beside it can be read.
+- [ ] By the owner: one of the three visual directions is chosen, and the other two are deleted with the switch between them.
+
+With later slices:
+
+- [ ] *Proposed.* From slice 2: the count is the largest figure while a song plays, and count 1 and the start of each ocho are told apart from the other beats.
+- [ ] *Proposed.* From slice 4: pressing a section plays from its first beat, and the page says which section comes next and in how many ochos.

@@ -14,6 +14,31 @@ The user gives it a song and it tells them where each section starts and ends.
 - It runs fluid.
 - It is secure, both for the user and for the machine that serves it.
 
+## Who it is for
+
+The owner answered these on 2026-10-05, in session 4.
+
+- The user is a dancer learning musicality: a social dancer who wants to hear and anticipate the changes between derecho, majao and mambo in the songs they dance to.
+- They use it in two situations:
+  - at a desk, with their eyes on the screen;
+  - on their feet, practising a few metres from the screen and glancing at it now and then.
+- It is a private tool. The owner uses it on localhost, in desktop Chrome and Firefox.
+- A few coworkers may get it later, to show them how bachata works. That is not the goal.
+- A public version is possible later. It would be a major refactor, with accounts and more security. Nothing is designed for it now.
+- What sets it apart from emusicality's breakdowns: it marks any recording the user gives it, automatically, on their own machine. Emusicality covers the songs its authors broke down by hand.
+
+## The interface
+
+Also answered on 2026-10-05, in session 4.
+
+- The name is "Bachata sections".
+- The interface is in English. The rhythm names stay in Spanish: derecho, majao, mambo, ocho.
+- Its sentences are short and plain, like "Delete this song?" and "This is not an mp3 or m4a file."
+- A section is never told apart by colour alone. Its name, its position or its shape identifies it too.
+- While a song plays, the first thing the dancer reads is where the song is now: the section and the count. What comes next, and the shape of the whole song, come second.
+- One screen serves the desk and the distance. There is no separate view for practising.
+- The user can jump to a section, replay a part of the song in a loop, and rename a song. Play, pause and the position also work from the keyboard.
+
 ## What we know about the music
 
 - Dancers make sense of the music in groups of two bars. That group is a **phrase**, informally an **ocho**.
@@ -33,6 +58,8 @@ Each slice takes a song and shows a visible result.
 4. Mambo, so the full timeline of sections.
 5. A screen that shows the timeline while the song plays.
 
+The screen of slice 5 is built early, after slice 1, with what slice 1 has. Each later slice puts its result in its place on it. Decided on 2026-10-05, in session 4.
+
 ## Reference material
 
 - The website is emusicality.co.uk. It publishes songs as separate instrument tracks, with a breakdown of each song's parts and rhythms.
@@ -43,12 +70,13 @@ Each slice takes a song and shows a visible result.
 ## Limits
 
 - Everything runs locally. No paid API.
-- No backward compatibility, no extra features, no abstractions for later.
+- No backward compatibility, no extra features, no abstractions for later. The jump, the loop and the renaming under "The interface" are the owner's additions of 2026-10-05, not extras.
 - The analysis runs on the local server, not in the browser. Decided on 2026-10-05: on the server the beat tracker runs as its authors published it, and more tools are available for the later slices. The cost is that every song is sent to the machine that serves the application.
 - Uploaded songs are kept in one library on the server. Everyone who can reach the application can play every song in it.
 
-## The other three files
+## The other files
 
 - `ACCEPTANCE.md`: what has to be true for the application and for each slice to count as done.
 - `LOG.md`: what was run in each session, what it showed and what it cost, plus the decisions taken.
 - `NEXT.md`: where things stand and what to do next.
+- `PRODUCT.md`: a pointer for the Impeccable design plugin, which looks for a file of that name. It gives the platform and sends the reader to this brief. It holds no product fact of its own.

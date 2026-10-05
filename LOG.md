@@ -2,6 +2,74 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-05, session 4: who it is for
+
+The owner ran two commands of the Impeccable design plugin. `init` asks who the product is for and writes the answers down for later design work: three rounds of questions. `shape` plans a screen before any code: four more rounds, and a page of cards for choosing between visual directions. The session changed `BRIEF.md`, `ACCEPTANCE.md`, this log, `NEXT.md` and `.gitignore`, and added `PRODUCT.md`. No code changed and no test was run.
+
+### Runs
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| `impeccable context`, the plugin's start command | It reports no `PRODUCT.md` and no design file | not timed |
+| The same, after `PRODUCT.md` was written | It finds `PRODUCT.md`, reads the platform as `web` and no longer asks for `init` | not timed |
+| `impeccable concept-seed --scope direction --mode operate`, the plugin's roll | It picked the fifth of my seven candidate directions, Dominó, and dealt six directions from the plugin's own catalogue to weigh against it | not timed |
+| `curl` of two reference images of one catalogue direction | 200 for both: 211,924 and 242,916 bytes, into the session's scratch folder | not timed |
+| `impeccable serve-question --start`, the plugin's page for choosing a direction, inside the sandbox | It printed an address on 127.0.0.1 and was gone when the command returned | not timed |
+| The same, outside the sandbox | The page was served on 127.0.0.1:39215 and opened in the owner's browser. The owner answered on the third wait of 60 seconds. The program stopped by itself: nothing listens on that port afterwards | not timed |
+
+### Cost
+
+- Paid APIs: none used, $0.
+- Network, all to `impeccable.style`:
+  - The roll made one request. By the plugin's own description it carries the kind of roll, the kind of screen, a random key of eight characters and a counter, and nothing of the project.
+  - The two reference images above.
+  - The page for choosing a direction links to images of the catalogue directions, which the owner's browser fetched.
+  - `impeccable context` asked for the same host twice and the sandbox refused it. The command finished without it.
+  - The plugin asks for an anonymous message saying which kind of card was chosen. It was not sent.
+- Commands outside the sandbox: 4. Three served the page and waited for the answer, and one checked that the page's program had stopped.
+- Dependencies: none added.
+- Cost of the Claude Code session itself: not measured from inside the session.
+
+### Decisions
+
+**The owner's**, from the question rounds. They are written into `BRIEF.md`, under "Who it is for" and "The interface".
+
+- The user is a dancer learning musicality.
+- Two situations: at a desk with their eyes on the screen, and on their feet, glancing at it from a few metres.
+- It is a private tool. Coworkers are there to be shown how bachata works, which is not the goal.
+- A public version is possible later, as a major refactor with accounts and more security. Nothing is designed for it now.
+- Against emusicality's breakdowns, its point is that it marks any recording the user gives it, automatically, on their own machine.
+- The interface stays in English with the rhythm names in Spanish, its sentences stay short and plain, and the name stays "Bachata sections".
+- A section is never told apart by colour alone.
+- The product facts live in `BRIEF.md`. The owner's rule: prefer an existing file when the responsibility is the same. The plugin's own file would have restated about two thirds of the brief.
+- `PRODUCT.md` is therefore a pointer: the platform, and a line that sends the reader to `BRIEF.md`. The plugin looks for a file of that name and has no setting for another.
+
+**The owner's**, from the question rounds of `shape`.
+
+- The surface is the whole page, as slice 5 will have it, and it is a redesign. The owner's words: "Needs a redesign, there are multiple issues".
+- The issues with the page of slice 1: the strip says too little, nothing reads from a distance, the layout and the messages are awkward, and it looks plain and generic. The owner's words: "I can not even validate if the beat is correct because it is unreadable, even close to the screen. Most probably we need to differentiate the 1,2,3,4,5,6,7,8 (beats), and the phrases".
+- While a song plays, the first thing the dancer reads is where the song is now: the section and the count. What is coming, and the shape of the whole song, come second.
+- One screen serves the desk and the distance. There is no separate view for practising.
+- Three features are added, over the brief's "no extra features": jumping to a section, replaying a part in a loop, and renaming a song.
+- The redesigned page is built next, with what slice 1 has. Counts and sections appear in their places as their slices land, and nothing is faked before that.
+- The visual direction. On the page of cards the owner chose Dominó, then asked for three directions to be built as real pages and compared: Dominó, The counts sheet and Terminal signs, on one layout.
+- The brief for the redesign was read back and confirmed as written, with three decisions left open in it.
+- The brief lives in the project files, not in a file of the plugin's: the brief itself in `NEXT.md`, its checks in `ACCEPTANCE.md` under slice 5, marked *proposed*, and the three added features in `BRIEF.md`.
+- `.claude/` and `.impeccable/` are ignored by git. The session's work was committed on the owner's instruction.
+
+**Mine**
+
+- Keyboard control of play, pause and position is part of the redesign as an accessibility baseline. The owner was told and did not object.
+- The seven candidate directions and their order, written before the roll: the dancer's counts sheet, the güira's punched steel, the sign painting of a colmado, the song map of a musicality class, dominoes on a colmado table, the title strips of a vellonera, and the line score of a ballpark.
+- Of the six catalogue directions, one was kept as a full alternative, the airport sign system, shown as Terminal signs: it is built to be read at a distance. The other five were declined, each with one discipline taken from it.
+- The key of the roll is `6e38c9ca`. The plugin asks for it when the page is built.
+- The numbers of the proposed items in `ACCEPTANCE.md`: 20 pixels between two marks in a window of 1280, and a song of 4 minutes whole in a window of 1920 by 1080. They are design targets worked out from the layout, not measurements.
+- The session wrote no code and no file of the plugin's. `shape` ends at the confirmed brief.
+- "Desktop Chrome and Firefox" went into `BRIEF.md` with the answers. It is the owner's decision of session 2, moved to where a design session reads it.
+- `PRODUCT.md` also points at the rules for the page in `NEXT.md`. The owner chose the pointer from a preview that did not have that line.
+- The plugin's live mode was not set up. It puts a script of its own into the page, and the page's content security policy allows only the page's own script. Changing that policy is the owner's decision.
+- The plugin's question about starting a screen from a generated image was not asked. The session has no tool that makes images.
+
 ## 2026-10-05, session 3: slice 1 built
 
 The owner asked for all of slice 1, in the order of `NEXT.md`, in one instruction: the items marked *proposed* are accepted, the points under "To settle while building" are decided here, and the session stops after 6 hours at most. Anything started had to use port 8081. All twelve steps were done. What is left is the owner's: the checks by ear and three confirmations, listed in `NEXT.md`.
