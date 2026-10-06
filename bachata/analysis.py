@@ -22,8 +22,10 @@ top of it, and the page lets the user say where count 1 is.
 
 Which of two bars starts an ocho is ours too, and is read from the sound: an instrument
 that comes in, comes in on count 1. The count is set once, for the whole song, by the
-places where the sound rises in its first minute, over music that is already playing. Nothing here hears a bar that is extra
-later in the song (LOG.md, sessions 6 and 9).
+places where the sound rises in its first minute, over music that is already playing.
+Where nothing rises, the bass decides: it is louder in the first bar of an ocho than in
+the second. Nothing here hears a bar that is extra later in the song (LOG.md, sessions
+6 and 9).
 """
 
 import numpy as np
@@ -35,7 +37,7 @@ from bachata.model import checked_model_path
 
 # Stored with every result. A result with another number is made again from the stored
 # sound. Raise it whenever the same song could give different beats or tempo.
-ANALYSIS_VERSION = 3
+ANALYSIS_VERSION = 4
 
 # The tempos a dancer may be counting, in BPM.
 MIN_BPM = 90
@@ -73,6 +75,16 @@ OUT_OF_SILENCE_DB = 15
 # The count is set by what comes in during this many seconds from the start. Later in a
 # song a bar that is extra moves the ochos, and what comes in after it would vote wrong.
 ENTRY_WINDOW_S = 60
+
+# Where nothing comes in, the bass says which bar starts an ocho: it is louder in the
+# first bar than in the second. The bass is the lowest of the bands, 40 to 123 Hz, over
+# the bars that start in this many seconds: longer than for what comes in, because this
+# is a mean over bars and needs many.
+BASS_BANDS = 3
+BASS_WINDOW_S = 90
+# The bass is sure when the mean difference between the two kinds of bar is this many
+# times its own uncertainty.
+BASS_SURE = 2.0
 
 # The shown tempo at a beat is measured from 4 beats before it to 4 beats after it: one
 # ocho. Beat times come in steps of 20 ms, so a single interval is only good to about 4%.
@@ -192,12 +204,35 @@ def entries(rise, bars, music):
     return found
 
 
-def first_ocho(first, beats, found):
+def bass_cycle(levels, beats, first):
+    """How surely the bass is louder in the bars that start an ocho counted from `first`.
+
+    Each bar is compared with the two around it. The result is the mean of what the bars
+    of the one kind have over the other, divided by its uncertainty: above 0 the ochos
+    start as counted from `first`, under 0 a bar later. 0 with fewer than three bars.
+    """
+    if not len(levels):
+        return 0.0
+    bass = 10 * np.log10((10 ** (levels[:, :BASS_BANDS] / 10)).sum(axis=1))
+    more = []
+    for bar in range(first % BEATS_PER_BAR, len(bass) - 2 * BEATS_PER_BAR + 1, BEATS_PER_BAR):
+        if bar >= BEATS_PER_BAR and beats[bar] < BASS_WINDOW_S:
+            around = (bass[bar - BEATS_PER_BAR : bar].mean() + bass[bar + BEATS_PER_BAR : bar + 2 * BEATS_PER_BAR].mean()) / 2
+            over = bass[bar : bar + BEATS_PER_BAR].mean() - around
+            more.append(over if (bar - first) % BEATS_PER_OCHO == 0 else -over)
+    if len(more) < 3:
+        return 0.0
+    return float(np.mean(more) / (np.std(more) / np.sqrt(len(more)) + 1e-9))
+
+
+def first_ocho(first, beats, found, bass=0.0):
     """The beat that starts the first ocho: `first`, a beat that starts a bar, or the bar after it.
 
     Each thing that comes in during the first minute says which of the two it is, by the
     bar it starts, with the weight of its rise. The first bar that is heard stays unless
     the other has more, and a rise out of silence says nothing for the other.
+
+    Where nothing comes in, `bass`, from bass_cycle(), decides, when it is sure.
     """
     for_first = for_next = 0.0
     for bar, rise, music in found:
@@ -206,6 +241,8 @@ def first_ocho(first, beats, found):
                 for_first += rise
             elif music:
                 for_next += rise
+    if for_first == for_next == 0:
+        return first + BEATS_PER_BAR if bass <= -BASS_SURE else first
     return first + BEATS_PER_BAR if for_next > for_first else first
 
 
@@ -237,7 +274,7 @@ def analyse(samples, rate):
     beats, bars = beats_from_activations(*beat_activations(mono, rate))
     first = first_heard_bar(mono, rate, beats, bars)
     levels = band_levels(mono, rate, beats)
-    first = first_ocho(first, beats, entries(rises(levels), bars, over_music(levels)))
+    first = first_ocho(first, beats, entries(rises(levels), bars, over_music(levels)), bass_cycle(levels, beats, first))
     return {
         "beats": [round(time, 3) for time in beats],
         "bpm": [round(bpm, 1) for bpm in bpm_at_beats(beats)],

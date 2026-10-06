@@ -6,6 +6,7 @@ from bachata.analysis import (
     MAX_BPM,
     MIN_BPM,
     band_levels,
+    bass_cycle,
     beats_from_activations,
     bpm_at_beats,
     count_from_bars,
@@ -228,6 +229,92 @@ def test_what_comes_in_after_the_first_minute_does_not_set_the_count():
     assert first_ocho(4, beats, [(200, 9.0, True)]) == 4
 
 
+def bass_louder_from(first, beats=80, by=6.0, seed=3):
+    """Made-up levels, a little uneven: the three bass bands are louder in every other bar, from the beat `first`."""
+    levels = np.random.default_rng(seed).normal(0, 0.5, (beats, BANDS))
+    for bar in range(first % 8, beats, 8):
+        levels[bar : bar + 4, :3] += by
+    return levels
+
+
+HALF_SECONDS = [0.5 * n for n in range(400)]
+
+
+def test_the_bass_says_which_bars_it_is_louder_in():
+    # Louder in the bars that start the ochos counted from the first beat: surely so.
+    assert bass_cycle(bass_louder_from(0), HALF_SECONDS, 0) > 10
+    # Counted from a bar later, it is as surely the other way.
+    assert bass_cycle(bass_louder_from(0), HALF_SECONDS, 4) < -10
+    assert bass_cycle(bass_louder_from(4), HALF_SECONDS, 0) < -10
+    # A song that starts inside a bar: the bars are counted from the first that is heard.
+    assert bass_cycle(bass_louder_from(2), HALF_SECONDS, 2) > 10
+    assert bass_cycle(bass_louder_from(2), HALF_SECONDS, 6) < -10
+
+
+def test_a_bass_that_is_as_loud_in_every_bar_says_nothing_surely():
+    assert abs(bass_cycle(bass_louder_from(0, by=0.0), HALF_SECONDS, 0)) < 2
+    assert bass_cycle(np.zeros((80, BANDS)), HALF_SECONDS, 0) == 0
+    # Nor does a song of fewer than three bars to compare, or of none.
+    assert bass_cycle(bass_louder_from(0, beats=16), HALF_SECONDS, 0) == 0
+    assert bass_cycle(np.zeros((0, BANDS)), [], 0) == 0
+
+
+def test_only_the_three_lowest_bands_are_the_bass():
+    levels = np.random.default_rng(3).normal(0, 0.5, (80, BANDS))
+    for bar in range(0, 80, 8):
+        levels[bar : bar + 4, 3:] += 6
+    assert abs(bass_cycle(levels, HALF_SECONDS, 0)) < 2
+    # One of the three is enough.
+    for band in range(3):
+        levels = np.random.default_rng(3).normal(0, 0.5, (80, BANDS))
+        for bar in range(0, 80, 8):
+            levels[bar : bar + 4, band] += 6
+        assert bass_cycle(levels, HALF_SECONDS, 0) > 5
+
+
+def test_the_bass_is_heard_over_the_first_ninety_seconds():
+    # 400 beats, 200 s. The bass is louder in the one kind of bar up to 90 s, beat 180, and in the other after.
+    levels = np.random.default_rng(3).normal(0, 0.5, (400, BANDS))
+    for bar in range(0, 400, 4):
+        if (bar % 8 == 0) == (bar < 180):
+            levels[bar : bar + 4, :3] += 6
+    assert bass_cycle(levels, HALF_SECONDS, 0) > 10
+    # The same with the change at 60 s: a third of the bars heard say the other, and it is less sure.
+    early = np.random.default_rng(3).normal(0, 0.5, (400, BANDS))
+    for bar in range(0, 400, 4):
+        if (bar % 8 == 0) == (bar < 120):
+            early[bar : bar + 4, :3] += 6
+    assert 0 < bass_cycle(early, HALF_SECONDS, 0) < bass_cycle(levels, HALF_SECONDS, 0) / 2
+
+
+def test_a_bar_is_compared_with_the_two_around_it():
+    # The bass gets 1 dB louder with every bar, and is 3 dB louder still in every other one.
+    # Compared with the bar before only, every bar would be louder than its neighbour.
+    levels = np.random.default_rng(3).normal(0, 0.1, (80, BANDS))
+    for bar in range(0, 80, 4):
+        levels[bar : bar + 4, :3] += bar / 4 + (3 if bar % 8 == 4 else 0)
+    assert bass_cycle(levels, HALF_SECONDS, 0) < -10
+
+
+def test_where_nothing_comes_in_a_sure_bass_sets_the_count():
+    beats = [0.5 * n for n in range(200)]
+    assert first_ocho(4, beats, [], -3.0) == 8
+    assert first_ocho(4, beats, [], -2.0) == 8
+    # Not sure enough, or sure of the first bar: the count stays.
+    assert first_ocho(4, beats, [], -1.9) == 4
+    assert first_ocho(4, beats, [], 3.0) == 4
+    # What comes in after the first minute, or out of silence on the other bar, is nothing coming in.
+    assert first_ocho(4, beats, [(128, 9.0, True)], -3.0) == 8
+    assert first_ocho(4, beats, [(16, 9.0, False)], -3.0) == 8
+
+
+def test_where_something_comes_in_the_bass_is_not_asked():
+    beats = [0.5 * n for n in range(200)]
+    assert first_ocho(4, beats, [(12, 6.0, True)], -9.0) == 4
+    assert first_ocho(4, beats, [(12, 6.0, False)], -9.0) == 4
+    assert first_ocho(4, beats, [(16, 6.0, True)], 9.0) == 8
+
+
 def analysed_with_a_beat_every_half_second(monkeypatch, sound, rate):
     """The analysis of a made-up sound, with made-up beats in place of the tracker's."""
     from bachata import analysis
@@ -256,6 +343,21 @@ def test_a_song_that_starts_quietly_keeps_its_count_on_the_first_bar_that_is_hea
     rate = 8000
     sound = 0.5 * np.random.default_rng(2).uniform(-1, 1, 20 * rate)
     sound[: 10 * rate // 2] *= 0.04
+    result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate)
+    assert result["count"][:9] == [1, 2, 3, 4, 5, 6, 7, 8, 1]
+
+
+def test_a_song_where_nothing_comes_in_is_counted_by_its_bass(monkeypatch):
+    # 40 s of steady noise at 8 kHz with a tone of 80 Hz, which is louder in every other bar from the second.
+    rate = 8000
+    moments = np.arange(40 * rate) / rate
+    tone = 0.1 * np.sin(2 * np.pi * 80 * moments)
+    bar = (moments // 2).astype(int)
+    sound = 0.02 * np.random.default_rng(2).uniform(-1, 1, 40 * rate) + tone * np.where(bar % 2 == 1, 2.0, 1.0)
+    result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate)
+    assert result["count"][:9] == [5, 6, 7, 8, 1, 2, 3, 4, 5]
+    # Louder in every other bar from the first: the count stays on the first bar.
+    sound = 0.02 * np.random.default_rng(2).uniform(-1, 1, 40 * rate) + tone * np.where(bar % 2 == 0, 2.0, 1.0)
     result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate)
     assert result["count"][:9] == [1, 2, 3, 4, 5, 6, 7, 8, 1]
 
