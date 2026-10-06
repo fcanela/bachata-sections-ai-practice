@@ -124,15 +124,16 @@ The count enters on 1 on 4 of 5 songs, at least 4 needed.
 
 ### Breaking the code on purpose
 
-The new part of `bachata/analysis.py`, 27 breaks in three rounds, each run through `one_break.sh` against `bachata/analysis_test.py`. The break that takes the rule out of the analysis ran against the entry check too.
+The new part of `bachata/analysis.py`, 27 breaks in three rounds and one more for the rule on what the analysis reads, each run through `one_break.sh` against `bachata/analysis_test.py`. The break that takes the rule out of the analysis ran against the entry check too.
 
 | Round | Breaks | Caught as the tests stood | What was repaired |
 | --- | --- | --- | --- |
 | The rises and the vote | 18 | 16 | Two rises 3 beats apart are one: nothing tested the 3. A beat's level is the sound from it to the next: the test passed with every level one beat late |
 | A rise out of silence | 8 | 4 | The four beats before, the level of the song as its usual beat and not its loudest, and whose silence it is, the beat's and not the bar's. And no test ran the rule inside the whole analysis: the entry check passes with and without it |
 | The same, after the repairs | 9 | 8, then 9 | The new test of a quiet start put the rise on a bar that starts an ocho, and could not fail |
+| The analysis opens `fixtures/audio/by-ear.json` | 1 | 1 | Nothing. The entry check failed in 4 s with "the analysis read what only a check may read" and the path of the file |
 
-- All 27 are caught now. Two tests run the whole analysis on a made-up sound, with made-up beats in place of the tracker's: one moves the count and one, with a quiet start, keeps it.
+- All 28 are caught now. Two tests run the whole analysis on a made-up sound, with made-up beats in place of the tracker's: one moves the count and one, with a quiet start, keeps it.
 - **Not caught by the song check, by design:** the rule about silence. Only Imitadora shows it, and Imitadora is not in the owner's list.
 
 ### Cost
