@@ -2,6 +2,168 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-06, session 9: the entry, by the owner's ear
+
+The owner listened to 13 songs in full, wrote his marks into `fixtures/audio/by-ear.json`, and asked for a check of the entry before any fix: on five songs the count was four off from the start, so where the main part enters the page showed 5 and he heard 1. He then set a goal of 180 minutes on that check. It was reached in the first hour. All of it is on the branch `goal-entry`, which is not merged.
+
+### Runs
+
+Scripts that are not in the repository ran from the session's scratch folder. Nothing was uploaded. The library was read for its sound only: `sound.raw` of each song, never `song.json`, where the owner's marks are. The stored results were read once, before the check existed, to see that the check's own analysis gives the same.
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| The count the stored results show at each of his marks | Count 5 at the mark on all five entry songs, and at 32.16 s of No vuelvo a caer too | under 1 s |
+| The analysis, version 2, on the sound of the eight songs that must not get worse, against the stored results | The same beats, bars, tempo and count on all eight. Kept as `fixtures/by_ear_before.json` | 27 s, 3 to 4 s a song |
+| `pytest bachata/entry_test.py`, as things were | Failed: count 1 on the mark on 0 of 5, 0 other songs worse. 15 lines, none skipped | 49 s |
+| The same check on a faked analysis, twice: only the five songs moved by a bar, then every song moved | Passed with 5 of 5; failed with 5 of 5 and 10 other songs worse | about 100 s |
+| The level of every bar of the first 45 s in three bands, on the 13 songs and the mixes | On four of the five entry songs the bass or the whole level steps up on the bar of the mark. On Me Emborrachare nothing does | under 60 s |
+| A rule: the entry is the first beat from which bass and treble stay within 3 to 8 dB of the song's usual level, six settings | Never right on all: 2 to 5 of the 15 songs wrong at every setting. La Bachata is wrong at all six, its bass comes in a bar before the chorus | under 30 s |
+| The rises of the sound: the 4 beats from a beat against the 4 before, in 16 bands. Every rise of 5 dB or more, over the whole song, with the bar it starts | They sit on the count the owner hears: see the first table below | under 30 s |
+| A vote of the rises of the first 45, 60, 75 or 90 s, at a limit of 3, 4, 5 or 6 dB, on 16 songs with a known answer | Me Emborrachare wrong at all 16 settings: it has no rise. Otherwise wrong on none at 11 settings, on one song at 5: Sus Huellas at 3 dB and 45 s, Bachata Que Duele at 90 s | under 30 s |
+| `pytest bachata/entry_test.py -s`, with the vote in the analysis, 60 s and 5 dB | Passed: 4 of 5, 0 other songs worse, none skipped | 51 s |
+| The vote on the two songs he marked only in part | Imitadora moved by a bar, on its fade-in alone, 15.5 against 7.8. His marks there say the count was right before 113 s | under 5 s |
+| Seven other ways to weigh a rise, on the 16 songs | See the second table below | under 30 s |
+| `pytest bachata/entry_test.py -s`, with a rise out of silence unable to move the count | Passed: 4 of 5, 0 other songs worse, none skipped. The lines are below | 60 s |
+| The rule on the `.opus` files of the owner's inbox, 105 at the time, one ignored as before, decoded with `ffmpeg` | See "The 104 songs" below. Run twice: before and after the rule about silence | about 9 min each |
+| `pytest bachata fixtures scripts web`, inside the sandbox | 157 passed, none skipped | 129 s |
+| `TMPDIR=/tmp/claude-1000/e2e BACHATA_TEST_PORT=8084 .venv/bin/python -m pytest`, outside the sandbox | 207 passed, none skipped. The owner's own program was on 8082 and was left alone | 414 s |
+
+**The check, as it reads at the end.**
+
+```
+ok    Bachata Que Duele: count 1 at 17.34 s, where he hears 1
+ok    Escalofríos: count 1 at 3.8 s, where he hears 1
+ok    No vuelvo a caer: count 1 at 17.04 s and count 1 at 32.16 s, where he hears 1
+FAIL  Me Emborrachare, the mix: count 5 at 2.28 s, where he hears 1
+ok    Sus Huellas: count 1 at 28.76 s, where he hears 1
+ok    Chanel - Clavaito: 364 of 364 beats keep their count from 0.7 s to the end
+ok    Manuel Turizo - La Bachata: 337 of 337 beats keep their count from 0.18 s to the end
+ok    Jalil Lopez - La Culpable: 329 of 329 beats keep their count from 0.06 s to the end
+ok    Antonio José - La Noche Perfecta: 361 of 361 beats keep their count from 1.46 s to the end
+ok    DJ Zarnoti - Fantasías (feat. Johandy): 329 of 329 beats keep their count from 0.2 s to the end
+ok    Romeo Santos - Héroe Favorito: 505 of 505 beats keep their count from 1.16 s to the end
+ok    Herrera: 116 of 116 beats keep their count from 0.66 s to the mark at 53.96 s
+ok    Sin Fin: 228 of 228 beats keep their count from 0.28 s to the mark at 110.94 s
+ok    Old Town Road (Bachata Remix): 416 of 416 labelled beats are shown with the count of the reference, at least 416 needed
+ok    Eso Es Amor: 257 of 505 labelled beats are shown with the count of the reference, at least 257 needed
+The count enters on 1 on 4 of 5 songs, at least 4 needed.
+0 other songs got worse.
+```
+
+**Where the sound rises, and on which bar.** Every rise of 5 dB or more in the whole song, as the second at which its bar starts. A is a bar that starts an ocho of the count version 2 gave, B a bar between two of them. A star is a bar the owner marked.
+
+| Song | The owner | Rises |
+| --- | --- | --- |
+| Bachata Que Duele | 5 where he hears 1 | 17B* 88A |
+| Escalofríos | 5 where he hears 1 | 4B* 11B 19B 64B |
+| No vuelvo a caer | 5 where he hears 1 | 13B 17B* 25B 32B 93B 174A |
+| Sus Huellas | 5 where he hears 1 | 2B 9A 14A 29B* 48B 131B 156A |
+| Me Emborrachare, the mix | 5 where he hears 1 | none: no rise in the song is over 3.5 dB |
+| Clavaito | right | 4A 26A 33A 48A 62A 69A 105A 120A 149A 156A |
+| La Bachata | right | 8A 16A 23A 37B 73A 100A 148B |
+| La Culpable | right | 16A 24A 32A 68A 100A 148A |
+| La Noche Perfecta | right | 4B 16A 20A 24A 31A 39A |
+| Fantasías | right | 5A 85A |
+| Héroe Favorito | right | 3B 9A 11B 16A 230A 232B |
+| Old Town Road, the mix | right, session 6 | 2A 46A 118A |
+| Herrera | half phrases at 53.96 and 111.2 s | 8A 12A 15A 19A 23A 37A 54B* 111A* |
+| Sin Fin | half phrase at 110.94 s | 7B 34A 111B* 186B 218A |
+| Eso Es Amor, the mix | five marks, in part | 2A 11B* 82A 200B* |
+| Imitadora | three marks, in part | 2B 24A 113B* 146A 197B* 224B |
+| El Perdedor | one mark, in part | 4A 8A 23A 100B* 192A |
+
+- Of his 14 marks that are not of the kind `entry`, 9 have a rise on the very bar. On the seven songs with no half phrase, 34 rises are on A and 6 on B.
+
+**The vote of the first minute, as built.** The sum of the rises on each side, in dB. "Next" does not count a rise out of silence.
+
+| Song | For the first bar heard | For the next | The count |
+| --- | --- | --- | --- |
+| Bachata Que Duele | 0.0 | 6.0 | moved |
+| Escalofríos | 0.0 | 26.6 | moved |
+| No vuelvo a caer | 0.0 | 56.4 | moved |
+| Sus Huellas | 15.4 | 27.8 | moved |
+| Me Emborrachare, the mix | 0.0 | 0.0 | kept |
+| Clavaito | 44.8 | 0.0 | kept |
+| La Bachata | 21.2 | 9.2 | kept |
+| La Culpable | 31.3 | 0.0 | kept |
+| La Noche Perfecta | 53.3 | 0.0 | kept |
+| Fantasías | 15.7 | 0.0 | kept |
+| Héroe Favorito | 16.1 | 13.8 | kept |
+| Old Town Road, the mix | 34.8 | 0.0 | kept |
+| Herrera | 69.1 | 19.0 | kept |
+| Sin Fin | 24.1 | 0.0 | kept |
+| Eso Es Amor, the mix | 32.7 | 5.4 | kept |
+| Imitadora | 7.8 | 0.0 | kept |
+| El Perdedor | 32.0 | 0.0 | kept |
+
+**Other ways to weigh a rise**, on the 16 songs with an answer: the 14 of the check without Me Emborrachare, and Imitadora and El Perdedor taken as right before their first mark. The margin is the smallest lead of the right side over the wrong one.
+
+| Way | Songs wrong | Smallest margin |
+| --- | --- | --- |
+| Every rise, by its size: the first rule built | 1, Imitadora | -7.7 |
+| A rise out of silence does not count for the next bar, silence 6, 10 or 15 dB under the song: the rule kept, at 15 | 0 | 2.2, Héroe Favorito |
+| The same at 20 dB | 0 | 2.2. Sin Fin is then 24 against 21 |
+| A rise out of silence does not count for either bar, at 6, 10 or 15 dB | 1 or 2: Eso Es Amor, and La Bachata at 6 and 10 | -5.4 to -9.2 |
+| The same at 20 dB | 0 | 2.2 |
+| A rise weighs by how many bands are at the song's level after it | 1, La Bachata | -5.4 |
+| The same, squared | 1, La Bachata | -8.0 |
+| No rise weighs more than 10 dB | 1, Imitadora | -2.2 |
+
+**The 104 songs.** They have no marks, so these figures show how often the rule acts and how sure it is, not whether it is right. Among the owner's 13, 5 were four off: 38%.
+
+| Figure | Every rise counts | With the rule about silence, as built |
+| --- | --- | --- |
+| Songs whose count moved by a bar | 29 | 26, 25% |
+| Songs where nothing comes in during the first minute | 7 | 7 |
+| Songs where everything comes in on one side | 49 | 55 |
+| Songs where the smaller side is over 60% of the larger | 15 | 12 |
+
+- The three that the rule about silence keeps: Chris Paradise - Nómada, Jensen - Frio, Romeo Santos - Imitadora.
+- The 12 close ones, for the owner to listen to first: Chris Paradise - Nómada 17.4 against 15.7; DJ Taga'Da, Eddy Barreto - El Beso 10.0 and 6.6; DJ Tony Pecino - Sola 5.6 and 8.3; Dani J, Bachata Heightz - Decídete 9.5 and 15.2; Kewin Cosmos - 100 X Hora 9.4 and 5.9; Liley, DJ Tony Pecino - Loca Manera 5.4 and 5.4; Mario Baro, DJ Tony Pecino - Lagunas 11.7 and 8.1; Pinto Picasso - Paris 16.4 and 17.5; ROSALÍA, The Weeknd - LA FAMA 34.1 and 20.5; Romeo Santos - Héroe Favorito 16.1 and 13.8; Shakira, Ozuna - Monotonía 23.0 and 15.0; sP Polanco, Ralphy Dreamz - Energía 23.1 and 20.8.
+- Nothing comes in on "Jiory - Eso Es Amor", the commercial recording of the mix, nor on six others. Their count is as version 2 gave it.
+
+### Breaking the code on purpose
+
+The new part of `bachata/analysis.py`, 27 breaks in three rounds, each run through `one_break.sh` against `bachata/analysis_test.py`. The break that takes the rule out of the analysis ran against the entry check too.
+
+| Round | Breaks | Caught as the tests stood | What was repaired |
+| --- | --- | --- | --- |
+| The rises and the vote | 18 | 16 | Two rises 3 beats apart are one: nothing tested the 3. A beat's level is the sound from it to the next: the test passed with every level one beat late |
+| A rise out of silence | 8 | 4 | The four beats before, the level of the song as its usual beat and not its loudest, and whose silence it is, the beat's and not the bar's. And no test ran the rule inside the whole analysis: the entry check passes with and without it |
+| The same, after the repairs | 9 | 8, then 9 | The new test of a quiet start put the rise on a bar that starts an ocho, and could not fail |
+
+- All 27 are caught now. Two tests run the whole analysis on a made-up sound, with made-up beats in place of the tracker's: one moves the count and one, with a quiet start, keeps it.
+- **Not caught by the song check, by design:** the rule about silence. Only Imitadora shows it, and Imitadora is not in the owner's list.
+
+### Cost
+
+- Paid APIs: none used, $0.
+- Network: none. Nothing was downloaded or installed.
+- Dependencies: none added. The new part of the analysis uses numpy only.
+- Commands outside the sandbox: 1, the whole test run.
+- Time on the goal: from 19:46 to about 20:25 by the machine's clock, of 180 minutes.
+- A second model was asked for advice before the check was written and before the end. What it used is not visible from inside the session.
+- Cost of the Claude Code session itself: not measured from inside the session.
+
+### Decisions
+
+**The owner's**
+
+- The target, in his words: count 1 on his mark on at least 4 of the 5, with no mark used; no other song worse. What the count shows inside an intro without percussion is not judged, and half phrases in the middle of a song are not part of this.
+- On the Me Emborrachare mix the check accepts count 1 at 2.28 s and nothing else. The four beats before it are not judged: he said the opening can be taken as a half phrase or as a count that starts at its half.
+- The analysis never reads `by-ear.json`, the label files or the marks in `data/`.
+
+**Mine**
+
+- **The songs with no mark are judged from the first count 1 they had**, to the end, or to the first mark on Herrera and Sin Fin. His words are "from the entry on", and nothing says where a song without a mark enters. This is stricter than his words, and all eight pass it.
+- **The count they had is frozen in a committed file**, `fixtures/by_ear_before.json`: the beats and the count of those eight songs by version 2, with their names. A stored result would be made again by the new version, and the check would compare the analysis with itself.
+- **The song checks refuse an analysis that opens a file under `fixtures/` or the library.** A hook on every file opened while the analysis runs. It does not see an answer written into the code.
+- **The count moves once, for the whole song.** The rises would allow a short bar where they change sides, as on Sus Huellas at 28.76 s. That is a half phrase found from the sound, which the owner left out, and on the songs with none it would report 6.
+- **The first minute, 5 dB, 4 beats on each side, 16 bands from 40 Hz to 16 kHz, 15 dB for silence.** The limit and the minute were tried at 16 settings and held at 11; the others are as first tried. With 16 songs none of them is more than a first setting.
+- **A rise out of silence counts for the first bar heard and not for the next.** It is not even-handed, and that is on purpose: on these songs a quiet start that rises on the other bar was wrong four times of five (Imitadora, La Noche Perfecta, Sin Fin, Héroe Favorito; right on Escalofríos, which has three more rises), and one that rises on the first bar was right every time.
+- **Imitadora was taken as evidence** though it is not in his list: his marks there start at 113 s, so the count before them was taken as right.
+- **Me Emborrachare was left wrong.** The target allows one, and no measure of level shows its entry.
+
 ## 2026-10-06, session 8: a skill that breaks the code on purpose, and a changed reference
 
 The owner asked for a skill of the work sessions 3, 6 and 7 did by hand: break the code on purpose, one break at a time, and see whether the checks fail. No code of the program and none of its tests changed in this session. The skill is `.claude/skills/break-on-purpose/`: a `SKILL.md` and one script, `scripts/one_break.sh`.

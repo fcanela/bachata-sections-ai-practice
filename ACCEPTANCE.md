@@ -149,6 +149,15 @@ One control, "Count 1 here". The owner added it on 2026-10-06, in session 6, wit
 - [x] A beat set by hand is told apart from the other count 1s by its form: its bar has a cap across the top. `e2e/page_test.py` reads the canvas.
 - [x] It is kept on the server with the song, as a time. It shows in every browser, and it survives a restart, a renaming and a new version of the analysis. `bachata/server_test.py` and `bachata/store_test.py`. Every browser: `e2e/page_test.py`, with the song open in two and opened later in a third.
 
+**The entry, by the owner's ear**
+
+The owner listened to 13 songs in full on 2026-10-06 and set this target the same day, in session 9: on five of them the count was four off from the start, so where the main part enters the page showed 5 and he heard 1. His marks and notes are in `fixtures/audio/by-ear.json`, which git ignores. They are for checks only: the analysis never reads them, the label files or the marks in the library.
+
+- [x] With no mark used, count 1 falls on the owner's mark on at least 4 of these 5: Bachata Que Duele, Escalofríos, No vuelvo a caer (17.04 s and 32.16 s are equally right), the Me Emborrachare mix (count 1 at 2.28 s; the four beats before it are not judged), Sus Huellas. `bachata/entry_test.py`: 4 of 5. Me Emborrachare still shows 5 at 2.28 s.
+- [x] No other song gets worse. The six songs he found right throughout keep their count; Herrera and Sin Fin keep it up to their first mark; Old Town Road stays 416 of 416 and Eso Es Amor does not go below 257 of 505. `bachata/entry_test.py`, against the count version 2 of the analysis gave, kept in `fixtures/by_ear_before.json`. *Mine: with no mark to say where a song enters, a song is judged from the first count 1 it had, which is stricter than "from the entry on".*
+- [x] The analysis opens no file of the reference or of the library. `bachata/songs_test.py` and `bachata/entry_test.py` refuse an analysis that does.
+- What the count shows inside an intro without percussion is not judged. Half phrases in the middle of a song are not part of this.
+
 **What is refused, part of G7**
 
 - [x] A count 1 that does not come from the application's own page, one for a song id that is not well formed or not in the library, a time that is not a number inside the song, and one more when a song has 200 of them. `bachata/server_test.py`.
@@ -165,7 +174,7 @@ One control, "Count 1 here". The owner added it on 2026-10-06, in session 6, wit
 **Not in slice 2**
 
 - Finding a half phrase from the sound. Session 6 tried the two-bar cycle of the harmony: it found two of three on Me Emborrachare, four of eight at most on Eso Es Amor, and one to four that are not there on Old Town Road.
-- Telling the first bar of an ocho from the second. The analysis starts the count on the first bar it hears and goes on in eights. The first bar it hears is the first whose first beat is not more than 40 dB under the level of the whole song: the tracker carries the pulse back over the silence before a song. *Proposed: the 40.* On Old Town Road and Eso Es Amor, the two mixes that start with such a bar, the owner's ear agrees with where the count then starts. The beats it puts before that bar are counted as the end of an ocho, up to 8.
+- Telling the first bar of an ocho from the second. *Since session 9 the analysis does tell them, once for the whole song, by what comes in during the first minute: see "The entry, by the owner's ear" above. What follows is how the first bar is found before that.* The analysis starts the count on the first bar it hears and goes on in eights. The first bar it hears is the first whose first beat is not more than 40 dB under the level of the whole song: the tracker carries the pulse back over the silence before a song. *Proposed: the 40.* On Old Town Road and Eso Es Amor, the two mixes that start with such a bar, the owner's ear agrees with where the count then starts. The beats it puts before that bar are counted as the end of an ocho, up to 8.
 - Any mark of doubt on a count.
 
 ### 3. Derecho or majao for each ocho

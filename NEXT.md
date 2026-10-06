@@ -2,9 +2,23 @@
 
 Rewritten at the end of every session.
 
-## Where things stand (2026-10-06, session 8)
+## Where things stand (2026-10-06, session 9)
 
-Slice 2 is built, in the shape the owner gave it in session 6, and the owner has used it. Every check a program can run passes. What is open is the owner's: the checks of slice 1, one by-ear item of slice 2, and the proposals listed below.
+Slice 2 is built, in the shape the owner gave it in session 6, and the owner has used it. Since session 9 the analysis also says which of two bars starts an ocho. Every check a program can run passes. What is open is the owner's: to listen to the new count, the checks of slice 1, one by-ear item of slice 2, and the proposals listed below.
+
+- **The entry, on the branch `goal-entry`**, not merged. The owner listened to 13 songs in full and set a target: count 1 on his mark on at least 4 of 5 songs whose count was four off from the start, and no other song worse. `bachata/entry_test.py` checks it and passes: 4 of 5, none worse. `LOG.md`, session 9, has the figures.
+  - **What the analysis does now.** It looks at where the sound rises in the first minute: the 4 beats from a beat against the 4 before it, in 16 bands. A rise of 5 dB or more is something coming in, and it starts the nearest bar. The count moves by a bar, for the whole song, when more comes in on the bars between its ochos than on them. A rise out of silence cannot move it. It is version 3: the program analyses every stored song again when it starts.
+  - **Still wrong: the Me Emborrachare mix.** It shows 5 at 2.28 s. Nothing rises there: the mix is at its full level from the first beat, the rise at the fifth beat is 1.7 dB, and no rise in the whole song is over 3.5 dB. `fixtures/audio/README.md` has the two guitars starting 1.4 and 2.1 s into the mix, so what enters there is pitched sound and not level. A measure of that is the thing to try, and it was not tried.
+  - **Thin votes, where the next song may go wrong.** Héroe Favorito keeps its count by 16.1 against 13.8. Bachata Que Duele moves on one rise of 6.0 dB, the bass, with the limit at 5.0. Eso Es Amor keeps its count because its start, out of silence, counts for the first bar: 32.7 against the 5.4 of its first half phrase, at 11 s.
+  - **For the owner to listen to.** Every stored song gets the new count. Of the songs he marked only in part, Imitadora and El Perdedor keep the count they had. On Sus Huellas the whole count moved by a bar, so the intro before 28.76 s, which he agreed with, now reads four off: the analysis moves the count once and does not put a short bar where he hears one.
+  - **The check is stricter than his words in one place.** "From the entry on" has no mark to stand on for the six songs he found right, so they are judged from the first count 1 they had. All six pass that. If a later change fails it only inside an intro without percussion, that is for him to say.
+
+- **What was learned about half phrases**, which are not part of the entry. The same rises mark them.
+  - **Of his 14 marks that are not of the kind `entry`, 9 have something coming in on the very bar he marked**: both of Herrera, the one of Sin Fin, the one of Sus Huellas, the one of El Perdedor, 2 of the 3 of Imitadora, and 2 of the 5 of Eso Es Amor, which are count 1s of the labels and not all after a half phrase. The one of Me Emborrachare, at 151.32 s, has none.
+  - **From a mark on, what comes in does so on the other bar**, until the next mark. Herrera reads first bar six times up to 37 s, the other bar at 54 s, his first mark, and the first bar again at 111 s, his second.
+  - **It also reports some that are not there.** On the seven songs with no half phrase, 34 rises are on the first bar and 6 on the other: three on Héroe Favorito, two on La Bachata, one at the very start of La Noche Perfecta. On La Bachata the bass comes in a bar before the chorus, at 36.86 s.
+  - **What that suggests for slice 4**: follow the bar that things come in on along the song, with a cost for changing it, and put a short bar just before the rise where it changes. One rise alone on the other bar is not enough: two in a row, or one much larger than those around it, would be the thing to test. Session 6 tried the same with the harmony and it did worse.
+  - **The half phrase of Sus Huellas is of this kind**, and the owner described it: the bar before the percussion enters is half length. The rises read first bar at 9 and 14 s, the other bar at 29, 48 and 131 s, and the first bar once more at 156 s.
 
 - **A skill breaks the code on purpose**, since session 8: `.claude/skills/break-on-purpose/`. Asked to break a part and see its checks fail, it breaks every claim of the part once, then what no claim speaks of, and repairs each weak check it finds.
   - It was tried on three tasks before the owner's last changes to it, and not since. `LOG.md`, session 8.
@@ -53,7 +67,7 @@ The redesigned page is built, with what slice 1 has. The owner chose its design,
 - It has a light and a dark ground and takes the one the system is set to. It has no control for that.
 - The program is a Python one. The Node program is gone.
 - **To run it:** `uv run python -m bachata`, then http://127.0.0.1:8080. `PORT` changes the port and `BACHATA_DATA` the folder of the library. Sessions 3 and 5 used port 8081 for everything they started, as the owner asked in session 3.
-- **To test it:** `uv run pytest`. It runs the unit tests, the song checks and the flows through the page, 182 tests in about 4 and a half minutes.
+- **To test it:** `uv run pytest`. It runs the unit tests, the song checks and the flows through the page, 182 tests in about 4 and a half minutes. Since session 9 the entry check is one of them: `uv run pytest bachata/entry_test.py -s` prints a line per song, in about a minute. It needs the owner's 13 songs in the library and `fixtures/audio/by-ear.json`, and skips without the second.
 - **A program that is running shows the page it started with.** After a change to the page or to the server, stop it and start it again.
 - **On a new machine, once:**
   - `uv sync`
@@ -199,6 +213,9 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **The tests of the security headers carry their own list.** A test that reads the list from the program passes when a header is removed.
 - **The page draws nothing that neither an analysis nor the user has produced.** Before slice 4 there is no section on screen.
 - **The analysis answers for the bar, not for the count.** The count is a guess in eights until slice 4. Nothing in slice 2 may look for half phrases in the sound and show them as found: the tracker of session 6 reports ones that are not there.
+- **The analysis never reads the owner's marks**: not `fixtures/audio/by-ear.json`, not `fixtures/by_ear_before.json`, not a label file, not `song.json` in the library. It gets the samples and the rate. The song checks watch what it opens.
+- **`fixtures/by_ear_before.json` is written once.** It is the count the songs had before session 9. A check that makes it again from the analysis compares the analysis with itself.
+- **The entry check reads the sound of the library, `data/songs/<id>/sound.raw`, and nothing else of it.** A stored result is made again by every new version of the analysis, and a mark set by hand is the owner's answer.
 - **The count is put together on the page**, in `countsWith` of `web/song.js`, from the analysis's count and the beats set by hand. The server keeps those as times, with the song and not with the result, so a new version of the analysis leaves them alone.
 - **A bar is four beats.** The DBN is given bars of four only.
 - **Every file of the page is named in `PAGE_FILES`**, in `bachata/server.py`, and read once when the program starts. A new file needs an entry, and a changed file needs the program started again.
