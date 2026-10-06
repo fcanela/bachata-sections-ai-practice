@@ -2,6 +2,71 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-06, session 9, second goal: the Me Emborrachare mix, not reached
+
+The owner set a second goal of 60 minutes: count 1 on his mark on all five entry songs, the Me Emborrachare mix included, with no other song worse. After about ten minutes by the machine's clock, 22:04 to 22:14, he stopped it and asked for this record. **The program did not change: the check still reads 4 of 5, with the mix at count 5 at 2.28 s.** Everything below ran from the session's scratch folder, on the 17 songs of `by-ear.json` and Old Town Road, from the sound and beats kept there in the first goal.
+
+### Runs
+
+"A" is a bar that starts an ocho as version 2 counted, "B" a bar between two. The answer taken as right: B on the five entry songs, A on the others, Imitadora and El Perdedor included, up to their first mark.
+
+| What was tried | Result |
+| --- | --- |
+| The vote as built, with 32, 48, 64 or 96 bands in place of 16, at 5, 4 and 3 dB | The mix never moves: its rise at the fifth beat is 2.1 to 2.2 dB at every band count. The other songs get worse: one to three wrong at every setting but 16 bands |
+| The first twelve beats of the mix, band by band | From the fourth beat, 1.80 s, five bands between 800 Hz and 5 kHz are 5 to 10 dB louder and stay so; the others do not change. As a mean over 16 bands that is 1.7 dB |
+| Three other measures of a rise: the root mean square over the bands, the mean of the 4 bands that rise most, of the 8 that rise most. Each also with rises measured from the third beat of a song, not the fifth | At the start of the mix: 3.4, 6.6 and 3.5. Later in the same song the same measures reach 7.0, 12.2 and 6.4, so no limit takes the start and leaves the rest. The other songs: one to three wrong for the root mean square and the 4 bands, none for the 8 bands |
+| The same largest rises of the mix, by the bar they start | In the first minute they are at 15.8 s and 47 s, both on A, which is the labels' count 5: in this mix things come in a bar before the section. At 149 s, the short bar of the Breakdown, and at 188 s they are on B |
+| Rises measured from the third beat, with the measure as built | No song wrong, and two thin votes are wider: Héroe Favorito 30 against 6, where it is 16.1 against 13.8, and Bachata Que Duele 13, where it is 6.0. The mix does not move. Not built |
+| How pitched the sound is, 300 Hz to 3 kHz, beat by beat | Nothing at the fifth beat of the mix: 11 to 13 dB under noise before it and after |
+| The sound split into its sustained and its percussive part by median filters, and the vote on each | Sustained: the rise at the fifth beat of the mix is 3.7 dB, still under 5, and at 5 dB two other songs go wrong. Percussive: no song wrong but the mix, and La Bachata is 25 against 0, where it is 21.2 against 9.2 |
+| The rise at the second bar of every song, in the sustained part | The mix has 3.7 dB. Of the 12 songs where A is right, 8 have 3.2 dB or more there. A rule that reads the start of the mix as an entry reads those as one too |
+| About 150 measures, each for how it differs between the true count 1 and the true count 5, over 14 songs | None differs the same way in all 14. Best, against 2 of 14: the step of the bass from one bar to the next, 85 to 123 Hz in the percussive part. The six next best are also steps of the bands under 123 Hz |
+| One measure taken from that: the bass, 40 to 123 Hz, is louder in the first bar of an ocho than in the bars around it. As the mean difference over the bars of the first 90 s divided by its uncertainty | See the table below |
+
+**The bass, first bar against second.** Above 0 says A, under 0 says B. Between his marks the right answer changes side, so those stretches are a test the choice of the measure did not use.
+
+| Song | Right | First 60 s | First 90 s | Between his marks |
+| --- | --- | --- | --- | --- |
+| Me Emborrachare, the mix | B, then A from 151 s | -1.7 | -2.8 | 2 to 151 s: -1.1. After: 3.9. With 85 to 123 Hz alone: -3.6 and 4.0 |
+| Escalofríos | B | -1.3 | -2.1 | |
+| No vuelvo a caer | B | -4.0 | -4.6 | |
+| Bachata Que Duele | B | -1.3 | 0.3 | Before 17 s: -3.2. After: 1.5, the wrong side |
+| Sus Huellas | B | -2.1 | -2.1 | |
+| Clavaito | A | 3.4 | 4.1 | |
+| La Bachata | A | -1.4 | 0.1 | |
+| La Culpable | A | -1.8 | 0.5 | |
+| La Noche Perfecta | A | 2.9 | 2.8 | |
+| Fantasías | A | 2.4 | 3.6 | |
+| Héroe Favorito | A | -0.6 | -0.5 | |
+| Old Town Road, the mix | A | 2.5 | 3.0 | |
+| Herrera | A, B from 54 s, A from 111 s | 0.6 | 0.5 | 1.2, then -1.0, then 1.9: the right side three times |
+| Sin Fin | A, B from 111 s | -0.2 | -0.1 | -0.6, then 0.4: the wrong side twice, and small |
+| Eso Es Amor, the mix | A at the start | -0.1 | 0.0 | Under 1 in all six stretches |
+| Imitadora | A at the start | 1.4 | 1.8 | 1.3, 0.9, -1.8, -1.1 |
+| El Perdedor | A, B from 100 s | 3.3 | 3.1 | 2.6, then -0.6 |
+
+- Over the first 90 s the figure is 2 or more, either way, on 9 of the 17 songs, and on the right side on all 9. Over the first 60 s it is 2 or more on 7, all right, and the mix is not among them.
+- Under 2 it is right on 4 of 8 over 90 s: no better than chance.
+- **Not done.** The same figure on the 104 inbox songs against the vote of what comes in, to see how often two measures that share nothing agree: the run was stopped at 30 songs and nothing was read from it. No unit test, no break on purpose, no run of the check.
+- **A rule was written and taken out again.** Where nothing comes in during the first minute, move the count when the bass says B by 2 or more over 90 s. It was in `bachata/analysis.py` for a few minutes, never ran and was never committed. The mix is the only one of the 17 songs it would touch; of the 104 inbox songs, 7 have nothing coming in.
+
+### Cost
+
+- Paid APIs, network, dependencies, commands outside the sandbox: none.
+- Time on the goal: about 10 of 60 minutes.
+- Cost of the Claude Code session itself: not measured from inside the session.
+
+### Decisions
+
+**The owner's**
+
+- The goal was stopped before its hour, with this record asked for in its place.
+
+**Mine**
+
+- **No rule was built on the start of the mix alone.** A measure fine enough to hear its guitars come in hears the same at the second bar of 8 of the 12 songs where the count is right. It would have turned the line of the check without being true of other songs.
+- **The bass was chosen from a scan of about 150 measures on 14 songs**, so its 12 of 14 there is partly luck. What speaks for it beyond that: the six next best measures are of the same bands, and it changes side at his marks on the mix, on Herrera and on El Perdedor.
+
 ## 2026-10-06, session 9: the entry, by the owner's ear
 
 The owner listened to 13 songs in full, wrote his marks into `fixtures/audio/by-ear.json`, and asked for a check of the entry before any fix: on five songs the count was four off from the start, so where the main part enters the page showed 5 and he heard 1. He then set a goal of 180 minutes on that check. It was reached in the first hour. All of it was done on the branch `goal-entry`. The owner then had it merged into `master` with a fast-forward and deleted: he works on a single branch.
