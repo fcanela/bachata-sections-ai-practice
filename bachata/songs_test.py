@@ -6,14 +6,17 @@ measured that Chrome, Firefox and ffmpeg give the same samples for these files.
 """
 
 import functools
+import os
 import statistics
 import subprocess
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from bachata.analysis import analyse
 from bachata.model import sha256_of
+from fixtures.by_ear import reading
 from fixtures.validate import (
     DEV,
     SAME_BEAT_S,
@@ -44,9 +47,22 @@ def decoded(path):
     return np.frombuffer(raw, dtype="<i2").reshape(-1, 2)
 
 
+# Where the reference and the library are. The analysis gets the samples and nothing else.
+FIXTURES = DEV.parent.parent
+LIBRARY = Path(os.environ.get("BACHATA_DATA", FIXTURES.parent / "data"))
+
+
+def analysed_samples(samples):
+    """The analysis of some samples, refused when it opened a file of the reference or of the library."""
+    with reading(FIXTURES, LIBRARY) as opened:
+        result = analyse(samples, 44100)
+    assert opened == [], "the analysis read what only a check may read"
+    return result
+
+
 @functools.cache
 def analysed(path):
-    return analyse(decoded(path), 44100)
+    return analysed_samples(decoded(path))
 
 
 def test_the_reference_material_is_on_the_machine():
