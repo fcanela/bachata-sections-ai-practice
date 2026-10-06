@@ -4,7 +4,15 @@ Rewritten at the end of every session.
 
 ## Where things stand (2026-10-06, session 6)
 
-Slice 2 is specified and not built. Session 6 asked the owner five questions, ran an experiment on the three mixes and on 96 songs without labels, and the owner set the shape of the slice from its result. `ACCEPTANCE.md` has the items under slice 2, and `LOG.md`, session 6, the figures and the decisions.
+Slice 2 is built, in the shape the owner gave it in session 6. Every check a program can run passes. What is open is the owner's: the checks of slice 1, one by-ear item of slice 2, and the proposals listed below.
+
+- Session 6 asked the owner five questions, ran an experiment on the three mixes and on 96 songs without labels, and the owner set the shape of the slice from its result. `LOG.md`, session 6, has the figures and the decisions, and `ACCEPTANCE.md` the items.
+- **The analysis** now keeps the place of every beat in its bar, and a count from 1 to 8 that runs in eights from the first bar that is not silence. It is version 2: **the five songs in `data/` are analysed again by themselves at the next start**, about 5 seconds each.
+- **The page** shows the count as the largest figure, with the tempo small beside the time. The large view is the ocho that is sounding, standing still, each beat at the place of its count. The song is in rows of four ochos, with the count under every mark. Count 1 is an upright bar.
+- **"Count 1 here"**, in the transport bar, makes the beat at the playing position count 1. From there the count runs in eights. On a beat set this way the control reads "Not count 1" and takes it back. A beat set by hand has a cap across its bar.
+- The arrows with Shift move the position by an ocho.
+- The server has two new requests, `PUT` and `DELETE /api/songs/<id>/ones?at=<seconds>`.
+- **The count is right only where no half phrase has passed.** On Me Emborrachare it is four off from 0:17, the end of the Intro. Open the mix, move to the first beat of the Verse, and press "Count 1 here": that is what the control is for.
 
 Before that, in session 5:
 
@@ -16,7 +24,7 @@ The redesigned page is built, with what slice 1 has. The owner chose its design,
   - A press on a beat moves the position there. A drag across beats marks a loop. "Start here" and "End here" mark its two ends at the playing position.
   - A song is renamed in its row or in the top bar. Space plays and pauses, and the arrows move the position by a beat.
 - The server has one new request, `PATCH /api/songs/<id>?name=…`, for a renaming.
-- The page shows no count, no grouping and no section: those come with slices 2 to 4.
+- The page showed no count and no grouping then. It still shows no section: those come with slices 3 and 4.
 - It has a light and a dark ground and takes the one the system is set to. It has no control for that.
 - The program is a Python one. The Node program is gone.
 - **To run it:** `uv run python -m bachata`, then http://127.0.0.1:8080. `PORT` changes the port and `BACHATA_DATA` the folder of the library. Sessions 3 and 5 used port 8081 for everything they started, as the owner asked in session 3.
@@ -37,13 +45,13 @@ The redesigned page is built, with what slice 1 has. The owner chose its design,
   | original | 3:59 | Me Emborracharé, the full commercial version |
   | original | 3:35 | El Perdedor |
 
-## Next: the owner's checks, then slice 2
+## Next: the owner's checks, then slice 3
 
 ### Left open by the redesign
 
 - **`DESIGN.md`.** The design plugin ends a build by writing one from the finished page: the colours, the typeface and the rules of the design, for later design work. It is a new top-level file, so by the owner's rule on existing files it is asked first. Until then the design is described in `BRIEF.md`, under "The interface", and its values are in `web/style.css`.
 - **A control for light and dark.** The page follows the system. A control on the page is the owner's to ask for.
-- **The layout.** The owner found that the three designs looked like skins of one layout. That is what the brief of session 4 asked for, and what the plugin does for a tool: a design gives the typeface, the colours, the density and one move of its own, and the layout stays. The plugin has a separate round that keeps the design and proposes three arrangements of the screen. It was offered and not taken now. It is worth more once slice 2 has the count and the ochos on screen.
+- **The layout.** The owner found that the three designs looked like skins of one layout. That is what the brief of session 4 asked for, and what the plugin does for a tool: a design gives the typeface, the colours, the density and one move of its own, and the layout stays. The plugin has a separate round that keeps the design and proposes three arrangements of the screen. It was offered in session 5 and not taken. Slice 2 has since put the count and the ochos on screen, which is what the round was waiting for.
 - **What the owner judges by eye**, in `ACCEPTANCE.md` under slice 5: each large beat against its click, the figure read from three metres, and nothing told by colour alone.
 - **One small thing the plugin's reviewer named** and did not count as a fault: the time under the large figure ends a little to the right of the figure's last digit.
 
@@ -136,16 +144,16 @@ This is the brief the owner confirmed on 2026-10-05, in session 4, with the deci
 
 If the click sounds loose rather than wrong: beat times come in steps of 20 ms, because the tracker looks at the song 50 times a second. Moving each beat onto the nearest attack of the sound is the next thing to try. It was not built, because only an ear can say whether it is needed.
 
-### Then slice 2
+### Slice 2, as built, and what it leaves to the owner
 
-**The grid of ochos**, as the owner shaped it on 2026-10-06.
+- **By ear, the two commercial recordings:** a beat shown as 1 or as 5 is the first beat of a bar, wherever the song can be counted.
+- **By eye:** count 1 against the other beats, and a count 1 set by hand against the others, in the large view and on the song.
+- **The proposals in `ACCEPTANCE.md`, under slice 2:** that the first labelled beat of each mix is count 1, the seven half phrases the rule placed (check 7 above), the 9 beats of the Outro of Eso Es Amor, and that the control takes a count 1 back.
+- **The control, in use.** It is one button and nothing more, as asked. Whether a song with several half phrases is quick enough to put right with it is the owner's to say after using it.
 
-- **Strict: the bar.** Every labelled beat of the three mixes is the first, second, third or fourth of its bar. The DBN already says so for every beat, and the analysis throws it away today. Session 6 measured it right on all 1,317 labelled beats.
-- **Shown and measured: the count from 1 to 8.** The analysis starts the count on the first bar it hears and goes on in eights. It does not look for half phrases. How many labelled beats get the count of the reference is measured and logged, with no limit. The limit is in slice 4.
-- **By hand: "Count 1 here".** One control. From the beat at the playing position the count runs in eights. On a beat set by hand, the control takes it back.
-- **The page:** the count takes the place of the large figure and the tempo goes small beside the time. The large view shows the ocho that is sounding and stands still. The song is in rows of four ochos, and count 1 differs from the other beats by its form.
-- A bar is always four beats: the DBN is no longer allowed bars of three.
-- `ANALYSIS_VERSION` goes to 2. Every stored song is then analysed again by itself when the program starts, about 5 seconds a song.
+### Then slice 3
+
+**Derecho or majao for each ocho.** Nothing of it is decided. It starts with a round of questions, as slices 1 and 2 did. Three questions are already open under "For later slices": mambo in the labels, a section whose blocks disagree with it, and which rhythms count as `other`.
 
 ## Rules that are easy to break
 
@@ -160,9 +168,12 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **The window is 90 ms.** It grows again only if the measurements show it must, up to 120 ms, with the reason logged.
 - **The page has no inline script, no inline style and no `eval`.** Its content security policy blocks all three, and a test tool that evaluates a string inside the page is blocked with them.
 - **The tests of the security headers carry their own list.** A test that reads the list from the program passes when a header is removed.
-- **The page draws nothing an analysis has not produced.** Before slice 2 there is no count and no grouping of beats on screen, and before slice 4 no section. Until then a row of the song is a line wrap and nothing more.
+- **The page draws nothing that neither an analysis nor the user has produced.** Before slice 4 there is no section on screen.
+- **The analysis answers for the bar, not for the count.** The count is a guess in eights until slice 4. Nothing in slice 2 may look for half phrases in the sound and show them as found: the tracker of session 6 reports ones that are not there.
+- **The count is put together on the page**, in `countsWith` of `web/song.js`, from the analysis's count and the beats set by hand. The server keeps those as times, with the song and not with the result, so a new version of the analysis leaves them alone.
+- **A bar is four beats.** The DBN is given bars of four only.
 - **Every file of the page is named in `PAGE_FILES`**, in `bachata/server.py`, and read once when the program starts. A new file needs an entry, and a changed file needs the program started again.
-- **The tests find a beat through what the canvases say about themselves**: `data-lit` on the large beats, and the place of the marks on the song. A change to how the song is laid out keeps those attributes true.
+- **The tests find a beat through what the canvases say about themselves**: `data-lit` and `data-ocho` on the large beats, and on the song `data-marks`, the middle of every mark, `data-counts` and `data-by-hand`. A change to how the song is laid out keeps those attributes true.
 - **The colours of the page are plain six-digit values on `:root`** in `web/style.css`, light first and dark after. `web/contrast.test.js` reads them from there.
 - **A loop is played by the sound itself**, through the loop points of the audio source, and its clicks come from `clicksUntil` in `web/song.js`. A loop made by stopping and starting the sound would have a gap, and its clicks would drift.
 - **Product facts go in `BRIEF.md`, never in `PRODUCT.md`.** `PRODUCT.md` only points at the brief. The design plugin's `init` command offers to fill it in; a new fact goes into the brief instead.
@@ -191,6 +202,14 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **Torch and Beat This on Python 3.13 were not tried.** The project pins 3.12.13.
 - **`fixtures/audio/README.md` is the owner's file** and does not mention the two fields the script adds to `labels.json`: `first_beat_s` and `mix_sha256`. `fixtures/validate.py` describes them. A `labels.json` made again from the site loses them, and the song checks then refuse the mix until the script has run.
 
+**For slice 2**
+
+- **At 1280 wide the transport bar takes two lines**: the click switch goes under the other controls.
+- **A song longer than about 3 minutes no longer shows whole at 1920 by 1080.** A row is 50 pixels high, for the count under each mark.
+- **Nothing checks by a test that a number is drawn under each mark**, nor the empty places of a short ocho in the large view. Both were looked at in pictures.
+- **A change of count 1 in another browser arrives with the list**, so up to two seconds later.
+- **The count starts on the first bar that is not silence**, 40 dB under the level of the song. A song that fades in over several bars may start its count late; none of the 101 songs analysed in session 6 does.
+
 **For later slices**
 
 - **Mambo.** It is a rhythm: the owner said so again in session 5, so the page will have three kinds. The labels treat it as a part of the song, like Verse or Chorus, whose rhythm is majao or derecho. No label has mambo as a rhythm, so G1 has nothing to compare mambo against. How G1 is checked for mambo is still to settle before slice 3.
@@ -203,7 +222,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **The songs that stood apart in session 6**, in `LOG.md`, are the owner's to look at. "Entre La Espada Y La Pared" was downloaded wrong and is ignored.
 - **Hearing count 1 from count 5, and a half phrase, from the sound.** Session 6 found no plain measure that does it. Slice 4 needs it, or the sections that make it unnecessary. A model taught on labelled ochos was not tried: three songs have labels.
 - **"Jiory - Eso Es Amor" is among the 96 songs**: the commercial recording of a mix that has labels.
-- **The last three labelled beats of Me Emborrachare have no percussion.** The analysis carries the pulse over them. Slice 2 will meet that ending again when it counts.
+- **The last three labelled beats of Me Emborrachare have no percussion.** The analysis carries the pulse over them, and their place in the bar is right.
 - **Lining up the labels with the commercial recordings.** The full Me Emborracharé is 44 s longer than the mix and differs in places.
 - **The screen of slice 5 is built early**, with what slice 1 has, and G4 is still checked in slice 5.
 - **No `DESIGN.md` exists.** See "Left open by the redesign" above.

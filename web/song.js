@@ -1,6 +1,7 @@
 // What the page works out about a song without the screen or the sound card:
 // the type of a file, its id, its name from its tags, the samples to send, what to
-// show at a playing position, and where a loop and its clicks fall. song.test.js checks it.
+// show at a playing position, the count with what the user set, and where a loop and its
+// clicks fall. song.test.js checks it.
 
 // What the page decodes to and sends. The server checks the same numbers again.
 export const RATE = 44100
@@ -179,15 +180,53 @@ export function bpmAt(result, position) {
   return Math.round(result.bpm[Math.max(0, beatsUntil(result.beats, position) - 1)])
 }
 
-// Where a position is among the beats, as a number that moves evenly from one beat to
-// the next: 3 on the fourth beat, 3.5 half way to the fifth. Before the first beat and
-// after the last one it carries on at the pace of the nearest two beats.
-export function beatPosition(beats, position) {
-  if (beats.length === 0) return 0
-  if (beats.length === 1) return position < beats[0] ? -1 : 0
-  const last = beats.length - 1
-  const before = Math.min(Math.max(beatsUntil(beats, position) - 1, 0), last - 1)
-  return before + (position - beats[before]) / (beats[before + 1] - beats[before])
+// How many beats an ocho has, and so how far a count goes.
+export const OCHO = 8
+
+// The beat nearest to a time in seconds, or -1 when there is no beat.
+export function nearestBeat(beats, seconds) {
+  const after = beatsUntil(beats, seconds)
+  if (after === 0) return beats.length ? 0 : -1
+  if (after === beats.length) return after - 1
+  return seconds - beats[after - 1] <= beats[after] - seconds ? after - 1 : after
+}
+
+// The count of every beat, 1 to 8, with what the user said. `count` is the analysis's.
+// `ones` are the times of the beats the user set to count 1: from each of them the count
+// runs in eights, up to the next one or to the end of the song. Before the first one the
+// count is the analysis's. `byHand` are those beats, in order.
+export function countsWith(beats, count, ones) {
+  const byHand = [...new Set(ones.map((seconds) => nearestBeat(beats, seconds)))].filter((beat) => beat >= 0).sort((a, b) => a - b)
+  const counted = count.slice()
+  byHand.forEach((first, i) => {
+    const end = i + 1 < byHand.length ? byHand[i + 1] : beats.length
+    for (let beat = first; beat < end; beat++) counted[beat] = ((beat - first) % OCHO) + 1
+  })
+  return { count: counted, byHand }
+}
+
+// The ochos of a song: a new one starts wherever the count does not go on from the beat
+// before, which is at every count 1. Each is { first, last }, beats, both included. One
+// that was cut short, or that started before the song, has fewer than eight beats.
+export function ochosOf(count) {
+  const ochos = []
+  count.forEach((value, beat) => {
+    if (beat > 0 && value === count[beat - 1] + 1) ochos[ochos.length - 1].last = beat
+    else ochos.push({ first: beat, last: beat })
+  })
+  return ochos
+}
+
+// The ocho a beat is in, as its place in ochosOf(), or -1 when there is none.
+export function ochoOf(ochos, beat) {
+  let low = 0
+  let high = ochos.length
+  while (low < high) {
+    const middle = (low + high) >> 1
+    if (ochos[middle].first <= beat) low = middle + 1
+    else high = middle
+  }
+  return low - 1
 }
 
 // A loop starts this long before its first beat, and ends as long before the beat after

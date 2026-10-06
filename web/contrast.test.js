@@ -45,6 +45,7 @@ const TEXT = [
   ['--field-ink', '--field'],
   ['--band-ink', '--band'],
   ['--band-soft', '--band'],
+  ['--band-mark', '--band'],
 ]
 
 // A mark, a rule or a focus ring and what it is drawn on.
@@ -54,7 +55,6 @@ const MARKS = [
   ['--mark', '--ground'],
   ['--loop', '--ground'],
   ['--band-mark', '--band'],
-  ['--band-now', '--band'],
   ['--band-lit-ink', '--band-lit'],
   ['--lit-ink', '--lit'],
 ]

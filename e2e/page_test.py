@@ -15,6 +15,7 @@ a drum-like click at 120 BPM. Nothing from the reference material is needed.
 """
 
 import http.client
+import json
 import os
 import shutil
 import socket
@@ -178,10 +179,24 @@ class Visitor:
     def row(self, name):
         return self.page.locator("#songs li", has=self.page.get_by_text(name, exact=True))
 
-    def beats(self, name):
-        """The beats of a song, as the server has them."""
+    def result(self, name):
+        """What the analysis made of a song, as the server has it."""
         song_id = self.row(name).get_attribute("data-id")
-        return self.page.evaluate("id => fetch(`/api/songs/${id}/result`).then((answer) => answer.json())", song_id)["beats"]
+        return self.page.evaluate("id => fetch(`/api/songs/${id}/result`).then((answer) => answer.json())", song_id)
+
+    def beats(self, name):
+        return self.result(name)["beats"]
+
+    def counts(self):
+        """The count of every beat, as the song on screen says it."""
+        return [int(count) for count in self.page.locator("#map").get_attribute("data-counts").split()]
+
+    def marks(self):
+        """The middle of the mark of every beat, inside the canvas of the song."""
+        return json.loads(self.page.locator("#map").get_attribute("data-marks"))
+
+    def changes_of_count(self):
+        return [(method, url) for method, url in self.sent if url.endswith("/ones") or "/ones?" in url]
 
     def lit(self):
         """The beat whose mark is lit, or -1 before the first one."""
@@ -190,10 +205,9 @@ class Visitor:
 
     def point_of(self, beat):
         """Where the mark of a beat is on the page. The song says where it puts its marks."""
-        song = self.page.locator("#map")
-        box = song.bounding_box()
-        step, row, left, top, per_row, seat = (float(song.get_attribute(f"data-{name}")) for name in MAP)
-        return box["x"] + left + (beat % per_row + 0.5) * step, box["y"] + top + (beat // per_row) * row + seat
+        box = self.page.locator("#map").bounding_box()
+        x, y = self.marks()[beat]
+        return box["x"] + x, box["y"] + y
 
     def press_beat(self, beat):
         self.page.mouse.click(*self.point_of(beat))
@@ -226,7 +240,6 @@ def visit(browser, program):
 READY = 60_000  # ms: an analysis takes a few seconds, the first one loads the model too
 
 # What the canvas of the song says about itself, in the order point_of() reads it.
-MAP = ("step", "row", "left", "top", "per-row", "seat")
 
 
 def clock(seconds):
@@ -267,7 +280,7 @@ def test_an_uploaded_song_is_analysed_listed_and_played(visit, files):
     assert len(visitor.uploads()) == 1
     assert "rate=44100" in visitor.uploads()[0]
 
-    # It opens by itself: the tempo as the largest figure, the beats, the click switch.
+    # It opens by itself: the count as the largest figure, the tempo, the beats, the click switch.
     expect(page.locator("#player")).to_be_visible(timeout=READY)
     expect(page.locator("#song-name")).to_have_text(TAGGED)
     expect(page.locator("#duration")).to_have_text("0:24")
@@ -275,12 +288,17 @@ def test_an_uploaded_song_is_analysed_listed_and_played(visit, files):
     assert 44 <= len(beats) <= 50, len(beats)
     assert int(page.locator("#now").get_attribute("data-beats")) == len(beats)
     assert abs(int(page.locator("#bpm").inner_text()) / BPM - 1) <= 0.04
-    # The tempo is the largest figure on the page, until the count takes its place.
+    # The count is the largest figure on the page, and the tempo is small beside the time.
     sizes = page.evaluate(
         """() => Object.fromEntries([...document.querySelectorAll('body *')].map(
             (part) => [part.id || part.className || part.tagName, parseFloat(getComputedStyle(part).fontSize)]))"""
     )
-    assert sizes["bpm"] == max(sizes.values()) >= 100
+    assert sizes["count"] == max(sizes.values()) >= 100
+    assert sizes["bpm"] < 30
+    # No beat has sounded yet, so there is no count to show.
+    expect(page.locator("#count")).to_have_text("–")
+    counts = visitor.result(TAGGED)["count"]
+    assert visitor.counts() == counts
     expect(page.locator("#click")).to_be_checked()
     expect(page.locator("#position")).to_have_text("0:00")
     # The list says which song is open, in words.
@@ -306,10 +324,16 @@ def test_an_uploaded_song_is_analysed_listed_and_played(visit, files):
     visitor.press_beat(24)
     expect(page.locator("#now")).to_have_attribute("data-lit", "24")
     expect(page.locator("#position")).to_have_text(clock(beats[24]))
-    # A press on one of the large beats does too: the fourth is the one that is lit.
+    expect(page.locator("#count")).to_have_text(str(counts[24]))
+    # The large view shows the ocho of that beat, each beat at the place of its count. A
+    # press on one of them moves the position too.
+    first, last = (int(beat) for beat in page.locator("#now").get_attribute("data-ocho").split())
+    assert first <= 24 <= last and counts[first] == 1 and last - first == 7
+    other = last if last != 24 else first
     large = page.locator("#now").bounding_box()
-    page.mouse.click(large["x"] + large["width"] * 5.5 / 8, large["y"] + large["height"] / 2)
-    expect(page.locator("#now")).to_have_attribute("data-lit", "26")
+    page.mouse.click(large["x"] + large["width"] * (counts[other] - 0.5) / 8, large["y"] + large["height"] / 2)
+    expect(page.locator("#now")).to_have_attribute("data-lit", str(other))
+    expect(page.locator("#count")).to_have_text(str(counts[other]))
     # And so does the position control of the transport bar.
     page.locator("#seek").fill("5")
     expect(page.locator("#position")).to_have_text("0:05")
@@ -470,55 +494,137 @@ def test_a_marked_range_plays_in_a_loop_with_a_click_on_every_beat_of_every_pass
     expect(page.locator("#loop")).not_to_be_checked()
 
 
-def test_every_beat_has_its_own_mark_and_nothing_groups_them_in_light_and_in_dark(visit, files):
-    """Before the count exists, the beats of the song are one even row after the other."""
+INK = """([x, y]) => {
+    const canvas = document.getElementById('map')
+    const scale = canvas.width / canvas.clientWidth
+    const at = (px, py) => canvas.getContext('2d').getImageData(Math.round(px * scale), Math.round(py * scale), 1, 1).data
+    // How tall the ink is through this point, and what is at the point itself.
+    let tall = 0
+    for (let up = 0; at(x, y - up)[3] > 128; up++) tall++
+    for (let down = 1; at(x, y + down)[3] > 128; down++) tall++
+    const [red, green, blue, alpha] = at(x, y)
+    return { tall: tall / scale, inked: alpha > 128, light: red + green + blue }
+}"""
+
+
+def test_every_beat_has_its_own_mark_and_its_count_in_rows_of_four_ochos_in_light_and_in_dark(visit, files):
     visitor = visit(viewport={"width": 1280, "height": 720}, color_scheme="light")
     page = visitor.page
     visitor.pick(files["tagged"])
     expect(page.locator("#player")).to_be_visible(timeout=READY)
-    count = len(visitor.beats(TAGGED))
-    song = page.locator("#map")
-    step, row, left, top, per_row, seat = (float(song.get_attribute(f"data-{name}")) for name in MAP)
-    assert step >= 20
-    assert per_row < count, "the test song must fill its first row"
+    result = visitor.result(TAGGED)
+    counts, marks = visitor.counts(), visitor.marks()
+    # The count on screen is the one of the analysis, one for every beat.
+    assert counts == result["count"] and len(marks) == len(result["beats"])
+    assert set(counts) == set(range(1, 9))
+
+    # A row holds four ochos: it starts on the first beat of one and has no fifth.
+    assert page.locator("#map").get_attribute("data-per-row") == "4"
+    rows = {}
+    for beat, (x, y) in enumerate(marks):
+        rows.setdefault(y, []).append(beat)
+    assert len(rows) >= 2, "the test song must fill its first row"
+    for beats in rows.values():
+        starts = [beat for beat in beats if beat == 0 or counts[beat] != counts[beat - 1] + 1]
+        assert starts[0] == beats[0] and len(starts) <= 4, beats
+        # Neighbours are 20 pixels apart or more, and further apart from one ocho to the next.
+        gaps = [marks[beat][0] - marks[beat - 1][0] for beat in beats[1:]]
+        assert min(gaps) >= 20, gaps
+        for beat, gap in zip(beats[1:], gaps):
+            assert (gap > min(gaps)) == (beat in starts), (beat, gap)
 
     seen = {}
     for scheme in ("light", "dark"):
         # The page follows the system, and draws the song again in the colours of each.
         page.emulate_media(color_scheme=scheme)
         page.wait_for_timeout(300)
-        # Where there is ink along the middle of the marks of the first row, and its colour.
-        marks = page.evaluate(
-            """([y, from]) => {
-                const canvas = document.getElementById('map')
-                const scale = canvas.width / canvas.clientWidth
-                const inked = canvas.getContext('2d').getImageData(0, Math.round(y * scale), canvas.width, 1).data
-                const marks = []
-                let start = null
-                for (let x = Math.round(from * scale); x <= canvas.width; x++) {
-                    const ink = x < canvas.width && inked[4 * x + 3] > 128
-                    if (ink && start === null) start = x
-                    if (!ink && start !== null) {
-                        const middle = Math.floor((start + x) / 2)
-                        marks.push({ x: (start + x) / 2 / scale, light: inked[4 * middle] + inked[4 * middle + 1] + inked[4 * middle + 2] })
-                        start = null
-                    }
-                }
-                return marks
-            }""",
-            [top + seat, left],
-        )
-        # One mark for every beat of the row, all the same distance apart: no count, no group.
-        assert len(marks) == per_row, scheme
-        for n, mark in enumerate(marks):
-            assert abs(mark["x"] - (left + (n + 0.5) * step)) <= 1, (scheme, n)
+        inks = [page.evaluate(INK, mark) for mark in marks]
+        assert all(ink["inked"] for ink in inks), scheme
+        # Count 1 is told apart by its form: an upright bar, where the others are squares.
+        for beat, ink in enumerate(inks):
+            assert (ink["tall"] > 15) == (counts[beat] == 1), (scheme, beat, ink)
+            assert ink["tall"] >= 7
+        # Between two marks there is no ink.
+        between = page.evaluate(INK, [(marks[1][0] + marks[2][0]) / 2, marks[1][1]])
+        assert not between["inked"], scheme
         ground = page.evaluate("getComputedStyle(document.body).backgroundColor")
-        seen[scheme] = (sum(int(part) for part in ground[4:-1].split(",")), marks[0]["light"])
+        seen[scheme] = (sum(int(part) for part in ground[4:-1].split(",")), inks[0]["light"])
     # Dark marks on a light ground, then light marks on a dark one.
     assert seen["light"][0] > seen["light"][1] and seen["dark"][0] < seen["dark"][1], seen
-    # Nothing is written beside the beats: the only text where the song is shown is the
-    # tempo and the time.
-    assert page.locator("#player").inner_text().split() == [page.locator("#bpm").inner_text(), "BPM", "0:00"]
+    # No section is written: the text where the song is shown is the count, which is not
+    # there before the first beat, the tempo and the time.
+    assert page.locator("#player").inner_text().split() == ["–", page.locator("#bpm").inner_text(), "BPM", "0:00"]
+
+
+def test_count_1_is_set_by_hand_shown_in_every_browser_and_taken_back(visit, files):
+    visitor = visit(viewport={"width": 1280, "height": 720})
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    song_id = visitor.row(TAGGED).get_attribute("data-id")
+    result = visitor.result(TAGGED)
+    before, beats = result["count"], result["beats"]
+    # Another browser has the song open too.
+    other = visit(viewport={"width": 1280, "height": 720})
+    other.row(TAGGED).get_by_role("button", name="Open").click()
+    expect(other.page.locator("#player")).to_be_visible(timeout=READY)
+    song = page.locator("#map")
+    expect(song).to_have_attribute("data-by-hand", "")
+
+    # A beat the analysis counts as 5, well inside the song: the user says it is count 1.
+    beat = next(n for n in range(16, len(before)) if before[n] == 5)
+    visitor.press_beat(beat)
+    expect(page.locator("#count")).to_have_text("5")
+    expect(page.locator("#one")).to_have_text("Count 1 here")
+    page.locator("#one").click()
+    expect(song).to_have_attribute("data-by-hand", str(beat))
+    expect(page.locator("#count")).to_have_text("1")
+    expect(page.locator("#one")).to_have_text("Not count 1")
+    # Before it the count is the analysis's, and from it the count runs in eights.
+    after = before[:beat] + [(n - beat) % 8 + 1 for n in range(beat, len(before))]
+    assert visitor.counts() == after
+    # The ocho before it was cut to a bar, and the large view shows the ocho that starts here.
+    assert after[beat - 4 : beat + 1] == [1, 2, 3, 4, 1]
+    expect(page.locator("#now")).to_have_attribute("data-ocho", f"{beat} {min(beat + 7, len(beats) - 1)}")
+    assert visitor.changes_of_count() == [("PUT", f"/api/songs/{song_id}/ones?at={str(beats[beat]).removesuffix('.0')}")]
+    # A count 1 set by hand has a cap across its top, and the other count 1s have none.
+    # Looked at with the playing position elsewhere, so that neither mark is the lit one.
+    visitor.press_beat(beat + 2)
+    x, y = visitor.marks()[beat]
+    x_other, y_other = visitor.marks()[beat - 4]
+    assert page.evaluate(INK, [x + 7, y - 8])["inked"] and not page.evaluate(INK, [x_other + 7, y_other - 8])["inked"]
+    assert page.evaluate(INK, [x_other, y_other])["tall"] > 15
+
+    # The other browser learns of it from the list, with the song open.
+    expect(other.page.locator("#map")).to_have_attribute("data-by-hand", str(beat), timeout=6000)
+    assert other.counts() == after
+    # And a browser that opens the song later finds it there.
+    late = visit()
+    late.row(TAGGED).get_by_role("button", name="Open").click()
+    expect(late.page.locator("#map")).to_have_attribute("data-by-hand", str(beat), timeout=READY)
+
+    # A second one, set in the other browser, holds from its beat on. The first holds up to it.
+    second = beat + 12
+    other.press_beat(second)
+    other.page.locator("#one").click()
+    expect(song).to_have_attribute("data-by-hand", f"{beat} {second}", timeout=6000)
+    both = after[:second] + [(n - second) % 8 + 1 for n in range(second, len(before))]
+    assert visitor.counts() == both and both[second - 4 : second + 1] == [1, 2, 3, 4, 1]
+
+    # On a beat that was set by hand, the control takes it back.
+    visitor.press_beat(second)
+    expect(page.locator("#one")).to_have_text("Not count 1")
+    page.locator("#one").click()
+    expect(song).to_have_attribute("data-by-hand", str(beat))
+    assert visitor.counts() == after
+    visitor.press_beat(beat)
+    page.locator("#one").click()
+    expect(song).to_have_attribute("data-by-hand", "")
+    expect(page.locator("#one")).to_have_text("Count 1 here")
+    assert visitor.counts() == before
+    expect(other.page.locator("#map")).to_have_attribute("data-by-hand", "", timeout=6000)
+    assert other.counts() == before
+    assert [method for method, url in visitor.changes_of_count()] == ["PUT", "DELETE", "DELETE"]
 
 
 def test_a_song_is_renamed_in_its_row_and_in_the_top_bar(visit, files):
@@ -618,6 +724,21 @@ def test_the_keyboard_plays_moves_the_position_and_reaches_every_control(visit, 
     page.locator("#loop-start").focus()
     page.keyboard.press("ArrowLeft")
     expect(page.locator("#now")).to_have_attribute("data-lit", "10")
+    # With Shift they move by an ocho: on to the first beat of the next one, back to the
+    # first beat of this one, and from there to the one before.
+    counts = visitor.counts()
+    starts = [beat for beat, count in enumerate(counts) if beat == 0 or count != counts[beat - 1] + 1]
+    here = max(start for start in starts if start <= 10)
+    page.keyboard.press("Shift+ArrowRight")
+    expect(page.locator("#now")).to_have_attribute("data-lit", str(starts[starts.index(here) + 1]))
+    page.keyboard.press("Shift+ArrowLeft")
+    expect(page.locator("#now")).to_have_attribute("data-lit", str(here))
+    visitor.press_beat(here + 2)
+    page.keyboard.press("Shift+ArrowLeft")
+    expect(page.locator("#now")).to_have_attribute("data-lit", str(here))
+    visitor.press_beat(10)
+    expect(page.locator("#now")).to_have_attribute("data-lit", "10")
+    page.locator("#loop-start").focus()
 
     # The loop, from the keyboard alone: its two ends, then its switch.
     page.keyboard.press("Enter")
@@ -646,7 +767,7 @@ def test_the_keyboard_plays_moves_the_position_and_reaches_every_control(visit, 
     # From the top of the page: a press on its heading is where the keyboard starts from.
     page.locator("h1").click()
     reached = {}
-    for _ in range(20):
+    for _ in range(22):
         page.keyboard.press("Tab")
         on = page.evaluate(
             """() => {
@@ -659,7 +780,7 @@ def test_the_keyboard_plays_moves_the_position_and_reaches_every_control(visit, 
         # After the last control the keyboard leaves the page.
         if on["name"] not in ("BODY", "HTML"):
             reached[on["name"]] = on["ring"] and reached.get(on["name"], True)
-    controls = {"rename-open", "file", "rename", "delete", "play", "seek", "loop", "loop-start", "loop-end", "click"}
+    controls = {"rename-open", "file", "rename", "delete", "play", "seek", "loop", "loop-start", "loop-end", "one", "click"}
     assert controls <= set(reached), controls - set(reached)
     assert all(reached.values()), reached
 

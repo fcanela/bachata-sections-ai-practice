@@ -1,18 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  beatPosition,
   beatsUntil,
   bpmAt,
   channelsFrom16,
   cleanName,
   clicksUntil,
   clock,
+  countsWith,
   idOf,
   interleaved16,
   kindOf,
   loopOf,
   nameFor,
+  nearestBeat,
+  ochoOf,
+  ochosOf,
   tagsOf,
   wrapped,
 } from './song.js'
@@ -175,22 +178,6 @@ test('the shown tempo is the one of the last beat before the playing position', 
   assert.equal(bpmAt({ beats: [], bpm: [] }, 5), null)
 })
 
-test('a position among the beats moves evenly from one beat to the next', () => {
-  const beats = [1.0, 1.5, 2.5, 3.0]
-  assert.equal(beatPosition(beats, 1.0), 0)
-  assert.equal(beatPosition(beats, 1.25), 0.5)
-  assert.equal(beatPosition(beats, 1.5), 1)
-  assert.equal(beatPosition(beats, 2.25), 1.75)
-  assert.equal(beatPosition(beats, 3.0), 3)
-  // Outside the beats it carries on at the pace of the nearest two.
-  assert.equal(beatPosition(beats, 0.5), -1)
-  assert.equal(beatPosition(beats, 0), -2)
-  assert.equal(beatPosition(beats, 3.25), 3.5)
-  assert.equal(beatPosition([], 5), 0)
-  assert.equal(beatPosition([2], 1), -1)
-  assert.equal(beatPosition([2], 3), 0)
-})
-
 const near = (value, expected) => assert.ok(Math.abs(value - expected) < 1e-9, `${value} is not ${expected}`)
 
 test('a loop over some beats lasts exactly from its first beat to the beat after its last', () => {
@@ -268,4 +255,74 @@ test('a position is shown as minutes and seconds', () => {
   assert.equal(clock(75.4), '1:15')
   assert.equal(clock(599.99), '9:59')
   assert.equal(clock(-1), '0:00')
+})
+
+// A beat every half second from 1.0 s, counted in eights from the first one.
+const steady = (length) => Array.from({ length }, (_, n) => 1 + n * 0.5)
+const eights = (length, first = 0) => Array.from({ length }, (_, n) => ((((n - first) % 8) + 8) % 8) + 1)
+
+test('the beat nearest to a time', () => {
+  const beats = steady(4)
+  assert.equal(nearestBeat(beats, 0), 0)
+  assert.equal(nearestBeat(beats, 1.2), 0)
+  assert.equal(nearestBeat(beats, 1.3), 1)
+  assert.equal(nearestBeat(beats, 2.5), 3)
+  assert.equal(nearestBeat(beats, 99), 3)
+  assert.equal(nearestBeat([], 1), -1)
+})
+
+test('without a beat set by hand the count is the one of the analysis', () => {
+  const counted = countsWith(steady(20), eights(20), [])
+  assert.deepEqual(counted.count, eights(20))
+  assert.deepEqual(counted.byHand, [])
+})
+
+test('from a beat set to count 1 the count runs in eights', () => {
+  const beats = steady(30)
+  // The user says the thirteenth beat is count 1: the bar before it is left alone.
+  const counted = countsWith(beats, eights(30), [beats[12]])
+  assert.deepEqual(counted.count.slice(0, 12), [1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4])
+  assert.deepEqual(counted.count.slice(12), eights(18))
+  assert.deepEqual(counted.byHand, [12])
+  // What the analysis counted is not changed.
+  assert.deepEqual(eights(30)[12], 5)
+})
+
+test('each beat set by hand holds up to the next one', () => {
+  const beats = steady(40)
+  const counted = countsWith(beats, eights(40, 2), [beats[21], beats[5]])
+  // Before the first one, the analysis: a song that starts inside a bar.
+  assert.deepEqual(counted.count.slice(0, 5), [7, 8, 1, 2, 3])
+  assert.deepEqual(counted.count.slice(5, 21), eights(16))
+  assert.deepEqual(counted.count.slice(21), eights(19))
+  assert.deepEqual(counted.byHand, [5, 21])
+})
+
+test('a time kept by the server finds its beat again after another analysis', () => {
+  // The beats moved by 20 ms, and the time sits between two of them.
+  const beats = steady(16).map((time) => time + 0.02)
+  const counted = countsWith(beats, eights(16), [3.0, 3.01, 99])
+  assert.deepEqual(counted.byHand, [4, 15])
+  assert.equal(counted.count[4], 1)
+  assert.deepEqual(countsWith([], [], [1]).byHand, [])
+})
+
+test('an ocho starts at every count 1 and may be short', () => {
+  assert.deepEqual(ochosOf(eights(20)), [{ first: 0, last: 7 }, { first: 8, last: 15 }, { first: 16, last: 19 }])
+  // A song that starts inside a bar, and a half phrase made by a beat set by hand.
+  const count = [7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 1]
+  const ochos = ochosOf(count)
+  assert.deepEqual(ochos, [
+    { first: 0, last: 1 },
+    { first: 2, last: 9 },
+    { first: 10, last: 13 },
+    { first: 14, last: 21 },
+    { first: 22, last: 22 },
+  ])
+  assert.deepEqual(ochosOf([]), [])
+  // Two beats set by hand side by side: each is an ocho of its own.
+  assert.deepEqual(ochosOf([1, 1, 2]), [{ first: 0, last: 0 }, { first: 1, last: 2 }])
+
+  assert.deepEqual([0, 1, 2, 9, 10, 13, 14, 22].map((beat) => ochoOf(ochos, beat)), [0, 0, 1, 1, 2, 2, 3, 4])
+  assert.equal(ochoOf([], 3), -1)
 })

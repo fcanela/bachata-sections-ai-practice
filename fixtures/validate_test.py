@@ -2,7 +2,16 @@ import copy
 
 import pytest
 
-from fixtures.validate import beat_problems, labelled_songs, problems, read_labels, reference_beats
+from fixtures.validate import (
+    bar_problems,
+    beat_problems,
+    count_matches,
+    labelled_songs,
+    problems,
+    read_labels,
+    reference_beats,
+    reference_counts,
+)
 
 # A made-up song in the site's format, at 120 BPM: a beat every half second from 1.0 s.
 EXAMPLE = {
@@ -108,3 +117,35 @@ def test_a_missing_an_extra_and_a_late_beat_are_each_reported():
 def test_a_beat_every_50_ms_is_rejected():
     everywhere = [n * 0.05 for n in range(300)]
     assert len(beat_problems(REFERENCE, everywhere)) >= len(REFERENCE)
+
+
+def section(beats, *blocks):
+    return {"beats": beats, "blocks": [{"beats": block} for block in blocks]}
+
+
+def test_the_reference_count_starts_again_at_every_section_and_every_block():
+    assert reference_counts(EXAMPLE) == [1, 2, 3, 4, 5, 6, 7, 8] * 3
+    # A section of an ocho and a half: the half phrase is its last bar, counted 1 to 4.
+    assert reference_counts({"sections": [section(12), section(8)]}) == [1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4] + [1, 2, 3, 4, 5, 6, 7, 8]
+    # Blocks say where a half phrase is when it is not at the end.
+    assert reference_counts({"sections": [section(20, 8, 4, 8)]}) == [1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8]
+    # Nine beats: an ocho and one beat on count 1.
+    assert reference_counts({"sections": [section(9)]}) == [1, 2, 3, 4, 5, 6, 7, 8, 1]
+
+
+def test_a_beat_in_the_wrong_place_of_its_bar_is_reported():
+    reference = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
+    counts = [1, 2, 3, 4, 1, 2]
+    assert bar_problems(reference, counts, reference, [1, 2, 3, 4, 1, 2]) == []
+    # Counts 5 to 8 are the same places of a bar as 1 to 4.
+    assert bar_problems(reference, [5, 6, 7, 8, 1, 2], reference, [1, 2, 3, 4, 1, 2]) == []
+    shifted = bar_problems(reference, counts, reference, [2, 3, 4, 1, 2, 3])
+    assert len(shifted) == 6 and shifted[0] == "the beat at 1.000 s is beat 2 of its bar, the labels say 1"
+    assert bar_problems(reference, counts, reference[:5], [1, 2, 3, 4, 1]) == ["no beat at 3.500 s"]
+
+
+def test_the_beats_shown_with_the_count_of_the_reference_are_counted():
+    reference = [1.0, 1.5, 2.0, 2.5]
+    assert count_matches(reference, [1, 2, 3, 4], reference, [1, 2, 3, 4]) == 4
+    assert count_matches(reference, [1, 2, 3, 4], reference, [5, 6, 7, 8]) == 0
+    assert count_matches(reference, [1, 2, 3, 4], [1.0, 1.5, 2.0], [1, 2, 7]) == 2

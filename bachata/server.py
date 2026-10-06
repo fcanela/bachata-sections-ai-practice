@@ -4,8 +4,11 @@
     GET    /api/songs/<id>          one song, or 404 when the id is not in the library
     PUT    /api/songs/<id>          an upload: ?name=...&rate=44100&frames=N, and the samples
     GET    /api/songs/<id>/sound    the stored sound
-    GET    /api/songs/<id>/result   the beats and the tempo, once the song is ready
+    GET    /api/songs/<id>/result   the beats, with the tempo, the place in the bar and the
+                                    count at each, once the song is ready
     PATCH  /api/songs/<id>          a new name: ?name=...
+    PUT    /api/songs/<id>/ones     the beat at ?at=<seconds> is count 1
+    DELETE /api/songs/<id>/ones     it no longer is
     DELETE /api/songs/<id>          a deletion
 
 An upload is plain samples: 16 bits, little-endian, left and right in turn, at 44.1 kHz,
@@ -18,6 +21,7 @@ Every answer carries the security headers, including the 404s and the errors.
 
 import contextlib
 import json
+import re
 from pathlib import Path
 
 from starlette.applications import Starlette
@@ -33,11 +37,13 @@ from bachata.store import (
     BYTES_PER_FRAME,
     LIBRARY_LIMIT_BYTES,
     MAX_NAME,
+    MAX_ONES,
     MAX_SECONDS,
     MIN_SECONDS,
     RATE,
     Known,
     Store,
+    TooMany,
     well_formed,
 )
 
@@ -136,6 +142,19 @@ def checked_name(name):
     return name
 
 
+# A time in seconds as the page writes it: digits, and up to three more after a point.
+SECONDS = re.compile(r"[0-9]{1,4}(\.[0-9]{1,3})?", re.ASCII)
+
+
+def checked_time(at, song):
+    """A time inside a song, in seconds, as the page sent it, or a refusal."""
+    if at is None or SECONDS.fullmatch(at) is None:
+        raise Refused(400, "The time is not a number of seconds")
+    if float(at) > song["frames"] / RATE:
+        raise Refused(400, "The time is after the end of the song")
+    return float(at)
+
+
 def checked_frames(request):
     """The number of moments an upload says it holds, or a refusal."""
     query = request.query_params
@@ -171,6 +190,9 @@ def create_app(data, analyse=None, version=ANALYSIS_VERSION, limit=LIBRARY_LIMIT
             "name": song["name"],
             "state": queue.state(song),
             "seconds": round(song["frames"] / RATE, 1),
+            # The beats the user said are count 1, as times. The list is asked for every
+            # two seconds, so every browser learns of a change.
+            "ones": song["ones"],
         }
 
     def song_id_of(request):
@@ -214,7 +236,7 @@ def create_app(data, analyse=None, version=ANALYSIS_VERSION, limit=LIBRARY_LIMIT
         song = song_of(request)
         if queue.state(song) != "ready":
             raise Refused(404, "No result yet")
-        return answer({"beats": song["result"]["beats"], "bpm": song["result"]["bpm"]})
+        return answer({key: song["result"][key] for key in ("beats", "bpm", "bar", "count")})
 
     async def upload(request):
         if not from_own_page(request):
@@ -257,6 +279,19 @@ def create_app(data, analyse=None, version=ANALYSIS_VERSION, limit=LIBRARY_LIMIT
             raise Refused(404, "No such song")
         return Response(status_code=204)
 
+    async def set_one(request):
+        if not from_own_page(request):
+            raise Refused(403, "Not from the application's own page")
+        song = song_of(request)
+        at = checked_time(request.query_params.get("at"), song)
+        try:
+            found = store.set_one(song["id"], at, request.method == "PUT")
+        except TooMany:
+            raise Refused(400, f"The song has {MAX_ONES} beats set to count 1 already") from None
+        if not found:
+            raise Refused(404, "No such song")
+        return Response(status_code=204)
+
     async def delete(request):
         if not from_own_page(request):
             raise Refused(403, "Not from the application's own page")
@@ -276,6 +311,7 @@ def create_app(data, analyse=None, version=ANALYSIS_VERSION, limit=LIBRARY_LIMIT
         Route("/api/songs/{id}", upload, methods=["PUT"]),
         Route("/api/songs/{id}", rename, methods=["PATCH"]),
         Route("/api/songs/{id}", delete, methods=["DELETE"]),
+        Route("/api/songs/{id}/ones", set_one, methods=["PUT", "DELETE"]),
         Route("/api/songs/{id}/sound", sound),
         Route("/api/songs/{id}/result", result),
     ]

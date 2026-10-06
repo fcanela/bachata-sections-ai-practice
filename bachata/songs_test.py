@@ -14,7 +14,17 @@ import pytest
 
 from bachata.analysis import analyse
 from bachata.model import sha256_of
-from fixtures.validate import DEV, SAME_BEAT_S, beat_problems, labelled_songs, read_labels, reference_beats
+from fixtures.validate import (
+    DEV,
+    SAME_BEAT_S,
+    bar_problems,
+    beat_problems,
+    count_matches,
+    labelled_songs,
+    read_labels,
+    reference_beats,
+    reference_counts,
+)
 
 # How far the shown BPM may be from the BPM a dancer counts.
 BPM_TOLERANCE = 0.04
@@ -64,6 +74,28 @@ def test_the_shown_bpm_is_the_labels_bpm_at_every_labelled_beat(song):
         if abs(result["bpm"][nearest] / labels["bpm"] - 1) > BPM_TOLERANCE:
             wrong.append(f"{result['bpm'][nearest]} BPM at {labelled:.3f} s")
     assert wrong == [], f"the labels say {labels['bpm']} BPM"
+
+
+@pytest.mark.parametrize("song", MIXES)
+def test_every_labelled_beat_is_in_its_place_of_the_bar(song):
+    mix = DEV / song / "mix.m4a"
+    labels = read_labels(DEV / song)
+    result = analysed(mix)
+    problems = bar_problems(reference_beats(labels, sha256_of(mix)), reference_counts(labels), result["beats"], result["bar"])
+    assert problems == [], f"{len(problems)} problems on {labels['total_beats']} labelled beats"
+
+
+@pytest.mark.parametrize("song", MIXES)
+def test_the_count_is_measured_against_the_reference(song):
+    """Measured, with no limit to pass: the count is strict from slice 4."""
+    mix = DEV / song / "mix.m4a"
+    labels = read_labels(DEV / song)
+    result = analysed(mix)
+    counts = reference_counts(labels)
+    right = count_matches(reference_beats(labels, sha256_of(mix)), counts, result["beats"], result["count"])
+    # Printed for the log: `pytest -s` shows it.
+    print(f"\n{song}: {right} of {len(counts)} labelled beats are shown with the count of the reference")
+    assert set(result["count"]) <= set(range(1, 9)) and len(result["count"]) == len(result["beats"])
 
 
 @pytest.mark.parametrize("recording", sorted(RECORDINGS))

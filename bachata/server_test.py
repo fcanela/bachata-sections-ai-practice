@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 from starlette.testclient import TestClient
 
+from bachata.analysis import ANALYSIS_VERSION
 from bachata.server import WEB, create_app
 from bachata.store import RATE
 
@@ -30,7 +31,7 @@ def analyse(samples, rate):
     """Stands for the real analysis. The first sample says which song it was given."""
     if samples[0, 0] == 13:
         raise RuntimeError("this song cannot be analysed")
-    return {"beats": [1.0, 1.5, float(samples[0, 0])], "bpm": [120.0, 120.0, 120.0]}
+    return {"beats": [1.0, 1.5, float(samples[0, 0])], "bpm": [120.0, 120.0, 120.0], "bar": [1, 2, 3], "count": [1, 2, 3]}
 
 
 def a_song(seconds=20, first=1):
@@ -58,6 +59,13 @@ class Program:
 
     def delete(self, song_id=ID_A, headers=OWN_PAGE):
         return self.client.delete(f"/api/songs/{song_id}", headers=headers)
+
+    def set_one(self, at, song_id=ID_A, on=True, headers=OWN_PAGE):
+        send = self.client.put if on else self.client.delete
+        return send(f"/api/songs/{song_id}/ones", params=None if at is None else {"at": at}, headers=headers)
+
+    def ones(self, song_id=ID_A):
+        return self.get(f"/api/songs/{song_id}").json()["ones"]
 
     def analyse_one(self):
         return self.app.queue.run_one()
@@ -157,6 +165,7 @@ def test_an_uploaded_song_is_listed_with_its_name_and_its_state(program):
         "name": "Grupo Extra - Me Emborracharé",
         "state": "waiting",
         "seconds": 20.0,
+        "ones": [],
     }
     assert program.get(f"/api/songs/{ID_A}/result").status_code == 404
 
@@ -167,7 +176,7 @@ def test_an_uploaded_song_is_listed_with_its_name_and_its_state(program):
     assert program.get(f"/api/songs/{ID_B}/result").status_code == 404
 
     result = program.get(f"/api/songs/{ID_A}/result")
-    assert result.json() == {"beats": [1.0, 1.5, 1.0], "bpm": [120.0, 120.0, 120.0]}
+    assert result.json() == {"beats": [1.0, 1.5, 1.0], "bpm": [120.0, 120.0, 120.0], "bar": [1, 2, 3], "count": [1, 2, 3]}
     assert result.headers["cache-control"] == "no-store"
     assert program.get("/api/songs").headers["cache-control"] == "no-store"
 
@@ -202,11 +211,12 @@ def test_a_result_of_an_older_analysis_is_made_again_from_the_stored_sound(tmp_p
     old.analyse_one()
     assert old.listed() == [("A song", "ready")]
 
-    new = Program(tmp_path / "data", version=2, analyse=lambda samples, rate: {"beats": [float(len(samples))], "bpm": [0.0]})
+    newer = {"bpm": [0.0], "bar": [1], "count": [1]}
+    new = Program(tmp_path / "data", version=2, analyse=lambda samples, rate: {"beats": [float(len(samples))]} | newer)
     assert new.listed() == [("A song", "waiting")]
     assert new.get(f"/api/songs/{ID_A}/result").status_code == 404
     new.analyse_one()
-    assert new.get(f"/api/songs/{ID_A}/result").json() == {"beats": [20.0 * RATE], "bpm": [0.0]}
+    assert new.get(f"/api/songs/{ID_A}/result").json() == {"beats": [20.0 * RATE]} | newer
 
 
 def test_the_library_and_the_queue_survive_a_restart(tmp_path):
@@ -265,6 +275,75 @@ def test_a_song_is_renamed_and_keeps_its_state_and_its_result(tmp_path):
 
     missing = program.rename("c" * 32, "Not there")
     assert (missing.status_code, missing.text) == (404, "No such song\n")
+
+
+def test_a_beat_is_set_to_count_1_and_taken_back(tmp_path):
+    analysed = []
+    program = Program(tmp_path / "data", analyse=lambda samples, rate: analysed.append(1) or analyse(samples, rate))
+    program.put(ID_A)
+    program.put(ID_B, a_song(first=2))
+    program.analyse_one()
+
+    done = program.set_one("1.5")
+    assert (done.status_code, done.content) == (204, b"")
+    assert program.set_one("12.345").status_code == 204
+    assert program.set_one("0").status_code == 204
+    # Set twice, a beat is there once.
+    assert program.set_one("1.5").status_code == 204
+    assert program.ones() == [0.0, 1.5, 12.345]
+    assert [song["ones"] for song in program.get("/api/songs").json()] == [[0.0, 1.5, 12.345], []]
+
+    assert program.set_one("0", on=False).status_code == 204
+    # Taking back a beat that was not set changes nothing.
+    assert program.set_one("7", on=False).status_code == 204
+    assert program.ones() == [1.5, 12.345]
+
+    # The song keeps its name, its state, its sound and its result, and nothing is analysed again.
+    assert program.listed() == [("A song", "ready"), ("A song", "waiting")]
+    assert program.get(f"/api/songs/{ID_A}/result").json()["beats"] == [1.0, 1.5, 1.0]
+    assert program.get(f"/api/songs/{ID_A}/sound").content == a_song().tobytes()
+    assert analysed == [1]
+
+    # It survives a renaming, a restart and a new version of the analysis.
+    assert program.rename(ID_A, "Renamed").status_code == 204
+    program = Program(tmp_path / "data", version=ANALYSIS_VERSION + 1)
+    assert program.listed() == [("Renamed", "waiting"), ("A song", "waiting")]
+    program.analyse_one()
+    assert program.listed() == [("Renamed", "ready"), ("A song", "waiting")]
+    assert program.ones() == [1.5, 12.345]
+    assert program.ones(ID_B) == []
+
+
+def test_a_count_1_is_checked_before_it_is_kept(program):
+    program.put(ID_A)
+    missing = program.set_one("1.5", "c" * 32)
+    assert (missing.status_code, missing.text) == (404, "No such song\n")
+    assert program.set_one("1.5", "../../etc").status_code in (400, 404)
+    assert program.set_one("1.5", "A" * 32).status_code == 400
+
+    no_time = program.set_one(None)
+    assert (no_time.status_code, no_time.text) == (400, "The time is not a number of seconds\n")
+    for at in ["", "soon", "-1", "1e3", "nan", "inf", "1,5", "1.2345", "12345", " 1", "1.", ".5", "١"]:
+        assert program.set_one(at).status_code == 400, repr(at)
+        assert program.set_one(at, on=False).status_code == 400, repr(at)
+    late = program.set_one("20.001")
+    assert (late.status_code, late.text) == (400, "The time is after the end of the song\n")
+    assert program.ones() == []
+    assert program.set_one("20").status_code == 204
+    assert program.ones() == [20.0]
+
+
+def test_a_song_takes_200_beats_set_to_count_1_and_no_more(program):
+    program.put(ID_A)
+    for beat in range(200):
+        assert program.set_one(f"{beat / 10:.1f}").status_code == 204
+    full = program.set_one("19.95")
+    assert (full.status_code, full.text) == (400, "The song has 200 beats set to count 1 already\n")
+    # One that is there already may be set again, and one may be taken back.
+    assert program.set_one("19.9").status_code == 204
+    assert program.set_one("0.0", on=False).status_code == 204
+    assert program.set_one("19.95").status_code == 204
+    assert len(program.ones()) == 200
 
 
 def test_a_new_name_is_checked_like_the_name_of_an_upload(program):
@@ -345,6 +424,16 @@ def test_a_renaming_that_is_not_from_the_own_page_is_refused(program, headers):
     answer = program.rename(ID_A, headers=headers)
     assert (answer.status_code, answer.text) == (403, "Not from the application's own page\n")
     assert program.listed() == [("A song", "waiting")]
+
+
+@pytest.mark.parametrize("headers", NOT_THE_OWN_PAGE)
+def test_a_count_1_that_is_not_from_the_own_page_is_refused(program, headers):
+    program.put(ID_A)
+    assert program.set_one("2.5").status_code == 204
+    for on in (True, False):
+        answer = program.set_one("1.5" if on else "2.5", on=on, headers=headers)
+        assert (answer.status_code, answer.text) == (403, "Not from the application's own page\n")
+    assert program.ones() == [2.5]
 
 
 def test_the_own_page_may_use_either_name_of_the_program(program):
@@ -529,6 +618,11 @@ def test_every_answer_has_the_security_headers(program):
         program.rename(ID_B, headers={}),
         program.rename(ID_B, name=""),
         program.rename("c" * 32),
+        program.set_one("1.5"),
+        program.set_one("1.5", headers={}),
+        program.set_one("soon"),
+        program.set_one("1.5", "c" * 32),
+        program.set_one("1.5", on=False),
         program.get("/fonts/hind-700.woff2"),
         program.delete(ID_B, headers={}),
         program.delete(ID_B),

@@ -1,7 +1,14 @@
 import numpy as np
 import pytest
 
-from bachata.analysis import MAX_BPM, MIN_BPM, beats_from_activations, bpm_at_beats
+from bachata.analysis import (
+    MAX_BPM,
+    MIN_BPM,
+    beats_from_activations,
+    bpm_at_beats,
+    count_from_bars,
+    first_heard_bar,
+)
 
 
 def test_the_shown_bpm_is_the_mean_tempo_of_the_ocho_around_each_beat():
@@ -34,8 +41,32 @@ def test_a_half_time_part_keeps_the_tempo_a_dancer_counts():
     # 125 BPM for 20 s, with only every other beat marked from 8 s to 14 s.
     every = [0.48 * n for n in range(1, 41)]
     marked = [time for n, time in enumerate(every) if not (8 < time < 14 and n % 2)]
-    beats = beats_from_activations(*activations(marked, 20))
+    beats, bars = beats_from_activations(*activations(marked, 20))
     assert beats == pytest.approx(every, abs=0.021)
+    # Every beat has a place in a bar of four, and the places follow each other.
+    assert all(after == before % 4 + 1 for before, after in zip(bars, bars[1:]))
+
+
+def test_the_count_runs_in_eights_from_the_first_bar_that_is_heard():
+    assert count_from_bars([1, 2, 3, 4] * 3, 0) == [1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4]
+    # A song that starts inside a bar: its first beats end an ocho.
+    assert count_from_bars([3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1], 2) == [7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1]
+    assert count_from_bars([], 0) == []
+
+
+def test_a_bar_in_the_silence_before_a_song_does_not_start_the_count():
+    rate = 100
+    beats = [0.5 * n for n in range(12)]
+    bars = [1, 2, 3, 4] * 3
+    sound = np.ones(6 * rate, dtype=np.float32)
+    assert first_heard_bar(sound, rate, beats, bars) == 0
+    # Two seconds of silence, with a faint noise in them: the second bar is the first heard.
+    sound[: 2 * rate] = 0.001
+    assert first_heard_bar(sound, rate, beats, bars) == 4
+    # A song that starts inside a bar.
+    assert first_heard_bar(np.ones(6 * rate, dtype=np.float32), rate, beats, [3, 4, 1, 2] * 3) == 2
+    assert first_heard_bar(np.zeros(6 * rate, dtype=np.float32), rate, beats, bars) == 0
+    assert first_heard_bar(sound, rate, [], []) == 0
 
 
 def test_the_tempo_range_cannot_hold_a_tempo_and_its_double():

@@ -1,6 +1,7 @@
 """The library: the songs the server remembers, in one data folder.
 
-    <data>/songs/<id>/song.json     the name, the length and when the song arrived
+    <data>/songs/<id>/song.json     the name, the length, when the song arrived, and the
+                                    beats the user said are count 1
     <data>/songs/<id>/sound.raw     the sound: the samples, exactly as they were uploaded
     <data>/songs/<id>/result.json   the results, with the version of the analysis that made them
     <data>/tmp/                     songs on their way in or out
@@ -33,6 +34,8 @@ MIN_SECONDS = 20
 MAX_SECONDS = 15 * 60
 MAX_NAME = 200
 LIBRARY_LIMIT_BYTES = 20 * 1000**3
+# How many beats of one song the user may say are count 1.
+MAX_ONES = 200
 
 ID = re.compile(r"[0-9a-f]{32}")
 
@@ -43,6 +46,10 @@ def well_formed(song_id):
 
 class Known(Exception):
     """The song is already in the library."""
+
+
+class TooMany(Exception):
+    """The song has as many beats set to count 1 as it may have."""
 
 
 class Store:
@@ -60,7 +67,8 @@ class Store:
         self._songs = {}
         for song_folder in self._songs_folder.iterdir():
             if well_formed(song_folder.name):
-                song = json.loads((song_folder / "song.json").read_text())
+                # A song stored before count 1 could be set by hand has none.
+                song = {"ones": []} | json.loads((song_folder / "song.json").read_text())
                 song["result"] = self._read_result(song_folder.name)
                 self._songs[song_folder.name] = song
 
@@ -107,7 +115,7 @@ class Store:
         try:
             frames = upload.stat().st_size // BYTES_PER_FRAME
             upload.rename(folder / "sound.raw")
-            song = {"id": song_id, "name": name, "frames": frames, "added": time.time_ns()}
+            song = {"id": song_id, "name": name, "frames": frames, "added": time.time_ns(), "ones": []}
             (folder / "song.json").write_text(json.dumps(song))
             with self._lock:
                 if song_id in self._songs:
@@ -139,18 +147,37 @@ class Store:
             else:
                 partial.unlink()
 
-    def rename(self, song_id, name):
-        """Gives a song another name. Returns whether it was there."""
+    def _change(self, song_id, change):
+        """Writes a song again with what `change` makes of it. Returns whether it was there."""
         with self._lock:
             song = self._songs.get(song_id)
             if song is None:
                 return False
-            kept = {key: value for key, value in song.items() if key != "result"} | {"name": name}
+            changed = change({key: value for key, value in song.items() if key != "result"})
             partial = self._new_tmp(song_id)
-            partial.write_text(json.dumps(kept))
+            partial.write_text(json.dumps(changed))
             os.replace(partial, self._folder(song_id) / "song.json")
-            song["name"] = name
+            song.update(changed)
         return True
+
+    def rename(self, song_id, name):
+        """Gives a song another name. Returns whether it was there."""
+        return self._change(song_id, lambda song: song | {"name": name})
+
+    def set_one(self, song_id, at, on):
+        """Says that the beat at `at` seconds is count 1, or takes that back.
+
+        Returns whether the song was there. It is kept as a time and not as the number of
+        a beat: a later version of the analysis may find other beats.
+        """
+
+        def change(song):
+            ones = set(song["ones"]) - {at}
+            if on and len(ones) >= MAX_ONES:
+                raise TooMany(song_id)
+            return song | {"ones": sorted(ones | {at} if on else ones)}
+
+        return self._change(song_id, change)
 
     def delete(self, song_id):
         """Removes a song. Returns whether it was there."""

@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pytest
 
-from bachata.store import RATE, Known, Store, well_formed
+from bachata.store import MAX_ONES, RATE, Known, Store, TooMany, well_formed
 
 ID_A = "a" * 32
 ID_B = "b" * 32
@@ -87,7 +87,8 @@ def test_a_renamed_song_keeps_everything_but_its_name(tmp_path):
         assert song["result"] == {"version": 1, "beats": [1.0], "bpm": [120.0]}
         assert np.array_equal(library.samples(ID_A), samples)
     # The name is in song.json only, and nothing is left on the way.
-    assert json.loads((tmp_path / "songs" / ID_A / "song.json").read_text()).keys() == {"id", "name", "frames", "added"}
+    kept = json.loads((tmp_path / "songs" / ID_A / "song.json").read_text())
+    assert kept.keys() == {"id", "name", "frames", "added", "ones"}
     assert files_under(tmp_path) == [f"songs/{ID_A}/{name}" for name in ("result.json", "song.json", "sound.raw")]
 
     assert store.rename(ID_B, "Not there") is False
@@ -152,3 +153,47 @@ def test_the_text_a_page_sent_never_names_a_file(tmp_path):
     add(store, ID_A, "../../etc/passwd")
     assert files_under(tmp_path) == [f"songs/{ID_A}/song.json", f"songs/{ID_A}/sound.raw"]
     assert json.loads((tmp_path / "songs" / ID_A / "song.json").read_text())["name"] == "../../etc/passwd"
+
+
+def test_the_beats_set_to_count_1_are_kept_with_the_song(tmp_path):
+    store = Store(tmp_path)
+    add(store, ID_A)
+    store.write_result(ID_A, {"version": 1, "beats": [1.0], "bpm": [120.0]})
+    assert store.song(ID_A)["ones"] == []
+
+    assert store.set_one(ID_A, 12.5, True) is True
+    assert store.set_one(ID_A, 3.0, True) is True
+    assert store.set_one(ID_A, 12.5, True) is True
+    assert store.set_one(ID_A, 40.0, False) is True
+    assert store.rename(ID_A, "Renamed") is True
+    for library in (store, Store(tmp_path)):
+        song = library.song(ID_A)
+        assert (song["name"], song["ones"]) == ("Renamed", [3.0, 12.5])
+        assert song["result"] == {"version": 1, "beats": [1.0], "bpm": [120.0]}
+    assert store.set_one(ID_A, 3.0, False) is True
+    assert Store(tmp_path).song(ID_A)["ones"] == [12.5]
+
+    assert store.set_one(ID_B, 1.0, True) is False
+    assert files_under(tmp_path) == [f"songs/{ID_A}/{name}" for name in ("result.json", "song.json", "sound.raw")]
+
+
+def test_a_song_stored_before_count_1_could_be_set_has_none(tmp_path):
+    store = Store(tmp_path)
+    add(store, ID_A)
+    file = tmp_path / "songs" / ID_A / "song.json"
+    file.write_text(json.dumps({key: value for key, value in json.loads(file.read_text()).items() if key != "ones"}))
+    again = Store(tmp_path)
+    assert again.song(ID_A)["ones"] == []
+    assert again.set_one(ID_A, 1.0, True) is True
+    assert Store(tmp_path).song(ID_A)["ones"] == [1.0]
+
+
+def test_a_song_takes_only_so_many_beats_set_to_count_1(tmp_path):
+    store = Store(tmp_path)
+    add(store, ID_A)
+    for beat in range(MAX_ONES):
+        store.set_one(ID_A, float(beat), True)
+    with pytest.raises(TooMany):
+        store.set_one(ID_A, 1000.0, True)
+    assert len(store.song(ID_A)["ones"]) == MAX_ONES
+    assert files_under(tmp_path) == [f"songs/{ID_A}/song.json", f"songs/{ID_A}/sound.raw"]

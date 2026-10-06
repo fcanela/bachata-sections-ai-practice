@@ -36,14 +36,14 @@
       <section id="player" class="player" aria-labelledby="song-name" hidden>
         <div class="now">
           <p class="figure">
-            <output id="bpm">–</output>
-            <span class="under"><span class="unit">BPM</span> <span id="where" aria-hidden="true">0:00</span></span>
+            <output id="count" aria-label="Count">–</output>
+            <span class="under"><span class="tempo"><span id="bpm">–</span> <span class="unit">BPM</span></span> <span id="where" aria-hidden="true">0:00</span></span>
           </p>
-          <canvas id="now" aria-label="The beats around the playing position. The one that is sounding is lit."></canvas>
+          <canvas id="now" aria-label="The ocho that is sounding, with a place for each count. The beat that is sounding is lit. Press a beat to move the playing position there."></canvas>
         </div>
         <div id="song" class="song">
           <div id="song-size">
-            <canvas id="map" aria-label="Every beat of the song. Press one to move the playing position there. Drag across several to mark a loop."></canvas>
+            <canvas id="map" aria-label="Every beat of the song with its count, in rows of ochos. Press one to move the playing position there. Drag across several to mark a loop."></canvas>
           </div>
         </div>
       </section>
@@ -59,6 +59,10 @@
           </div>
           <button id="loop-start" type="button" disabled>Start here</button>
           <button id="loop-end" type="button" disabled>End here</button>
+        </div>
+        <div class="counting">
+          <button id="one" type="button" disabled title="Say that the beat at the playing position is count 1">Count 1 here</button>
+          <span id="one-note" class="note refused" role="status"></span>
         </div>
         <label class="switch"><input id="click" type="checkbox" checked> Click on every beat</label>
       </footer>

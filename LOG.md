@@ -46,6 +46,32 @@ The harmony changes on count 5 in Me Emborrachare, in 10 of its 13 sections, and
 - The two pairs of half phrases that are close together in Eso Es Amor, at 344 and 380 and at 400 and 436, bring the cycle back to where it was, and the tracker misses them at every cost but 4.
 - On Me Emborrachare the shift is at the end of the Intro, beat 36, and not at its start. That is the one sign in favour of the rule that a half phrase is the last bar of its section.
 
+**After the specification, the build**
+
+Everything the session started was on port 8081, on a copy of the library in the session's scratch folder.
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| `pytest bachata/songs_test.py -s`, with bars of four only | Every labelled beat is still found once, and is in its place of the bar: 396, 505 and 416. Bars of three are no longer allowed, and no beat moved | 28 s |
+| The same, for the count in eights from the first bar | Me Emborrachare 120 of 396, Eso Es Amor 248 of 505, Old Town Road 0 of 416. On Old Town Road and Eso Es Amor the tracker puts four beats in the silence before the song, so its first bar is one bar early | 28 s |
+| How loud the first beat of each of the first four bars is, against the level of the whole song, on the 101 songs | The first bar starts more than 40 dB under the song in 2 of the 3 mixes and in 8 of the 96 songs: 180, 67, 180, 180, 80, 64, 50, 48, 43 and 43 dB under. In no song is a second bar that quiet | about 60 s |
+| `pytest bachata/songs_test.py -s`, with the count from the first bar that is not silence | Me Emborrachare 120 of 396, Eso Es Amor 257 of 505, Old Town Road 416 of 416 | 27 s |
+| `pytest bachata fixtures scripts`, inside the sandbox | 133 passed | 29 s |
+| `node --test web/` | 28 pass: 23 of the page's logic, 5 of the colours | under 1 s |
+| The program on the copy of the library, version 2 of the analysis | The five stored songs were analysed again by themselves | under 60 s |
+| Pictures with Playwright's Firefox, inside the sandbox: light at 1920 by 1080, dark at 1280 by 720 | Four ochos a row in both. The marks are 32 pixels apart at 1920 and 26 at 1280. The large beats are 168 pixels apart at 1920. At 1280 the transport bar takes two lines: the click switch goes under the others | not timed |
+| `pytest e2e -k firefox`, inside the sandbox | 12 passed, 5 skipped for want of sound. The first run failed: a name inside the page's own code hid the function that opens a song, so a song no longer opened by itself after its analysis. Fixed | 74 s |
+| `TMPDIR=/tmp/claude-1000/e2e BACHATA_TEST_PORT=8081 .venv/bin/python -m pytest`, outside the sandbox | 167 passed, 1 failed, none skipped. The failure was in the new test of count 1, in Chrome: it took the 404 for `/favicon.ico` in the console for an error. The check it repeated is already made for every test, without the 404 | 211 s |
+| The same, after that fix | 168 passed, none skipped | 226 s |
+
+**What the count is measured at.** With no beat set by hand:
+
+| Mix | Labelled beats with the count of the reference | Why the others differ |
+| --- | --- | --- |
+| Me Emborrachare | 120 of 396 | The count is four off from the half phrase that ends the Intro, beat 36, to the one that ends the Breakdown, beat 312 |
+| Eso Es Amor | 257 of 505 | Eight half phrases, each of which shifts the count by four |
+| Old Town Road | 416 of 416 | It has no half phrase |
+
 **The 96 songs.** They have no labels, so these figures show how regular the analysis is on them and not whether it is right.
 
 | Figure | Across the 96 |
@@ -112,6 +138,17 @@ Other songs that stand apart, for the owner to look at:
 - A bar is always four beats: the DBN is no longer allowed bars of three. None of the 101 songs analysed in this session has one.
 - The control takes a count 1 back when it is pressed on a beat that was set by hand. Without that a wrong press could not be undone.
 - The analysis does not look for half phrases, and starts the count on the first bar it hears. The tracker of the experiment reports half phrases that are not there on the one song that has none.
+
+**In the build**
+
+- **The count starts on the first bar that is not silence.** A bar whose first beat is more than 40 dB under the level of the whole song does not start it. The tracker carries the pulse back over the silence before a song: it did on two of the three mixes and on 8 of the 96 songs.
+- **The count is not stored.** The result of the analysis has the place in the bar and the count in eights. The beats set by hand are kept with the song, as times, and the page puts the two together. A new version of the analysis therefore leaves them alone, and a time finds the nearest beat again.
+- **The list tells every browser.** Each song in the list carries its beats set by hand, so a browser learns of a change within two seconds, as it does of a new name.
+- **A song takes 200 beats set by hand.** A bound for what the list carries. *Mine.*
+- **The row of the song is 50 pixels high**, up from 40, for the count under each mark. The mix of 3:15 no longer shows whole at 1920 by 1080: 11 of its 13 rows do.
+- **The large view no longer slides**, and the two arrowheads the beats passed are gone with it. Each beat stands at the place of its count, so a half phrase fills the first four places.
+- **The arrows with Shift move by an ocho.** The brief of the page had it for when ochos exist.
+- **Left as it is:** at 1280 wide the transport bar wraps to two lines.
 
 **What the experiment does not show.** It tried plain measures of the sound, not a model taught on labelled ochos. Three songs have labels, which is too few to teach or to test one.
 

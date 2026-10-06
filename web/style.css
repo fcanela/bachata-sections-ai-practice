@@ -30,7 +30,7 @@
   --font: "Hind", system-ui, sans-serif;
   /* How far apart the beats of the song are, and its rows. */
   --beat: 32px;
-  --row: 40px;
+  --row: 50px;
 
   --ground: #e5e3dc;
   --ink: #121212;
@@ -56,7 +56,6 @@
   --band-mark: #121212;
   --band-lit: #121212;
   --band-lit-ink: #ffd200;
-  --band-now: #121212;
   --mark: #121212;
   --lit: #121212;
   --lit-ink: #ffd200;
@@ -475,8 +474,7 @@ main {
   min-height: 0;
 }
 
-/* The largest figure on the page, and beside it the beats around the playing position.
-   With the count, the figure will be the count and the beats will be the ocho. */
+/* The largest figure on the page, the count, and beside it the ocho that is sounding. */
 .now {
   display: grid;
   grid-template: minmax(0, 1fr) / auto minmax(0, 1fr);
@@ -498,12 +496,10 @@ main {
 }
 
 /* Read from three metres: it is as tall as the band allows. */
-#bpm {
+#count {
   display: block;
   grid-row: 2;
-  min-width: 3ch;
   font: 700 clamp(6.5rem, min(24vh, 11.5vw), 16rem) / 0.86 var(--font);
-  letter-spacing: -0.02em;
 }
 
 .under {
@@ -515,10 +511,14 @@ main {
   justify-content: space-between;
 }
 
-.unit {
-  color: var(--band-soft);
+.tempo {
   font-size: 1.375rem;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.unit {
+  color: var(--band-soft);
 }
 
 #where {
@@ -582,6 +582,16 @@ main {
   align-items: center;
   padding-left: 1rem;
   border-left: 1px solid var(--panel-line);
+}
+
+/* The one control that says where count 1 is. Its two wordings take the same room. */
+.counting {
+  padding-left: 1rem;
+  border-left: 1px solid var(--panel-line);
+}
+
+#one {
+  min-width: 8.75rem;
 }
 
 /* The switch of the loop, and under it the range it goes round. */

@@ -17,6 +17,13 @@ amount per song, so the first beat is measured on the audio:
 
 - `first_beat_s`: where the first beat is in the mix.
 - `mix_sha256`: the mix it was measured on. reference_beats() refuses any other mix.
+
+What a check compares the analysis with:
+
+- reference_beats(): the time of every labelled beat.
+- reference_counts(): the count of every labelled beat, by the rules of ACCEPTANCE.md.
+- beat_problems(), bar_problems() and count_matches(): how the detected beats, their
+  places in the bar and their counts differ from those.
 """
 
 import json
@@ -136,6 +143,46 @@ def reference_beats(labels, mix_sha256):
             "the first beat was not measured on this mix: run `uv run python scripts/measure_first_beat.py`"
         )
     return [labels["first_beat_s"] + n * 60 / labels["bpm"] for n in range(labels["total_beats"])]
+
+
+def reference_counts(labels):
+    """The count of every labelled beat, 1 to 8, by the rules of ACCEPTANCE.md, slice 2.
+
+    The count starts again at every section and at every block. A section without blocks
+    is whole ochos from its start, and what is left over is at its end: a half phrase,
+    counted 1 to 4, is the last bar of its section.
+    """
+    counts = []
+    for section in labels["sections"]:
+        blocks = [block["beats"] for block in section["blocks"]] or [section["beats"]]
+        for beats in blocks:
+            counts += [beat % 8 + 1 for beat in range(beats)]
+    return counts
+
+
+def bar_problems(reference, counts, detected, bars):
+    """Where the place of a beat in its bar differs from the reference, one line per beat.
+
+    `counts` is the count of every labelled beat and `bars` the place in the bar of every
+    detected one. A labelled beat with no detected beat is a problem here too.
+    """
+    found = []
+    for time, count in zip(reference, counts):
+        nearest = min(range(len(detected)), key=lambda n: abs(detected[n] - time))
+        if abs(detected[nearest] - time) > SAME_BEAT_S:
+            found.append(f"no beat at {time:.3f} s")
+        elif bars[nearest] != (count - 1) % 4 + 1:
+            found.append(f"the beat at {time:.3f} s is beat {bars[nearest]} of its bar, the labels say {(count - 1) % 4 + 1}")
+    return found
+
+
+def count_matches(reference, counts, detected, shown):
+    """How many labelled beats are shown with the count of the reference."""
+    matches = 0
+    for time, count in zip(reference, counts):
+        nearest = min(range(len(detected)), key=lambda n: abs(detected[n] - time))
+        matches += abs(detected[nearest] - time) <= SAME_BEAT_S and shown[nearest] == count
+    return matches
 
 
 def beat_problems(reference, detected):

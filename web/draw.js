@@ -1,16 +1,16 @@
-// The two drawings of a song: the beats around the playing position, large, and every
-// beat of the song in rows. A beat is a small square. The one that is sounding gets the
-// large square a sign keeps for its pictogram, in the opposite of its ground, with the
-// small square inside it.
+// The two drawings of a song: the ocho that is sounding, large, and every beat of the
+// song in rows of four ochos. A beat is a small square with its count under it. Count 1
+// is an upright bar, and a count 1 the user set has a cap across its top. The beat that
+// is sounding gets the large square a sign keeps for its pictogram, in the opposite of
+// its ground, with its own mark inside it.
 
-import { clock } from './song.js'
+import { OCHO, clock } from './song.js'
 
 // The custom properties a drawing reads from :root, by the name it uses for each.
 const READ = {
   bandMark: '--band-mark',
   bandLit: '--band-lit',
   bandLitInk: '--band-lit-ink',
-  bandNow: '--band-now',
   mark: '--mark',
   lit: '--lit',
   litInk: '--lit-ink',
@@ -18,6 +18,7 @@ const READ = {
   loop: '--loop',
   loopFill: '--loop-fill',
   label: '--ink-soft',
+  ink: '--ink',
   font: '--font',
   beat: '--beat',
   row: '--row',
@@ -62,95 +63,127 @@ function square(pen, x, y, side, colour, corner = 0) {
   pen.fill()
 }
 
-// ---- The beats around the playing position
-
-// Eight beats fit the window. The one that is sounding has three before it.
-const SHOWN = 8
-const BEFORE = 3.5
-
-// Where the window puts things, for a canvas this wide.
-export function nowLayout(width) {
-  const step = width / SHOWN
-  return { step, line: step * BEFORE }
-}
-
-// The place the squares pass: two arrowheads, one from the top and one from the bottom.
-function nowLine(pen, x, height, size, colours) {
-  const reach = Math.max(10, Math.min(18, (height - size * 1.4) / 2 - 6))
-  pen.fillStyle = colours.bandNow
-  for (const [edge, tip] of [[0, reach], [height, height - reach]]) {
-    pen.beginPath()
-    pen.moveTo(x - reach, edge)
-    pen.lineTo(x + reach, edge)
-    pen.lineTo(x, tip)
-    pen.closePath()
-    pen.fill()
+// The mark of a beat, `unit` wide, around a point: a square, or for count 1 an upright
+// bar. `byHand` adds the cap of a count 1 the user set. A form, never a colour alone.
+function mark(pen, x, y, unit, colour, first, byHand) {
+  pen.fillStyle = colour
+  if (!first) return pen.fillRect(x - unit / 2, y - unit / 2, unit, unit)
+  const tall = unit * 2.5
+  // One shape, so a faint mark is as faint where the cap crosses the bar.
+  pen.beginPath()
+  pen.rect(x - unit / 2, y - tall / 2, unit, tall)
+  if (byHand) {
+    pen.rect(x - unit * 1.2, y - tall / 2, unit * 0.7, unit / 2)
+    pen.rect(x + unit / 2, y - tall / 2, unit * 0.7, unit / 2)
   }
+  pen.fill()
 }
 
-// `at` is the playing position among the beats: 3 on the fourth beat, 3.5 half way to
-// the fifth. `lit` is the beat that is sounding, or -1, and `pulse` goes from 1 to 0
-// after it started: the large square swells with it. A beat that has sounded is fainter.
-export function drawNow(canvas, { count, at, lit, pulse }) {
+// ---- The ocho that is sounding
+
+// Where the large view puts things, for a canvas this wide: eight places, one for each
+// count, so a beat stands at the place of its count.
+export function nowLayout(width) {
+  return { step: width / OCHO }
+}
+
+// `ocho` is the ocho to show, { first, last }, or null when the song has no beat.
+// `count` is the count of every beat and `byHand` the beats the user set to count 1.
+// `lit` is the beat that is sounding, or -1, and `pulse` goes from 1 to 0 after it
+// started: the large square swells with it. A beat that has sounded is fainter. An ocho
+// of fewer than eight beats leaves the other places empty.
+export function drawNow(canvas, { ocho, count, byHand, lit, pulse }) {
   const { pen, width, height } = sheetOf(canvas)
+  if (!ocho) return
   const colours = tokens()
-  const { step, line } = nowLayout(width)
+  const { step } = nowLayout(width)
   const size = Math.min(step * 0.6, height * 0.4)
-  nowLine(pen, line, height, size, colours)
-  const first = Math.max(0, Math.floor(at - BEFORE - 1))
-  const last = Math.min(count - 1, Math.ceil(at + SHOWN - BEFORE + 1))
-  for (let beat = first; beat <= last; beat++) {
-    const x = line + (beat - at) * step
+  const y = height * 0.42
+  pen.font = `700 ${Math.max(16, Math.min(size * 0.5, 44))}px ${colours.font}`
+  pen.textAlign = 'center'
+  pen.textBaseline = 'top'
+  for (let beat = ocho.first; beat <= ocho.last; beat++) {
+    const x = (count[beat] - 0.5) * step
+    const first = count[beat] === 1
     if (beat === lit) {
       const side = size * (1.22 + 0.14 * pulse)
-      square(pen, x, height / 2, side, colours.bandLit, side * 0.09)
-      square(pen, x, height / 2, size * 0.36, colours.bandLitInk)
+      square(pen, x, y, side, colours.bandLit, side * 0.09)
+      mark(pen, x, y, size * 0.36, colours.bandLitInk, first, byHand.has(beat))
     } else {
       pen.globalAlpha = beat < lit ? 0.28 : 1
-      square(pen, x, height / 2, size * 0.36, colours.bandMark)
+      mark(pen, x, y, size * 0.36, colours.bandMark, first, byHand.has(beat))
       pen.globalAlpha = 1
     }
+    pen.fillStyle = colours.bandMark
+    pen.fillText(String(count[beat]), x, y + size * 0.78)
   }
 }
 
 // ---- Every beat of the song
 
-// The rows of a song of `count` beats on a canvas this wide. A row holds as many beats
-// as fit, and where it breaks means nothing. The time of a row is written in the margin
-// on its left. `seat` is how far down a row its marks are.
-export function mapLayout(width, count) {
-  const { beat: step, row } = tokens()
-  const left = Math.ceil(72 / step) * step
-  const perRow = Math.max(1, Math.floor((width - left - step) / step))
-  const rows = Math.ceil(count / perRow)
-  return { left, top: step, step, row, seat: row / 2, perRow, rows, count, height: 2 * step + rows * row }
+// Marks are never closer than this, in pixels. A row holds four ochos when they fit with
+// that, and two or one when they do not.
+const CLOSEST = 20
+// The room on the left of a row for its time, on its right, and between two ochos.
+const LEFT = 80
+const RIGHT = 16
+const GAP = 12
+
+// The rows of a song on a canvas this wide. `ochos` are its ochos, each { first, last }.
+// An ocho of fewer than eight beats takes less room, so the ochos after it in its row
+// stand further left, and the next row starts in line again. `x` is the left edge of the
+// cell of every beat and `line` the row it is in. `seat` is how far down a row its
+// marks are.
+export function mapLayout(width, ochos) {
+  const { beat: widest, row } = tokens()
+  let perRow, step
+  for (perRow of [4, 2, 1]) {
+    step = Math.min(widest, Math.floor((width - LEFT - RIGHT - (perRow - 1) * GAP) / (perRow * OCHO)))
+    if (step >= CLOSEST) break
+  }
+  step = Math.max(step, 10)
+  const x = []
+  const line = []
+  const rows = []
+  ochos.forEach((ocho, n) => {
+    if (n % perRow === 0) rows.push({ first: ocho.first, last: ocho.last, end: LEFT })
+    const at = rows[rows.length - 1]
+    for (let beat = ocho.first; beat <= ocho.last; beat++) {
+      x.push(at.end + (beat - ocho.first) * step)
+      line.push(rows.length - 1)
+    }
+    at.last = ocho.last
+    at.end += (ocho.last - ocho.first + 1) * step + GAP
+  })
+  const top = 12
+  return { left: LEFT, top, step, row, seat: 16, perRow, rows, count: x.length, x, line, height: 2 * top + rows.length * row }
 }
 
-// The top left corner of the cell of a beat.
-const cellOf = (layout, beat) => ({
-  x: layout.left + (beat % layout.perRow) * layout.step,
-  y: layout.top + Math.floor(beat / layout.perRow) * layout.row,
+// The middle of the mark of a beat.
+export const markOf = (layout, beat) => ({
+  x: layout.x[beat] + layout.step / 2,
+  y: layout.top + layout.line[beat] * layout.row + layout.seat,
 })
 
 // The beat at a point of the canvas, or -1 where there is none. With `nearest`, a point
 // beside the beats gives the closest one: a drag may leave the rows.
 export function beatAt(layout, x, y, nearest = false) {
-  let column = Math.floor((x - layout.left) / layout.step)
+  if (layout.count === 0) return -1
   let row = Math.floor((y - layout.top) / layout.row)
-  if (nearest) {
-    column = Math.min(Math.max(column, 0), layout.perRow - 1)
-    row = Math.min(Math.max(row, 0), layout.rows - 1)
-  } else if (column < 0 || column >= layout.perRow || row < 0 || row >= layout.rows) {
-    return -1
+  if (nearest) row = Math.min(Math.max(row, 0), layout.rows.length - 1)
+  else if (row < 0 || row >= layout.rows.length) return -1
+  const { first, last } = layout.rows[row]
+  let closest = first
+  for (let beat = first; beat <= last; beat++) {
+    if (x >= layout.x[beat] && x < layout.x[beat] + layout.step) return beat
+    if (Math.abs(x - markOf(layout, beat).x) < Math.abs(x - markOf(layout, closest).x)) closest = beat
   }
-  const beat = row * layout.perRow + column
-  if (beat < layout.count) return beat
-  return nearest ? layout.count - 1 : -1
+  return nearest ? closest : -1
 }
 
 // Where the row of a beat starts and ends, top to bottom.
 export function rowOf(layout, beat) {
-  const top = layout.top + Math.floor(beat / layout.perRow) * layout.row
+  const top = layout.top + layout.line[beat] * layout.row
   return { top, bottom: top + layout.row }
 }
 
@@ -158,8 +191,8 @@ export function rowOf(layout, beat) {
 // round it, two dashed rules while it does not, and a black bar where the range starts
 // and where it ends.
 function loopRun(pen, x, y, width, layout, { opens, closes, on }, colours) {
-  const top = y + 5
-  const tall = layout.row - 10
+  const top = y + 3
+  const tall = layout.row - 6
   if (on) {
     pen.fillStyle = colours.loopFill
     pen.fillRect(x, top, width, tall)
@@ -188,44 +221,46 @@ function loopRun(pen, x, y, width, layout, { opens, closes, on }, colours) {
   }
 }
 
+// `count` is the count of every beat and `byHand` the beats the user set to count 1.
 // `range` is the marked range, { first, last, on }, or null. `on` says whether the
 // playing goes round it.
-export function drawMap(canvas, layout, { beats, lit, hover, range }) {
+export function drawMap(canvas, layout, { beats, count, byHand, lit, hover, range }) {
   const { pen } = sheetOf(canvas)
   const colours = tokens()
 
   if (range) {
     // One run for every row the range touches.
-    const firstRow = Math.floor(range.first / layout.perRow)
-    const lastRow = Math.floor(range.last / layout.perRow)
-    for (let row = firstRow; row <= lastRow; row++) {
-      const from = Math.max(range.first, row * layout.perRow)
-      const to = Math.min(range.last, (row + 1) * layout.perRow - 1)
-      const { x, y } = cellOf(layout, from)
+    for (let row = layout.line[range.first]; row <= layout.line[range.last]; row++) {
+      const from = Math.max(range.first, layout.rows[row].first)
+      const to = Math.min(range.last, layout.rows[row].last)
+      const y = layout.top + row * layout.row
       const ends = { opens: from === range.first, closes: to === range.last, on: range.on }
-      loopRun(pen, x, y, (to - from + 1) * layout.step, layout, ends, colours)
+      loopRun(pen, layout.x[from], y, layout.x[to] + layout.step - layout.x[from], layout, ends, colours)
     }
   }
 
+  pen.textBaseline = 'middle'
   pen.font = `500 12px ${colours.font}`
   pen.textAlign = 'right'
-  pen.textBaseline = 'middle'
   pen.fillStyle = colours.label
-  for (let row = 0; row < layout.rows; row++) {
-    const { y } = cellOf(layout, row * layout.perRow)
-    pen.fillText(clock(beats[row * layout.perRow]), layout.left - 12, y + layout.seat + 0.5)
-  }
+  layout.rows.forEach((row, n) => {
+    pen.fillText(clock(beats[row.first]), layout.left - 14, layout.top + n * layout.row + layout.seat + 0.5)
+  })
 
-  for (let beat = 0; beat < beats.length; beat++) {
-    const cell = cellOf(layout, beat)
-    const x = cell.x + layout.step / 2
-    const y = cell.y + layout.seat
+  pen.textAlign = 'center'
+  const litSide = Math.min(26, layout.step - 2)
+  for (let beat = 0; beat < layout.count; beat++) {
+    const { x, y } = markOf(layout, beat)
+    const first = count[beat] === 1
     if (beat === lit) {
-      square(pen, x, y, 24, colours.lit, 2)
-      square(pen, x, y, 8, colours.litInk)
+      square(pen, x, y, litSide, colours.lit, 2)
+      mark(pen, x, y, 8, colours.litInk, first, byHand.has(beat))
     } else {
-      if (beat === hover) square(pen, x, y, 22, colours.hover)
-      square(pen, x, y, 8, colours.mark)
+      if (beat === hover) square(pen, x, y, litSide - 2, colours.hover)
+      mark(pen, x, y, 8, colours.mark, first, byHand.has(beat))
     }
+    pen.font = `${first ? 700 : 500} 12px ${colours.font}`
+    pen.fillStyle = first ? colours.ink : colours.label
+    pen.fillText(String(count[beat]), x, y + 21.5)
   }
 }
