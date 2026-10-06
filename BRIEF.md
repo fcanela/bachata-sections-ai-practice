@@ -38,6 +38,7 @@ Also answered on 2026-10-05, in session 4.
 - While a song plays, the first thing the dancer reads is where the song is now: the section and the count. What comes next, and the shape of the whole song, come second.
 - One screen serves the desk and the distance. There is no separate view for practising.
 - The user can jump to a section, replay a part of the song in a loop, and rename a song. Play, pause and the position also work from the keyboard.
+- The user can say where count 1 is, with one control: "Count 1 here". From that beat the count runs in eights. The application cannot yet hear which of two bars starts an ocho, nor where a bar is extra; until it does, this is how a wrong count is put right. Decided on 2026-10-06, in session 6, with the words "one simple control, nothing more".
 - A replay is of one section by itself, without the change into the next one. Until the application finds sections, the user marks the range to loop by hand. Decided on 2026-10-05, in session 5.
 - The page has a light and a dark ground, and takes the one the system is set to. Decided on 2026-10-05, in session 5.
 - The page looks after airport sign systems. Where the song is hangs as a yellow sign band with black type; everything else is on black panels, over a ground of concrete grey by day and black by night. A beat is a small square, and the one that is sounding gets the large square a sign keeps for its pictogram. The typeface is Hind. The owner chose this among three designs on 2026-10-05, in session 5.
@@ -46,6 +47,7 @@ Also answered on 2026-10-05, in session 4.
 
 - Dancers make sense of the music in groups of two bars. That group is a **phrase**, informally an **ocho**.
 - Sometimes there is an extra bar, a **half phrase**. When it happens, it is usually after 4 phrases (8 bars).
+- A half phrase is counted 1 to 4, and the next ocho starts on 1. A section starts on count 1. The owner's answers of 2026-10-06, in session 6.
 - Derecho, majao and mambo are rhythms played by the percussion, mostly the güira and the bongos.
 - Derecho is usually in the verses, majao in the choruses and mambo in the instrumental breaks.
 - A song also has parts that are none of the three, like the intro or a break.
@@ -56,7 +58,7 @@ Also answered on 2026-10-05, in session 4.
 Each slice takes a song and shows a visible result.
 
 1. Beats and tempo.
-2. The grid of ochos: which beat is count 1, including the half phrase.
+2. The grid of ochos: which beat is count 1, including the half phrase. Since session 6 this slice answers for the bar, which beat is the first of four, and shows the count from 1 to 8 as well as it can. The count and the half phrase are answered for in slice 4, where the sections say where the count starts again.
 3. Derecho or majao for each ocho.
 4. Mambo, so the full timeline of sections.
 5. A screen that shows the timeline while the song plays.
@@ -73,7 +75,7 @@ The screen of slice 5 is built early, after slice 1, with what slice 1 has. Each
 ## Limits
 
 - Everything runs locally. No paid API.
-- No backward compatibility, no extra features, no abstractions for later. The jump, the loop and the renaming under "The interface" are the owner's additions of 2026-10-05, not extras.
+- No backward compatibility, no extra features, no abstractions for later. The jump, the loop and the renaming under "The interface" are the owner's additions of 2026-10-05, and count 1 by hand is the owner's addition of 2026-10-06. They are not extras.
 - The analysis runs on the local server, not in the browser. Decided on 2026-10-05: on the server the beat tracker runs as its authors published it, and more tools are available for the later slices. The cost is that every song is sent to the machine that serves the application.
 - Uploaded songs are kept in one library on the server. Everyone who can reach the application can play every song in it.
 

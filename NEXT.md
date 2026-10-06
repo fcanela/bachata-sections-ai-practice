@@ -2,7 +2,11 @@
 
 Rewritten at the end of every session.
 
-## Where things stand (2026-10-05, after session 5)
+## Where things stand (2026-10-06, session 6)
+
+Slice 2 is specified and not built. Session 6 asked the owner five questions, ran an experiment on the three mixes and on 96 songs without labels, and the owner set the shape of the slice from its result. `ACCEPTANCE.md` has the items under slice 2, and `LOG.md`, session 6, the figures and the decisions.
+
+Before that, in session 5:
 
 The redesigned page is built, with what slice 1 has. The owner chose its design, Terminal signs, among three, and the other two are deleted. Every check a program can run passes. The owner's checks of slice 1 are still open, listed below.
 
@@ -127,20 +131,21 @@ This is the brief the owner confirmed on 2026-10-05, in session 4, with the deci
 5. **Confirm two numbers of session 3**:
    - the window of 90 ms for "the same beat", up from 70. It grew for three beats of Old Town Road, and partly because the script puts the first beat at the very start of the attack. With the beat 15 ms later in the attack, where `fixtures/audio/README.md` has it, 70 ms holds on all three mixes; with session 2's figure one beat is at 75 ms. `LOG.md` has the table. The choice is between 90 ms with the reference as it is, and a later reference with 70 ms;
    - the tempos the analysis may follow, 90 to 175 BPM.
-6. **Say whether "the items marked proposed are accepted" also covered the item of slice 2**: "a section always starts on count 1". Session 3 applied it to the two numbers of slice 1 only.
+6. Answered on 2026-10-06: a section starts on count 1. It follows from the owner's rule that a half phrase is the last bar of its section.
+7. **Listen to the seven half phrases the rule placed**, and say for each whether the extra bar is the last of its section. On Me Emborrachare: the Intro, the Breakdown and the Ending. On Eso Es Amor: the Intro, both Pre Choruses and the Bridge. Also whether the first labelled beat of each mix is a count 1.
 
 If the click sounds loose rather than wrong: beat times come in steps of 20 ms, because the tracker looks at the song 50 times a second. Moving each beat onto the nearest attack of the sound is the next thing to try. It was not built, because only an ear can say whether it is needed.
 
 ### Then slice 2
 
-**The grid of ochos.**
+**The grid of ochos**, as the owner shaped it on 2026-10-06.
 
-- It starts with a round of questions to the owner, as slice 1 did in session 2. Nothing of it is decided.
-- Two things are already at hand and have not been evaluated:
-  - Beat This also rates every moment as a downbeat or not.
-  - The DBN gives each beat its place in the bar, 1 to 4 or 1 to 3. The analysis throws it away today.
-- A bar is four beats and an ocho is two bars. Neither of the two knows about ochos or half phrases.
-- A change of the analysis raises `ANALYSIS_VERSION`, and every stored song is then analysed again by itself.
+- **Strict: the bar.** Every labelled beat of the three mixes is the first, second, third or fourth of its bar. The DBN already says so for every beat, and the analysis throws it away today. Session 6 measured it right on all 1,317 labelled beats.
+- **Shown and measured: the count from 1 to 8.** The analysis starts the count on the first bar it hears and goes on in eights. It does not look for half phrases. How many labelled beats get the count of the reference is measured and logged, with no limit. The limit is in slice 4.
+- **By hand: "Count 1 here".** One control. From the beat at the playing position the count runs in eights. On a beat set by hand, the control takes it back.
+- **The page:** the count takes the place of the large figure and the tempo goes small beside the time. The large view shows the ocho that is sounding and stands still. The song is in rows of four ochos, and count 1 differs from the other beats by its form.
+- A bar is always four beats: the DBN is no longer allowed bars of three.
+- `ANALYSIS_VERSION` goes to 2. Every stored song is then analysed again by itself when the program starts, about 5 seconds a song.
 
 ## Rules that are easy to break
 
@@ -192,7 +197,12 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **When a section's rhythm and its blocks disagree, which wins?** On Me Emborrachare the Bridge is labelled Derecho, and its two blocks are `-` and Majao.
 - **Which rhythms count as `other`?** The labels also have Urban, Trap, Dembow, `-` and none.
 - **A section's `end_s` in the labels is the start of the next section.** G2 speaks of the last beat, which is one beat earlier.
-- **The assumption that a section always starts on count 1** is still a proposal, unless the owner's answer to check 6 says otherwise.
+- **The tempo, to look at again. Not in slice 2.** The owner's two points of 2026-10-06:
+  - The tempo of a bachata song is usually stable, so a tempo that moves inside a song is more likely the analysis than the music. In session 6, 13 of 96 songs read a tempo that spans more than 8% of their median; `LOG.md` lists them. An intro may read loose, and that is understood.
+  - In a part that is not the intro and has no percussion, the tempo may be worked out from the part before it and the part after it that have percussion, instead of being read from the part itself.
+- **The songs that stood apart in session 6**, in `LOG.md`, are the owner's to look at. "Entre La Espada Y La Pared" was downloaded wrong and is ignored.
+- **Hearing count 1 from count 5, and a half phrase, from the sound.** Session 6 found no plain measure that does it. Slice 4 needs it, or the sections that make it unnecessary. A model taught on labelled ochos was not tried: three songs have labels.
+- **"Jiory - Eso Es Amor" is among the 96 songs**: the commercial recording of a mix that has labels.
 - **The last three labelled beats of Me Emborrachare have no percussion.** The analysis carries the pulse over them. Slice 2 will meet that ending again when it counts.
 - **Lining up the labels with the commercial recordings.** The full Me Emborracharé is 44 s longer than the mix and differs in places.
 - **The screen of slice 5 is built early**, with what slice 1 has, and G4 is still checked in slice 5.

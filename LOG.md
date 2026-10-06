@@ -2,6 +2,119 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-06, session 6: slice 2, the questions, the experiment and the shape it took
+
+The owner asked for five questions before slice 2, then for a review of the proposal that came out of them, then for the experiment the review named, on a set of 96 songs as well as on the three mixes. The experiment changed the shape of the slice. The owner then asked for the specification, a commit of it, and the build.
+
+### Runs
+
+Scripts that are not in the repository ran from the session's scratch folder. Nothing was uploaded: every song was decoded with `ffmpeg` to the samples the page would send, and analysed by the program's own `beat_activations` and the DBN with its settings.
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| Arithmetic on the three `labels.json`: where each section starts, counted in eights from the first labelled beat | Old Town Road: every section is 4 or 8 ochos. Me Emborrachare: the Intro and the Breakdown are 36 beats and the Ending 4, so every section from the first Verse to the Breakdown starts on a count 5 unless the Intro holds a half phrase. Eso Es Amor: the Intro and both Pre Choruses are 20 beats, the Bridge 36, the Outro 9, and four blocks are 4 beats long, three in the Mambo and one at the end of the last Chorus | not timed |
+| The analysis on the three mixes and the two commercial recordings, keeping the place in the bar that the DBN gives each beat | 4.4 to 6.4 s a song | 27 s |
+| The same on the 96 `.opus` files that were in `<music-library>/` at 09:01 | 96 analysed, none failed. Two files arrived later and were left out, as the owner asked | 480 s, 5.0 s a song |
+| The place in the bar against the reference count, on the three mixes | Right on every labelled beat: 396 of 396, 505 of 505, 416 of 416. Every bar the DBN made is four beats long: 99, 128 and 106 bars | under 5 s |
+| Count 1 against count 5 on the three mixes, by seven measures of the sound at the start of a bar | See the first table below. The downbeat rating of Beat This has a median of 1.000 at both | under 5 s |
+| A two-state tracker of the two-bar cycle of the harmony, with a cost for each change of state, on the three mixes | See the second table below. No setting is right on all three | under 5 s |
+| The same tracker and the plain figures of each song, on the 96 | See "The 96 songs" below | under 10 s |
+
+**Count 1 against count 5.** For each measure, how often a bar that starts on count 1 scores higher than one that starts on count 5. 0.50 is chance; a figure under it means count 5 scores higher.
+
+| Measure at the start of a bar | Me Emborrachare | Eso Es Amor | Old Town Road |
+| --- | --- | --- | --- |
+| Downbeat rating | 0.56 | 0.57 | 0.64 |
+| Change of harmony, the bar before against the bar after | 0.33 | 0.68 | 0.56 |
+| Change of harmony, the ocho before against the ocho after | 0.25 | 0.67 | 0.55 |
+| Energy below 200 Hz on the beat | 0.77 | 0.52 | 0.53 |
+| Attack of the beat | 0.48 | 0.55 | 0.45 |
+| Change of energy above 5 kHz | 0.61 | 0.56 | 0.62 |
+| Change of energy below 200 Hz | 0.47 | 0.65 | 0.58 |
+
+The harmony changes on count 5 in Me Emborrachare, in 10 of its 13 sections, and on count 1 in Eso Es Amor, in 9 of 11.
+
+**Half phrases as a shift of the two-bar cycle.** The tracker follows which bars carry the larger change of harmony, and a change of state is a candidate for a half phrase. Positions are labelled beats; the reference is where each half phrase ends.
+
+| Song | Reference | Harmony over an ocho, cost 8 | Over an ocho, cost 16 | Over a bar, cost 8 |
+| --- | --- | --- | --- | --- |
+| Me Emborrachare | 36, 312, 396 | 36, 316 | 316 | 44, 316 |
+| Eso Es Amor | 20, 112, 268, 344, 380, 400, 436, 496 | 36, 104, 252, 492 | 104, 252 | 256 |
+| Old Town Road | none | 28, 144, 248, 376 | 28 | 28, 132, 244 |
+
+- With the cost at 4, both measures report four changes on Me Emborrachare, eight on Eso Es Amor and four or five on Old Town Road.
+- The two pairs of half phrases that are close together in Eso Es Amor, at 344 and 380 and at 400 and 436, bring the cycle back to where it was, and the tracker misses them at every cost but 4.
+- On Me Emborrachare the shift is at the end of the Intro, beat 36, and not at its start. That is the one sign in favour of the rule that a half phrase is the last bar of its section.
+
+**The 96 songs.** They have no labels, so these figures show how regular the analysis is on them and not whether it is right.
+
+| Figure | Across the 96 |
+| --- | --- |
+| Bars of four beats | 10,291 of 10,291 |
+| Beats | 41,426 |
+| Mean downbeat rating on the first beat of a bar, per song | 0.81 to 1.00 |
+| Median tempo, per song | 103.9 to 148.1 BPM. 12 songs under 110, 5 over 138 |
+| Songs where under 5% of the beats have a beat rating below 0.5 | 80 |
+| Songs where over 9% do | 10 |
+| Songs whose tempo over an ocho, from its 2nd to its 98th percentile, spans more than 8% of its median | 13 |
+| Changes of state by the tracker, harmony over an ocho, cost 8, per song | 0 in 16 songs, 1 in 15, 2 in 22, 3 in 13, 4 in 13, 5 in 9, 6 in 4, 7 in 4 |
+
+The 13 songs whose tempo spans more than 8%, with the lowest, the median and the highest tempo read:
+
+| Song | Lowest | Median | Highest |
+| --- | --- | --- | --- |
+| Antonio José - La Noche Perfecta | 93.8 | 125.0 | 125.7 |
+| Dani J - Favorito | 111.5 | 113.2 | 131.2 |
+| Jhoni The Voice - Religión | 115.2 | 129.7 | 130.4 |
+| Kay One, Cristobal - Bachata | 119.5 | 121.8 | 137.6 |
+| Kewin Cosmos - Sin Censura (Unplugged) | 119.4 | 129.7 | 130.4 |
+| Mario Baro, Jalil Lopez - Última Noche en Madrid | 108.2 | 129.7 | 131.1 |
+| Mickey Then - Tu Lobo | 113.4 | 127.7 | 128.3 |
+| Pinto Picasso, DJ Nico - Calentura | 114.8 | 121.8 | 127.7 |
+| Pinto Picasso - Feeling Something | 92.5 | 123.7 | 125.2 |
+| Romeo Santos, Justin Timberlake - Sin Fin | 109.4 | 127.7 | 128.3 |
+| Romeo Santos, Prince Royce - Better Late Than Never | 124.4 | 135.6 | 142.9 |
+| Romeo Santos - Sus Huellas | 108.6 | 125.7 | 126.3 |
+| Tutto Durán - Santa De Mi Devoción | 112.0 | 126.3 | 127.7 |
+
+Other songs that stand apart, for the owner to look at:
+
+- **Dani J, Pinto Picasso - Entre La Espada Y La Pared**: 26.8% of its beats rated below 0.5, twice the next song. The owner said the file was downloaded wrong and is to be ignored.
+- **Beats rated below 0.5, over 9%**: ROSALÍA, The Weeknd - LA FAMA 13.5%; Pablo Alborán, Maria Becerra - Amigos 12.6%; Pinto Picasso - Feeling Something 11.3%; Shakira, Ozuna - Monotonía 10.7%; SONCE, Mayinbito - En Los Pasillos 9.9%; Dani J, Dama - Bipolar 9.8%; Antonio José - La Noche Perfecta 9.7%; Dama, DJ Alejandro, Dj Dimen5ions - La Mala 9.4%; Romeo Santos, Prince Royce - Better Late Than Never 9.0%.
+- **Pinto Picasso, DJ Nico - Calentura**: 0.88% of its samples are at full scale. The next song has 0.13%.
+- **Mario Baro, Jalil Lopez - Última Noche en Madrid**: the lowest downbeat rating, 0.81.
+- **Nio Garcia, Flow La Movie - Dividimos (Bachata Version)**: the fastest, 148.1 BPM.
+- "Jiory - Eso Es Amor" is the commercial recording of one of the three mixes.
+
+### Decisions
+
+**The owner's answers to the five questions**
+
+1. In a section that is not a whole number of ochos, and whose blocks do not say, the half phrase is the last bar. Every section then starts on count 1.
+2. A half phrase is counted 1 to 4 and the next ocho starts on 1. It is drawn as a short ocho.
+3. Every labelled beat is checked, on all three mixes, and the check is never loosened.
+4. A wrong count on a song without labels is fixed in the analysis. *Changed after the experiment, see below.*
+5. The two commercial recordings are judged by the owner's ear.
+
+**After the experiment, the owner's words:** "specify slice 2 on the split (strict on the bar, count shown and measured, strict from slice 4). Allow setting count 1 by hand with one simple control, nothing more."
+
+- Slice 2 is strict on the place of every labelled beat in its bar.
+- The count from 1 to 8 is shown and measured in slice 2, with no limit to pass. The strict check of answer 3 on the count moves to slice 4.
+- Count 1 can be set by hand. This replaces answer 4.
+- The song "Entre La Espada Y La Pared" is ignored. The owner will look at the other songs that stand apart.
+- Two things about the tempo are to be looked at again, and not in slice 2. They are in `NEXT.md`.
+
+**Mine, and marked proposed in `ACCEPTANCE.md` where the owner has to confirm**
+
+- The first labelled beat of each song is count 1.
+- Seven half phrases are placed by the owner's rule and have not been heard.
+- The 9 beats of the Outro of Eso Es Amor are one ocho and one beat on count 1.
+- A bar is always four beats: the DBN is no longer allowed bars of three. None of the 101 songs analysed in this session has one.
+- The control takes a count 1 back when it is pressed on a beat that was set by hand. Without that a wrong press could not be undone.
+- The analysis does not look for half phrases, and starts the count on the first bar it hears. The tracker of the experiment reports half phrases that are not there on the one song that has none.
+
+**What the experiment does not show.** It tried plain measures of the sound, not a model taught on labelled ochos. Three songs have labels, which is too few to teach or to test one.
+
 ## 2026-10-05, session 5: the redesigned page, three designs and the one that stays
 
 The owner asked for the redesigned page with what slice 1 has, in the three designs of session 4, built in order: Dominó, The counts sheet, Terminal signs. Nothing was to be committed before the owner chooses one. The session built one page with a temporary switch between the three, the server's request for renaming, and the tests for both. It stopped for the owner's choice. The owner looked at the three, chose Terminal signs, and the session deleted the other two with the switch and committed.

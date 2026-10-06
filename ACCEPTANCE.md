@@ -111,9 +111,58 @@ What the server never does:
 
 ### 2. The grid of ochos
 
-- [ ] It shows the count of every beat and where each ocho starts, half phrases included.
-- [ ] Every section start in the reference lands on a count 1. *Proposed: this assumes a section always starts on count 1.*
-- [ ] On a song known to have a half phrase, the half phrase is found where the owner says it is. Eso Es Amor has four labelled half phrases.
+The owner decided the shape of this slice on 2026-10-06, in session 6, after an experiment that `LOG.md` records. The analysis hears the bar on every labelled beat of the three mixes. Nothing at hand hears which of two bars is the first of an ocho, or where a bar is extra. So the slice is strict on the bar. The count from 1 to 8 is shown and measured, and becomes strict in slice 4, where a section gives it a place to start again. Until then the user can say where count 1 is.
+
+**The reference count.** The labels give every section a length in beats, and some sections a list of blocks. The count of every labelled beat follows from them by these rules, which the owner set in session 6. `fixtures/validate.py` applies them.
+
+- The first labelled beat of a song is count 1. *Proposed: the labels were never checked by ear.*
+- The count starts again at 1 at every section and at every block.
+- A block of 4 beats is a half phrase. It is counted 1 to 4.
+- A section without blocks is whole ochos from its start. What is left over is at its end: 4 beats are a half phrase, its last bar. So every section starts on count 1, which answers check 6 of session 5.
+- By these rules Eso Es Amor has eight half phrases, Me Emborrachare three and Old Town Road none. Seven of the eleven are placed by the rule and have not been heard: on Me Emborrachare the Intro, the Breakdown and the Ending, and on Eso Es Amor the Intro, both Pre Choruses and the Bridge. *Proposed, until the owner has listened to those seven.*
+- The Outro of Eso Es Amor is 9 beats: one ocho and one beat on count 1. *Proposed.*
+
+**The three mixes, checked automatically**
+
+- [ ] Every labelled beat is the beat of its bar that the reference says: first, second, third or fourth. A bar is always four beats. If a part makes this impossible, the numbers go to the owner, who decides. The item is not loosened any other way.
+- [ ] The share of labelled beats that get the count of the reference is measured on each mix and written in `LOG.md`. There is no limit to pass in this slice. The limit is in slice 4.
+
+**The two commercial recordings**
+
+- [ ] By the owner's ear: a beat shown as 1 or as 5 is the first beat of a bar, wherever the song can be counted.
+
+**The page**
+
+- [ ] Every beat shows its count, in the large view and on the song, and the count of the beat that is sounding is the largest figure on the page.
+- [ ] The large view shows the ocho that is sounding and stands still while it sounds. An ocho of fewer than 8 beats leaves the other places empty.
+- [ ] The song is in rows of four ochos, in a window 1280 pixels wide or wider. An ocho of fewer than 8 beats takes less room, and the next row starts in line again.
+- [ ] Count 1 is told apart from the other beats by its form, not by colour alone.
+
+**Count 1 by hand**
+
+One control, "Count 1 here". The owner added it on 2026-10-06, in session 6, with the words "one simple control, nothing more".
+
+- [ ] It makes the beat at the playing position count 1. From that beat the count runs in eights, up to the next beat set the same way or to the end of the song. Before the first one, the count is the analysis's. The ocho before it ends where it is cut, so a bar left alone there is shown as a half phrase.
+- [ ] On a beat that was set by hand the control takes it back. *Proposed: without this a wrong press could not be undone.*
+- [ ] A beat set by hand is told apart from the other count 1s by its form.
+- [ ] It is kept on the server with the song, as a time. It shows in every browser, and it survives a restart, a renaming and a new version of the analysis.
+
+**What is refused, part of G7**
+
+- [ ] A count 1 that does not come from the application's own page, one for a song id that is not well formed or not in the library, a time that is not a number inside the song, and one more when a song has 200 of them.
+
+**How these are tested**
+
+- The bar and the measured count: `bachata/songs_test.py`, on the three mixes.
+- The count from the analysis and from the beats set by hand: unit tests beside the code, in Python for the analysis and in `web/song.test.js` for the page.
+- The page and the control: `e2e/page_test.py`.
+- Two tests of slice 1 are reworded, because what they checked is no longer true: the one that found the marks of a row all the same distance apart and no text but the tempo and the time, and the one that found the tempo to be the largest figure.
+
+**Not in slice 2**
+
+- Finding a half phrase from the sound. Session 6 tried the two-bar cycle of the harmony: it found two of three on Me Emborrachare, four of eight at most on Eso Es Amor, and one to four that are not there on Old Town Road.
+- Telling the first bar of an ocho from the second. The analysis starts the count on the first bar it hears and goes on in eights.
+- Any mark of doubt on a count.
 
 ### 3. Derecho or majao for each ocho
 
@@ -124,6 +173,7 @@ What the server never does:
 ### 4. Mambo, so the full timeline
 
 - [ ] G1, G2 and G3 hold on every fixture.
+- [ ] Every labelled beat of the three mixes gets the count of the reference, half phrases included, with no beat set by hand. The reference count is described under slice 2. If a part makes this impossible, the numbers go to the owner. Moved here from slice 2 by the owner on 2026-10-06, in session 6.
 
 ### 5. The screen
 
