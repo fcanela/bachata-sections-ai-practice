@@ -115,7 +115,7 @@ The owner decided the shape of this slice on 2026-10-06, in session 6, after an 
 
 **The reference count.** The labels give every section a length in beats, and some sections a list of blocks. Since 2026-10-06, in session 8, a section that holds a phrase shorter than an ocho has the site's own order of its phrases as blocks, so the blocks say where a half phrase is. The count of every labelled beat follows by these rules, which the owner set in session 6. `fixtures/validate.py` applies them.
 
-- The first labelled beat of a song is count 1. The owner confirmed it by ear on 2026-10-06 for Old Town Road, which is right throughout, and for Eso Es Amor, whose first percussion is count 1. *Proposed for Me Emborrachare, which has not been listened to for this.*
+- The first labelled beat of a song is count 1. The owner confirmed it by ear on 2026-10-06 for Old Town Road, which is right throughout, and for Eso Es Amor, whose first percussion is count 1. For Me Emborrachare the owner accepted it on 2026-10-06, in session 8: its first four beats are read as a half phrase, counted 1 to 4, as the site's blocks have them.
 - The count starts again at 1 at every section and at every block.
 - A block of 4 beats is a half phrase. It is counted 1 to 4.
 - A section without blocks is whole ochos from its start, and what is left over is at its end: 4 beats are a half phrase, its last bar. This is only what is done where the labels give no blocks. On the three mixes it now decides nothing: every section with a short phrase has blocks, and the one section of 4 beats is a half phrase whole.

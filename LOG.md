@@ -64,6 +64,7 @@ The owner changed the label files in `fixtures/audio/dev/` the same day and hand
 
 - **The 120 of 396 of sessions 6 and 7 was against the old reference.** The entries below keep it, as what was measured then. The analysis counts the Intro in eights from its first beat, and so did the wrong reference: 32 of the 120 were shared with that error.
 - **Decided by the owner:** the blocks say where a half phrase is. The last-bar rule is kept only for a section without blocks, and decides nothing on the three mixes.
+- **Decided by the owner, after the commit:** the first labelled beat of Me Emborrachare is count 1. The owner's words: "we can interpret it as a half phrase, no problem." It was marked proposed in `ACCEPTANCE.md` since session 6.
 - Changed: `ACCEPTANCE.md`, `NEXT.md`, `fixtures/audio/README.md`, which git ignores, and the docstring of `reference_counts()`. No other code.
 
 ## 2026-10-06, session 7: four findings of a review of the last commit
