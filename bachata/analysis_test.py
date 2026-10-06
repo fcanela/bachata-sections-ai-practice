@@ -2,12 +2,17 @@ import numpy as np
 import pytest
 
 from bachata.analysis import (
+    BANDS,
     MAX_BPM,
     MIN_BPM,
+    band_levels,
     beats_from_activations,
     bpm_at_beats,
     count_from_bars,
+    entries,
     first_heard_bar,
+    first_ocho,
+    rises,
 )
 
 
@@ -80,6 +85,99 @@ def test_a_bar_in_the_silence_before_a_song_does_not_start_the_count():
     assert first_heard_bar(np.ones(6 * rate, dtype=np.float32), rate, beats, [3, 4, 1, 2] * 3) == 2
     assert first_heard_bar(np.zeros(6 * rate, dtype=np.float32), rate, beats, bars) == 0
     assert first_heard_bar(sound, rate, [], []) == 0
+
+
+def test_a_band_is_as_loud_at_a_beat_as_the_sound_is_there():
+    # Four seconds at 8 kHz, a beat every half second. A tone of 1 kHz starts at 2 s, on a faint noise.
+    rate = 8000
+    beats = [0.5 * n for n in range(8)]
+    moments = np.arange(4 * rate) / rate
+    sound = 0.001 * np.random.default_rng(1).standard_normal(4 * rate)
+    sound[2 * rate :] += 0.5 * np.sin(2 * np.pi * 1000 * moments[2 * rate :])
+    levels = band_levels(sound.astype(np.float32), rate, beats)
+    assert levels.shape == (8, BANDS)
+    loudest = int(np.argmax(levels[6]))
+    # The band of the tone is much louder from the fifth beat on, and was not before.
+    assert all(levels[beat, loudest] > levels[2, loudest] + 30 for beat in range(4, 8))
+    assert all(abs(levels[beat, loudest] - levels[2, loudest]) < 6 for beat in range(3))
+    # A band far from the tone stays as it was.
+    assert abs(levels[6, 0] - levels[2, 0]) < 6
+
+
+def test_no_band_is_further_under_the_loudest_than_the_floor():
+    rate = 8000
+    sound = np.zeros(4 * rate, dtype=np.float32)
+    sound[2 * rate :] = np.sin(2 * np.pi * 1000 * np.arange(2 * rate) / rate)
+    levels = band_levels(sound, rate, [0.5 * n for n in range(8)])
+    assert levels.min() == pytest.approx(levels.max() - 60)
+    assert band_levels(sound, rate, []).shape == (0, BANDS)
+
+
+def test_the_sound_rises_where_the_beats_after_are_louder_than_the_beats_before():
+    # 16 beats: quiet, and 20 dB louder in every band from the ninth on.
+    levels = np.zeros((16, BANDS))
+    levels[8:] = 20
+    rise = rises(levels)
+    assert rise[8] == pytest.approx(20)
+    assert rise[7] == pytest.approx(15) and rise[9] == pytest.approx(15)
+    # Too near either end there are not four beats on each side.
+    assert list(rise[:4]) == [0] * 4 and list(rise[12:]) == [0] * 4
+    # A band that gets quieter counts as nothing, and half the bands rising is half the rise.
+    assert rises(-levels).max() == 0
+    levels[8:, : BANDS // 2] = 0
+    assert rises(levels)[8] == pytest.approx(10)
+
+
+def test_what_comes_in_starts_the_nearest_bar_and_the_bar_after_from_the_middle_of_one():
+    bars = [1, 2, 3, 4] * 6
+
+    def one_rise(beat, rise=8.0):
+        return [rise if n == beat else 0.0 for n in range(24)]
+
+    assert entries(np.array(one_rise(8)), bars) == [(8, 8.0)]
+    assert entries(np.array(one_rise(9)), bars) == [(8, 8.0)]
+    assert entries(np.array(one_rise(10)), bars) == [(12, 8.0)]
+    assert entries(np.array(one_rise(11)), bars) == [(12, 8.0)]
+    # A rise under 5 dB is nothing coming in.
+    assert entries(np.array(one_rise(8, 4.9)), bars) == []
+    assert entries(np.array(one_rise(8, 5.0)), bars) == [(8, 5.0)]
+
+
+def test_of_rises_close_together_only_the_largest_is_something_coming_in():
+    bars = [1, 2, 3, 4] * 6
+    rise = np.zeros(24)
+    rise[7], rise[8], rise[9] = 6, 9, 7
+    assert entries(rise, bars) == [(8, 9.0)]
+    # Four beats apart they are two.
+    rise = np.zeros(24)
+    rise[8], rise[12] = 9, 7
+    assert entries(rise, bars) == [(8, 9.0), (12, 7.0)]
+
+
+def test_the_first_ocho_starts_on_the_bar_that_more_comes_in_on():
+    beats = [0.5 * n for n in range(200)]
+    # Nothing comes in: the first bar that is heard starts the count.
+    assert first_ocho(4, beats, []) == 4
+    # What comes in on the ochos counted from that bar keeps it.
+    assert first_ocho(4, beats, [(12, 8.0), (36, 6.0)]) == 4
+    # What comes in on the bars between moves the count by a bar.
+    assert first_ocho(4, beats, [(16, 8.0), (40, 6.0)]) == 8
+    # The larger rises win, whichever way.
+    assert first_ocho(4, beats, [(12, 8.0), (16, 6.0), (40, 5.0)]) == 8
+    assert first_ocho(4, beats, [(12, 12.0), (16, 6.0), (40, 5.0)]) == 4
+    # Even, the count stays where it was.
+    assert first_ocho(4, beats, [(12, 8.0), (16, 8.0)]) == 4
+    # A bar before the first that is heard has its say too.
+    assert first_ocho(4, beats, [(0, 8.0)]) == 8
+
+
+def test_what_comes_in_after_the_first_minute_does_not_set_the_count():
+    beats = [0.5 * n for n in range(200)]
+    # Beat 112 is at 56 s and beat 128 at 64 s.
+    assert first_ocho(4, beats, [(12, 6.0), (112, 9.0)]) == 8
+    assert first_ocho(4, beats, [(12, 6.0), (128, 9.0)]) == 4
+    # A bar that would start after the last beat is not there.
+    assert first_ocho(4, beats, [(200, 9.0)]) == 4
 
 
 def test_the_tempo_range_cannot_hold_a_tempo_and_its_double():

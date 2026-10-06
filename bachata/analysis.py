@@ -18,8 +18,12 @@ change costs more the larger it is.
 
 A bar is four beats, always: as published the DBN may also choose bars of three. The
 place in the bar is what the analysis answers for. The count from 1 to 8 is a guess on
-top of it: nothing here hears which of two bars starts an ocho, nor a bar that is extra
-(LOG.md, session 6). The page lets the user say where count 1 is.
+top of it, and the page lets the user say where count 1 is.
+
+Which of two bars starts an ocho is ours too, and is read from the sound: an instrument
+that comes in, comes in on count 1. The count is set once, for the whole song, by the
+places where the sound rises in its first minute. Nothing here hears a bar that is extra
+later in the song (LOG.md, sessions 6 and 9).
 """
 
 import numpy as np
@@ -31,7 +35,7 @@ from bachata.model import checked_model_path
 
 # Stored with every result. A result with another number is made again from the stored
 # sound. Raise it whenever the same song could give different beats or tempo.
-ANALYSIS_VERSION = 2
+ANALYSIS_VERSION = 3
 
 # The tempos a dancer may be counting, in BPM.
 MIN_BPM = 90
@@ -46,6 +50,24 @@ BEATS_PER_OCHO = 8
 # pulse back over the silence before a song, and no ocho starts there. As a ratio of
 # amplitudes: 40 dB.
 SILENCE = 0.01
+
+# Where the sound is looked at for what comes in: in bands an equal part of an octave wide,
+# between these two frequencies in Hz, and no further than this under its loudest, in dB.
+BANDS = 16
+LOWEST_HZ = 40
+HIGHEST_HZ = 16000
+FLOOR_DB = 60
+
+# The sound rises at a beat by how much louder the 4 beats from it are than the 4 beats
+# before it, in dB, as a mean over the bands, a band that gets quieter counting as 0.
+RISE_SPAN_BEATS = 4
+# Something comes in where the rise is at least this much, in dB, and no beat within 3
+# beats rises more.
+ENTRY_RISE_DB = 5.0
+ENTRY_APART_BEATS = 3
+# The count is set by what comes in during this many seconds from the start. Later in a
+# song a bar that is extra moves the ochos, and what comes in after it would vote wrong.
+ENTRY_WINDOW_S = 60
 
 # The shown tempo at a beat is measured from 4 beats before it to 4 beats after it: one
 # ocho. Beat times come in steps of 20 ms, so a single interval is only good to about 4%.
@@ -102,6 +124,72 @@ def first_heard_bar(mono, rate, beats, bars):
     return 0
 
 
+def band_levels(mono, rate, beats):
+    """How loud each beat is in each band, in dB: one row per beat, from it to the next."""
+    hop = rate // FRAMES_PER_SECOND
+    size = 2 ** round(np.log2(rate * 0.046))
+    starts = np.arange(0, len(mono) - size, hop)
+    frequencies = np.fft.rfftfreq(size, 1 / rate)
+    edges = np.geomspace(LOWEST_HZ, min(HIGHEST_HZ, rate / 2), BANDS + 1)
+    in_band = [(frequencies >= low) & (frequencies < high) for low, high in zip(edges, edges[1:])]
+    energy = np.zeros((len(starts), BANDS))
+    # In pieces, to keep the memory small: a whole song is some 15,000 frames.
+    for piece in range(0, len(starts), 4096):
+        frames = np.stack([mono[start : start + size] for start in starts[piece : piece + 4096]])
+        power = np.abs(np.fft.rfft(frames * np.hanning(size), axis=1)) ** 2
+        energy[piece : piece + 4096] = np.stack([power[:, band].sum(axis=1) for band in in_band], axis=1)
+    levels = np.full((len(beats), BANDS), -100.0)
+    for beat, time in enumerate(beats):
+        first = int(time * FRAMES_PER_SECOND)
+        end = int((beats[beat + 1] if beat + 1 < len(beats) else time + 0.5) * FRAMES_PER_SECOND)
+        heard = energy[first : max(end, first + 1)]
+        if len(heard):
+            levels[beat] = 10 * np.log10(heard.mean(axis=0) + 1e-10)
+    return np.maximum(levels, levels.max() - FLOOR_DB) if len(beats) else levels
+
+
+def rises(levels):
+    """How much the sound rises at each beat, in dB. 0 at the beats too near either end."""
+    span = RISE_SPAN_BEATS
+    rise = np.zeros(len(levels))
+    for beat in range(span, len(levels) - span):
+        change = levels[beat : beat + span].mean(axis=0) - levels[beat - span : beat].mean(axis=0)
+        rise[beat] = np.maximum(change, 0).mean()
+    return rise
+
+
+def entries(rise, bars):
+    """Where something comes in: the bar it starts, as the number of a beat, and its rise.
+
+    What comes in is often led in by a beat or two, so it starts the nearest bar, and
+    the bar after when it is in the middle of one.
+    """
+    found = []
+    for beat in range(len(rise)):
+        near = rise[max(0, beat - ENTRY_APART_BEATS) : beat + ENTRY_APART_BEATS + 1]
+        if rise[beat] >= ENTRY_RISE_DB and rise[beat] == near.max():
+            place = bars[beat]
+            found.append((beat - (place - 1) if place <= 2 else beat + (BEATS_PER_BAR + 1 - place), float(rise[beat])))
+    return found
+
+
+def first_ocho(first, beats, found):
+    """The beat that starts the first ocho: `first`, a beat that starts a bar, or the bar after it.
+
+    Each thing that comes in during the first minute says which of the two it is, by the
+    bar it starts, with the weight of its rise. The first bar that is heard stays unless
+    the other has more.
+    """
+    for_first = for_next = 0.0
+    for bar, rise in found:
+        if bar < len(beats) and beats[bar] < ENTRY_WINDOW_S:
+            if (bar - first) % BEATS_PER_OCHO == 0:
+                for_first += rise
+            else:
+                for_next += rise
+    return first + BEATS_PER_BAR if for_next > for_first else first
+
+
 def count_from_bars(bars, first):
     """The count of each beat, 1 to 8: in eights from the beat `first`, which starts a bar.
 
@@ -128,9 +216,11 @@ def analyse(samples, rate):
     """
     mono = samples.astype(np.float32).mean(axis=1) / 32768.0
     beats, bars = beats_from_activations(*beat_activations(mono, rate))
+    first = first_heard_bar(mono, rate, beats, bars)
+    first = first_ocho(first, beats, entries(rises(band_levels(mono, rate, beats)), bars))
     return {
         "beats": [round(time, 3) for time in beats],
         "bpm": [round(bpm, 1) for bpm in bpm_at_beats(beats)],
         "bar": bars,
-        "count": count_from_bars(bars, first_heard_bar(mono, rate, beats, bars)),
+        "count": count_from_bars(bars, first),
     }
