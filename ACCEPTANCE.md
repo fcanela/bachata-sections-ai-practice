@@ -127,7 +127,7 @@ The owner decided the shape of this slice on 2026-10-06, in session 6, after an 
 **The three mixes, checked automatically**
 
 - [x] Every labelled beat is the beat of its bar that the reference says: first, second, third or fourth. A bar is always four beats. If a part makes this impossible, the numbers go to the owner, who decides. The item is not loosened any other way. `bachata/songs_test.py`: 396, 505 and 416 beats, all in their place.
-- [x] The share of labelled beats that get the count of the reference is measured on each mix and written in `LOG.md`. There is no limit to pass in this slice. The limit is in slice 4. `bachata/songs_test.py` prints it: 88 of 396 on Me Emborrachare, 257 of 505 on Eso Es Amor, 416 of 416 on Old Town Road. Me Emborrachare read 120 of 396 until session 8, against a reference that had the short bar of its Intro last: the analysis counts that Intro in eights from its first beat, and so did the wrong reference.
+- [x] The share of labelled beats that get the count of the reference is measured on each mix and written in `LOG.md`. There is no limit to pass in this slice. The limit is in slice 4. `bachata/songs_test.py` prints it: 308 of 396 on Me Emborrachare since session 9, when the analysis began to say which bar starts an ocho, 257 of 505 on Eso Es Amor, 416 of 416 on Old Town Road. Me Emborrachare read 88 of 396 from session 8 to then. Me Emborrachare read 120 of 396 until session 8, against a reference that had the short bar of its Intro last: the analysis counts that Intro in eights from its first beat, and so did the wrong reference.
 
 **The two commercial recordings**
 

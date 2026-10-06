@@ -33,7 +33,7 @@ Slice 2 is built, in the shape the owner gave it in session 6, and the owner has
 
 - **The reference changed on 2026-10-06, outside git.** The owner's label files now carry the site's order of phrases, as blocks, for every section with a phrase shorter than an ocho.
   - The Intro of Me Emborrachare has its short bar first. The old reference had it last, by the last-bar rule, and was wrong: the owner listened.
-  - The measured count is 88 of 396 on Me Emborrachare, where it was 120. Eso Es Amor is still 257 of 505 and Old Town Road 416 of 416. The analysis did not change: it lost the 32 beats it had only shared with the wrong reference.
+  - The measured count was then 88 of 396 on Me Emborrachare, where it was 120. *Since session 9 it is 308 of 396.* Eso Es Amor is still 257 of 505 and Old Town Road 416 of 416. The analysis did not change: it lost the 32 beats it had only shared with the wrong reference.
   - The last-bar rule stays for a section without blocks, and decides nothing on these three mixes.
   - No code changed but one docstring. `LOG.md`, session 8, and `ACCEPTANCE.md`, slice 2.
 
@@ -52,12 +52,12 @@ Slice 2 is built, in the shape the owner gave it in session 6, and the owner has
   - The owner's five notes for later are under "For later slices".
 
 - Session 6 asked the owner five questions, ran an experiment on the three mixes and on 96 songs without labels, and the owner set the shape of the slice from its result. `LOG.md`, session 6, has the figures and the decisions, and `ACCEPTANCE.md` the items.
-- **The analysis** now keeps the place of every beat in its bar, and a count from 1 to 8 that runs in eights from the first bar that is not silence. It is version 2. The five songs in `data/` have been analysed again: that happened by itself when the owner started the program.
+- **The analysis** now keeps the place of every beat in its bar, and a count from 1 to 8 that runs in eights from the first bar that is not silence. It was version 2 then. *Since session 9 it is version 4, and the count may start a bar later: see the top of this file.* The five songs in `data/` have been analysed again: that happened by itself when the owner started the program.
 - **The page** shows the count as the largest figure, with the tempo small beside the time. The large view is the ocho that is sounding, standing still, each beat at the place of its count. The song is in rows of four ochos, with the count under every mark. Count 1 is an upright bar.
 - **"Count 1 here"**, in the transport bar, makes the beat at the playing position count 1. From there the count runs in eights. On a beat set this way the control reads "Not count 1" and takes it back. A beat set by hand has a cap across its bar.
 - The arrows with Shift move the position by an ocho.
 - The server has two new requests, `PUT` and `DELETE /api/songs/<id>/ones?at=<seconds>`.
-- **The count is right only where no half phrase has passed.** On Me Emborrachare the Intro starts with one: the count is four off from the fifth beat of the song, at 0:02, to the end of the Breakdown, at 2:31. "Count 1 here" on those two beats puts all 396 right: that is what the control is for. *Corrected in session 8. This said "from 0:17, the end of the Intro", by a reference that had the short bar last.*
+- **The count is right only where no half phrase has passed.** On Me Emborrachare the Intro starts with one: the count is four off from the fifth beat of the song, at 0:02, to the end of the Breakdown, at 2:31. "Count 1 here" on those two beats puts all 396 right: that is what the control is for. *Since session 9 this is turned round on the mix: the count is right from the fifth beat to the end of the Breakdown, and four off on the first four beats and after 2:31. One beat set by hand, at 2:31, should put the rest right; that was worked out and not run.* *Corrected in session 8. This said "from 0:17, the end of the Intro", by a reference that had the short bar last.*
 
 Before that, in session 5:
 
