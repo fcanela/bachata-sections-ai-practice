@@ -9,6 +9,7 @@ import { OCHO, clock } from './song.js'
 // The custom properties a drawing reads from :root, by the name it uses for each.
 const READ = {
   bandMark: '--band-mark',
+  bandSounded: '--band-sounded',
   bandLit: '--band-lit',
   bandLitInk: '--band-lit-ink',
   mark: '--mark',
@@ -69,7 +70,6 @@ function mark(pen, x, y, unit, colour, first, byHand) {
   pen.fillStyle = colour
   if (!first) return pen.fillRect(x - unit / 2, y - unit / 2, unit, unit)
   const tall = unit * 2.5
-  // One shape, so a faint mark is as faint where the cap crosses the bar.
   pen.beginPath()
   pen.rect(x - unit / 2, y - tall / 2, unit, tall)
   if (byHand) {
@@ -110,9 +110,7 @@ export function drawNow(canvas, { ocho, count, byHand, lit, pulse }) {
       square(pen, x, y, side, colours.bandLit, side * 0.09)
       mark(pen, x, y, size * 0.36, colours.bandLitInk, first, byHand.has(beat))
     } else {
-      pen.globalAlpha = beat < lit ? 0.28 : 1
-      mark(pen, x, y, size * 0.36, colours.bandMark, first, byHand.has(beat))
-      pen.globalAlpha = 1
+      mark(pen, x, y, size * 0.36, beat < lit ? colours.bandSounded : colours.bandMark, first, byHand.has(beat))
     }
     pen.fillStyle = colours.bandMark
     pen.fillText(String(count[beat]), x, y + size * 0.78)

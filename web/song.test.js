@@ -342,12 +342,13 @@ test('without a beat set by hand the count is the one of the analysis', () => {
 test('from a beat set to count 1 the count runs in eights', () => {
   const beats = steady(30)
   // The user says the thirteenth beat is count 1: the bar before it is left alone.
-  const counted = countsWith(beats, eights(30), [beats[12]])
+  const analysed = eights(30)
+  const counted = countsWith(beats, analysed, [beats[12]])
   assert.deepEqual(counted.count.slice(0, 12), [1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4])
   assert.deepEqual(counted.count.slice(12), eights(18))
   assert.deepEqual(counted.byHand, [12])
-  // What the analysis counted is not changed.
-  assert.deepEqual(eights(30)[12], 5)
+  // What the analysis counted is not changed: the page counts from it again at every change.
+  assert.deepEqual(analysed, eights(30))
 })
 
 test('each beat set by hand holds up to the next one', () => {

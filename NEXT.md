@@ -2,11 +2,17 @@
 
 Rewritten at the end of every session.
 
-## Where things stand (2026-10-06, session 6)
+## Where things stand (2026-10-06, session 7)
 
 Slice 2 is built, in the shape the owner gave it in session 6, and the owner has used it. Every check a program can run passes. What is open is the owner's: the checks of slice 1, one by-ear item of slice 2, and the proposals listed below.
 
-- **After the owner's check by hand**, the same day:
+- **After a review of the last commit**, the same day, in session 7. A fresh reviewer had four findings in `a775210`, and all four held:
+  - **The loop can be switched off and on while the song plays.** The switch did nothing during playback.
+  - **A large beat that has sounded is `#7a6500`**, 3.9 to 1 against the band in light and 3.5 in dark. It was the black of the marks at 28%, which is 1.8 to 1. It is less faint than it was: whether it is faint enough is the owner's to say.
+  - **Two checks were repaired.** An assertion of `web/song.test.js` looked at a new array and could not fail. And no test read the large view: one now reads its canvas, in light and in dark.
+  - Each of the four has a check that was seen to fail. `LOG.md`, session 7.
+
+- **After the owner's check by hand**, in session 6:
   - **"Clear"**, in the transport bar, takes a marked range away. Switching the loop off still keeps it.
   - **Every song has an address**, `/?song=` and its id. The address bar shows it while the song is open. Loaded again, or opened from a link, the page opens that song. Back does not go from song to song.
   - **Opus files are taken**, like mp3 and m4a. The server did not change: it still receives plain samples.
@@ -156,7 +162,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 ### Slice 2, as built, and what it leaves to the owner
 
 - **By ear, the two commercial recordings:** a beat shown as 1 or as 5 is the first beat of a bar, wherever the song can be counted.
-- **By eye:** count 1 against the other beats, and a count 1 set by hand against the others, in the large view and on the song.
+- **By eye:** count 1 against the other beats, and a count 1 set by hand against the others, in the large view and on the song. Since session 7 also the large beats that have sounded, in their new colour, against the ones to come.
 - **The proposals in `ACCEPTANCE.md`, under slice 2:** that the first labelled beat of Me Emborrachare is count 1, the 40 dB under which a bar is silence, the seven half phrases the rule placed (check 7 above), the 9 beats of the Outro of Eso Es Amor, and that the control takes a count 1 back.
 - **The control, in use.** It is one button and nothing more, as asked. Whether a song with several half phrases is quick enough to put right with it is the owner's to say after using it.
 
@@ -185,8 +191,8 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **The count is put together on the page**, in `countsWith` of `web/song.js`, from the analysis's count and the beats set by hand. The server keeps those as times, with the song and not with the result, so a new version of the analysis leaves them alone.
 - **A bar is four beats.** The DBN is given bars of four only.
 - **Every file of the page is named in `PAGE_FILES`**, in `bachata/server.py`, and read once when the program starts. A new file needs an entry, and a changed file needs the program started again.
-- **The tests find a beat through what the canvases say about themselves**: `data-lit` and `data-ocho` on the large beats, and on the song `data-marks`, the middle of every mark, `data-counts` and `data-by-hand`. A change to how the song is laid out keeps those attributes true.
-- **The colours of the page are plain six-digit values on `:root`** in `web/style.css`, light first and dark after. `web/contrast.test.js` reads them from there.
+- **The tests find a beat through what the canvases say about themselves**: `data-lit` and `data-ocho` on the large beats, and on the song `data-marks`, the middle of every mark, `data-counts` and `data-by-hand`. A change to how the song is laid out keeps those attributes true. One test reads the canvas of the large view without them, `LARGE` in `e2e/page_test.py`: it takes an eighth of the width for the place of each count.
+- **The colours of the page are plain six-digit values on `:root`** in `web/style.css`, light first and dark after. `web/contrast.test.js` reads them from there. A colour or a strength that is set in `web/draw.js` is one that test cannot see: the large beats that have sounded were drawn at 28% there until session 7, at 1.8 to 1.
 - **A loop is played by the sound itself**, through the loop points of the audio source, and its clicks come from `clicksUntil` in `web/song.js`. A loop made by stopping and starting the sound would have a gap, and its clicks would drift.
 - **Product facts go in `BRIEF.md`, never in `PRODUCT.md`.** `PRODUCT.md` only points at the brief. The design plugin's `init` command offers to fill it in; a new fact goes into the brief instead.
 - **In the session's sandbox:**
@@ -219,7 +225,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 
 - **At 1280 wide the transport bar takes two lines**: the click switch goes under the other controls.
 - **A song longer than about 3 minutes no longer shows whole at 1920 by 1080.** A row is 50 pixels high, for the count under each mark.
-- **Nothing checks by a test that a number is drawn under each mark**, nor the empty places of a short ocho in the large view. Both were looked at in pictures.
+- **Nothing checks by a test which number is drawn under a mark.** In the large view a test finds something written under every beat, and the empty places of a short ocho, since session 7. The numbers on the song were looked at in pictures.
 - **A change of count 1 in another browser arrives with the list**, so up to two seconds later.
 - **The count starts on the first bar that is not silence**, 40 dB under the level of the song. A song that fades in over several bars may start its count late; none of the 101 songs analysed in session 6 does.
 

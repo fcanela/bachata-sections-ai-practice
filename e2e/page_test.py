@@ -512,6 +512,46 @@ def test_a_marked_range_plays_in_a_loop_with_a_click_on_every_beat_of_every_pass
     expect(page.locator("#loop")).not_to_be_checked()
 
 
+def test_the_loop_is_switched_off_and_on_while_the_song_plays(visit, files):
+    visitor = visit()
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    player, loop = page.locator("#player"), page.locator("#loop")
+    first, last = 8, 11
+    visitor.drag_across(first, last)
+    page.locator("#play").click()
+    expect(player).to_have_attribute("data-state", "looping")
+
+    # Switched off while the song goes round the range: the song plays on and the range stays.
+    loop.click()
+    expect(loop).not_to_be_checked()
+    expect(player).to_have_attribute("data-state", "playing")
+    expect(page.locator("#map")).to_have_attribute("data-range", f"{first} {last}")
+    # Switched on again, the song goes round it again without a press on Play.
+    loop.click()
+    expect(loop).to_be_checked()
+    expect(player).to_have_attribute("data-state", "looping")
+    # And from the keyboard.
+    loop.focus()
+    page.keyboard.press("Space")
+    expect(loop).not_to_be_checked()
+    expect(player).to_have_attribute("data-state", "playing")
+    expect(page.locator("#play")).to_have_text("Pause")
+    # The sound was handed to the audio clock again at each change, with the loop or without.
+    assert [sound["loop"] for sound in page.evaluate("window.started") if sound["seconds"] > 1] == [True, False, True, False]
+
+    # Without the loop the song leaves the range. Switched on after that, it goes back
+    # into the range and stays there.
+    needs_sound(page)
+    page.wait_for_function("last => Number(document.getElementById('now').dataset.lit) > last", arg=last, timeout=10_000)
+    loop.click()
+    expect(player).to_have_attribute("data-state", "looping")
+    for _ in range(6):
+        page.wait_for_timeout(500)
+        assert first - 1 <= visitor.lit() <= last
+
+
 def test_a_marked_range_can_be_cleared(visit, files):
     visitor = visit(viewport={"width": 1280, "height": 720})
     page = visitor.page
@@ -676,6 +716,104 @@ def test_every_beat_has_its_own_mark_and_its_count_in_rows_of_four_ochos_in_ligh
     # No section is written: the text where the song is shown is the count, which is not
     # there before the first beat, the tempo and the time.
     assert page.locator("#player").inner_text().split() == ["–", page.locator("#bpm").inner_text(), "BPM", "0:00"]
+
+
+# What the large view has drawn at the place of a count, 1 to 8: the ink down the middle
+# of the place, how tall and how wide it is, its colour just inside its top and in its
+# middle, and whether something is written under it. Colours are as the eye gets them,
+# on the band behind the canvas: ink that is not solid lets the band through.
+LARGE = """(place) => {
+    const canvas = document.getElementById('now')
+    const scale = canvas.width / canvas.clientWidth
+    const band = getComputedStyle(canvas.parentElement).backgroundColor.match(/[0-9.]+/g).slice(0, 3).map(Number)
+    const wide = Math.floor(canvas.width / 8)
+    const high = canvas.height
+    const cell = canvas.getContext('2d').getImageData(Math.round(((place - 1) * canvas.width) / 8), 0, wide, high).data
+    const at = (x, y) => cell.subarray(4 * (y * wide + x), 4 * (y * wide + x) + 4)
+    const alpha = (x, y) => at(x, y)[3]
+    const seen = (x, y) => band.map((ground, part) => Math.round((at(x, y)[part] * alpha(x, y) + ground * (255 - alpha(x, y))) / 255))
+    const middle = wide >> 1
+    let top = 0
+    while (top < high && alpha(middle, top) < 32) top++
+    if (top === high) return { empty: cell.every((part, n) => n % 4 !== 3 || part === 0) }
+    let bottom = top
+    while (bottom + 1 < high && alpha(middle, bottom + 1) >= 32) bottom++
+    const row = (top + bottom) >> 1
+    let left = middle
+    let right = middle
+    while (left > 0 && alpha(left - 1, row) >= 32) left--
+    while (right + 1 < wide && alpha(right + 1, row) >= 32) right++
+    let under = false
+    for (let y = bottom + 3; y < high && !under; y++) for (let x = 0; x < wide && !under; x++) under = alpha(x, y) > 128
+    return {
+        empty: false,
+        tall: (bottom - top + 1) / scale,
+        across: (right - left + 1) / scale,
+        edge: seen(middle, top + Math.round(3 * scale)),
+        middle: seen(middle, row),
+        under,
+        band,
+    }
+}"""
+
+
+def contrast(one, other):
+    """The contrast of two colours, each three numbers up to 255, as WCAG counts it."""
+
+    def luminance(colour):
+        parts = [part / 255 for part in colour]
+        red, green, blue = [part / 12.92 if part <= 0.04045 else ((part + 0.055) / 1.055) ** 2.4 for part in parts]
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+    dark, light = sorted((luminance(one), luminance(other)))
+    return (light + 0.05) / (dark + 0.05)
+
+
+def test_the_large_view_draws_the_ocho_that_is_sounding_in_light_and_in_dark(visit, files):
+    visitor = visit(viewport={"width": 1280, "height": 720}, color_scheme="light")
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    counts = visitor.counts()
+    # A whole ocho with the playing position on its count 4: three of its beats have
+    # sounded, one is sounding and four are to come.
+    first = next(beat for beat in range(len(counts) - 7) if counts[beat : beat + 8] == list(range(1, 9)))
+    visitor.press_beat(first + 3)
+    expect(page.locator("#now")).to_have_attribute("data-ocho", f"{first} {first + 7}")
+    expect(page.locator("#now")).to_have_attribute("data-lit", str(first + 3))
+
+    for scheme in ("light", "dark"):
+        page.emulate_media(color_scheme=scheme)
+        page.wait_for_timeout(300)
+        places = [page.evaluate(LARGE, place) for place in range(1, 9)]
+        # Every beat of the ocho is drawn at the place of its count, with its count under it.
+        assert not any(place["empty"] for place in places), scheme
+        assert all(place["under"] for place in places), scheme
+        band = places[0]["band"]
+        sounded, lit, coming = places[:3], places[3], places[4:]
+        # A beat that has sounded is fainter than one to come, and still a mark: it has a
+        # contrast of 3 to 1 or more against the band.
+        faint = [contrast(place["middle"], band) for place in sounded]
+        full = [contrast(place["middle"], band) for place in coming]
+        assert min(faint + full) >= 3, (scheme, [round(ratio, 2) for ratio in faint + full])
+        assert max(faint) < min(full), (scheme, faint, full)
+        # Count 1 is an upright bar and the others are squares, whether they have sounded or not.
+        assert sounded[0]["tall"] > 2 * sounded[0]["across"], (scheme, sounded[0])
+        for place in sounded[1:] + coming:
+            assert abs(place["tall"] - place["across"]) <= 1.5, (scheme, place)
+        # The beat that is sounding has the large square, with its own mark inside it.
+        side = coming[0]["tall"]
+        assert lit["tall"] > 3 * side and lit["across"] > 3 * side, (scheme, lit)
+        assert contrast(lit["edge"], band) >= 3 and contrast(lit["middle"], lit["edge"]) >= 3, (scheme, lit)
+
+    # An ocho of fewer than 8 beats leaves the other places empty. Its fifth beat is set
+    # to count 1, which cuts it to a bar.
+    visitor.press_beat(first + 4)
+    page.locator("#one").click()
+    expect(page.locator("#map")).to_have_attribute("data-by-hand", str(first + 4))
+    visitor.press_beat(first + 1)
+    expect(page.locator("#now")).to_have_attribute("data-ocho", f"{first} {first + 3}")
+    assert [page.evaluate(LARGE, place)["empty"] for place in range(1, 9)] == [False] * 4 + [True] * 4
 
 
 def test_count_1_is_set_by_hand_shown_in_every_browser_and_taken_back(visit, files):

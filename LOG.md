@@ -2,6 +2,61 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-06, session 7: four findings of a review of the last commit
+
+The owner handed over four findings that a fresh reviewer made in commit `a775210`. Each was first checked against the code, and all four hold. Two are faults of the page: the loop's switch, and the contrast of a large beat that has sounded. Two are faults of its checks: an assertion that cannot fail, and no test that reads the large view.
+
+### The four findings: a check that fails, then the fix
+
+For a fault of the page, the new check ran on the page as committed. For a fault of the checks the page was right, so it was broken on purpose, as in session 6: the file is changed, the checks run, and the file is written back as it was.
+
+| Finding | The check, before the fix | After |
+| --- | --- | --- |
+| The loop cannot be switched off or on while the song plays | `test_the_loop_is_switched_off_and_on_while_the_song_plays`, new, on the page as committed: "Locator expected not to be checked. Actual value: checked", after a press on the switch during playback | passes |
+| A large beat that has sounded has less than 3 to 1 against the band | `test_the_large_view_draws_the_ocho_that_is_sounding_in_light_and_in_dark`, new, reads the canvas of the page as committed: 1.83 to 1 for the three beats that have sounded, in light, and 12.91 for the four to come. `web/contrast.test.js`, with the colour moved into the style sheet at the strength it was drawn: "--band-sounded #bd9c05 on --band #ffd200 is 1.83" and "--band-sounded #b39305 on --band #f2c500 is 1.80" | 3.92 to 1 in light and 3.46 in dark |
+| An assertion of `web/song.test.js` cannot fail: it looks at a new array, not at the one the analysis counted | A fault of the check. `countsWith` was made to write into the count it is given. With the test as it stood, 31 of 31 pass. With the assertion repaired, so that it keeps the array it hands over and looks at it afterwards, "from a beat set to count 1 the count runs in eights" fails | passes on the code as it is |
+| No test of the page fails when the large view stops drawing | A fault of the checks. `drawNow` was made to return before it draws. Of the 25 tests of the page in Firefox, 18 pass and 6 are skipped for want of sound, and none of those reads the canvas of the large view. The one that fails is the new test: every place is empty | passes |
+
+**The new test of the large view, broken five more ways.** It reads the canvas at the place of each count, in light and in dark.
+
+| Break | Caught by |
+| --- | --- |
+| A beat that has sounded is as strong as one to come | "12.91 < 12.91": it is not fainter |
+| The beat that is sounding has no large square | Its ink is 21 pixels tall, where more than three times a mark is asked |
+| Count 1 is a square | 21 pixels tall and 21 across, where an upright bar is asked |
+| No count is written under the beats | Nothing is found under them |
+| The beats stand in order from the fifth place, not at the place of their count | The first four places are empty |
+
+### Runs
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| The black of the marks at 28% over the band, by the arithmetic of `web/contrast.test.js` | `#bd9c05` on `#ffd200` in light, 1.83 to 1. `#b39305` on `#f2c500` in dark, 1.80. The reviewer's figure was about 1.8 | under 1 s |
+| `node --test web/`, with `countsWith` broken, before and after the assertion was repaired | 31 pass, then 30 pass and 1 fails | under 1 s |
+| `pytest e2e -k "firefox and switched_off_and_on"`, inside the sandbox, on the page as committed | 1 failed, at the first press on the switch | 15 s |
+| `pytest e2e -k "firefox and large_view"`, inside the sandbox, on the page as committed | 1 failed, on the contrast | 10 s |
+| `node --test web/`, with the colour of a sounded beat in the style sheet at the strength it was drawn | 29 pass, 2 fail: the marks, in light and in dark | under 1 s |
+| The same three after the two fixes | `node --test web/`: 31 pass. The test of the large view passes. The test of the loop passes up to where it needs sound, and is skipped there | 15 s |
+| `pytest e2e -k firefox`, inside the sandbox, with `drawNow` returning before it draws | 18 passed, 6 skipped, 1 failed: the new test | 117 s |
+| The five other breaks of the large view, each against its new test | 5 failed, as in the table above | about 50 s |
+| `TMPDIR=/tmp/claude-1000/e2e BACHATA_TEST_PORT=8083 .venv/bin/python -m pytest`, outside the sandbox. Port 8083 was free | 186 passed, none skipped. The four more than in session 6 are the two new tests, in Chrome and in Firefox | 297 s |
+
+### Cost
+
+- Paid APIs: none used, $0.
+- Network: none. Nothing was downloaded or installed.
+- Dependencies: none added.
+- Commands outside the sandbox: 1, the whole test suite.
+- A second model was asked for advice twice, on the plan and on the finished work. What it used is not visible from inside the session.
+- Cost of the Claude Code session itself: not measured from inside the session.
+
+### Decisions
+
+- **The switch of the loop is read before the song is stopped.** A change to the playing stops the song and starts it again, and stopping it shows the switch as the page last knew it. The switch was read after that, so during playback it read its old value back. Paused, nothing is stopped, which is why every test that pressed the switch passed: they all pressed it while paused. No other control is read after the stop.
+- **A large beat that has sounded has a colour of its own, `--band-sounded`, `#7a6500`**, the same in light and in dark. It was the black of the marks at 28% strength, set in `web/draw.js`, where `web/contrast.test.js` could not see it. It is now with the other colours on `:root`, and in that test's list of marks. Against the band it has 3.92 to 1 in light and 3.46 in dark, and the black of a beat to come has 3.29 to 1 against it. *The colour is mine. It is less faint than it was; whether it is faint enough is the owner's to say.*
+- **A sounded beat stays fainter than one to come.** The new test asks for both: 3 to 1 against the band, and less than a beat to come. Without the second, drawing every beat at full strength would pass.
+- **The new test finds something written under each large beat, not which number it is.** It also does not look at the cap of a count 1 set by hand in the large view, nor at the square swelling while the song plays.
+
 ## 2026-10-06, session 6: slice 2, the questions, the experiment and the shape it took
 
 The owner asked for five questions before slice 2, then for a review of the proposal that came out of them, then for the experiment the review named, on a set of 96 songs as well as on the three mixes. The experiment changed the shape of the slice. The owner then asked for the specification, a commit of it, and the build. After using the built page the owner came back with three findings and a request to break the code on purpose; that is the last part of this entry.

@@ -55,6 +55,7 @@ const MARKS = [
   ['--mark', '--ground'],
   ['--loop', '--ground'],
   ['--band-mark', '--band'],
+  ['--band-sounded', '--band'],
   ['--band-lit-ink', '--band-lit'],
   ['--lit-ink', '--lit'],
 ]

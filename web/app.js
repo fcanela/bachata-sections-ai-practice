@@ -792,8 +792,10 @@ $('loop-clear').addEventListener('click', () => {
 })
 
 $('loop').addEventListener('change', () => {
+  // Read before the song is stopped: stopping it shows the switch as it was.
+  const on = $('loop').checked
   replay(() => {
-    player.looping = $('loop').checked
+    player.looping = on
     // Switched on after the range has been passed: the playing goes back into it.
     const loop = markedLoop()
     if (player.looping && player.offset >= loop.end) player.offset = loop.start
