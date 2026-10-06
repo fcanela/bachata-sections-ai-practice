@@ -2,6 +2,80 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-06, session 9, third part: the bass, and 5 of 5
+
+The owner said "resume" after the record below. The step that record names as first was run, it held, and the rule that had been taken out was built. **The entry check reads 5 of 5, with no other song worse.**
+
+### Runs
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| The beats and the band levels of the 104 inbox songs, kept in the scratch folder | 104 analysed, none failed | about 8 min |
+| The bar set before the result was read: where the vote of what comes in is one-sided or 3 to 1, and the bass is sure by 2 over 90 s, the two agree on 80% of 15 songs or more | 33 songs, 30 agree: 91%. See the table below | under 5 s |
+| `pytest bachata/entry_test.py -s`, with the rule in the analysis | Passed: 5 of 5, 0 other songs worse, none skipped. The lines are below | 54 s |
+| `pytest bachata/songs_test.py -s` | 16 passed. The count against the labels: Me Emborrachare 308 of 396, where it was 88; Eso Es Amor 257 of 505 and Old Town Road 416 of 416, as before | 27 s |
+| The final rule on the 104 songs | 28 moved by a bar. One of them by the bass: Ronny Dae - You Gotta Go, at -2.8 | under 5 s |
+| `TMPDIR=/tmp/claude-1000/e2e BACHATA_TEST_PORT=8084 .venv/bin/python -m pytest`, outside the sandbox | 215 passed, none skipped. The owner's program on 8082 was left alone | 336 s |
+
+**The check, as it reads now.**
+
+```
+ok    Bachata Que Duele: count 1 at 17.34 s, where he hears 1
+ok    Escalofríos: count 1 at 3.8 s, where he hears 1
+ok    No vuelvo a caer: count 1 at 17.04 s and count 1 at 32.16 s, where he hears 1
+ok    Me Emborrachare, the mix: count 1 at 2.28 s, where he hears 1
+ok    Sus Huellas: count 1 at 28.76 s, where he hears 1
+ok    Chanel - Clavaito: 364 of 364 beats keep their count from 0.7 s to the end
+ok    Manuel Turizo - La Bachata: 337 of 337 beats keep their count from 0.18 s to the end
+ok    Jalil Lopez - La Culpable: 329 of 329 beats keep their count from 0.06 s to the end
+ok    Antonio José - La Noche Perfecta: 361 of 361 beats keep their count from 1.46 s to the end
+ok    DJ Zarnoti - Fantasías (feat. Johandy): 329 of 329 beats keep their count from 0.2 s to the end
+ok    Romeo Santos - Héroe Favorito: 505 of 505 beats keep their count from 1.16 s to the end
+ok    Herrera: 116 of 116 beats keep their count from 0.66 s to the mark at 53.96 s
+ok    Sin Fin: 228 of 228 beats keep their count from 0.28 s to the mark at 110.94 s
+ok    Old Town Road (Bachata Remix): 416 of 416 labelled beats are shown with the count of the reference, at least 416 needed
+ok    Eso Es Amor: 257 of 505 labelled beats are shown with the count of the reference, at least 257 needed
+The count enters on 1 on 5 of 5 songs, at least 4 needed.
+0 other songs got worse.
+```
+
+**The bass against what comes in, on the 104 songs.** They have no marks: this shows how often two measures that share nothing say the same. "A" is the first bar heard, "B" the bar after. 97 of the 104 have a vote; in 7 nothing comes in.
+
+| Songs | Bass sure by | Songs | Agree | Both A | Both B | Vote A, bass B | Vote B, bass A |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Vote one-sided or 3 to 1, bass over 90 s | 2 | 33 | 30, 91% | 26 | 4 | 1 | 2 |
+| The same | 3 | 20 | 19, 95% | 17 | 2 | 0 | 1 |
+| The same | any | 67 | 53, 79% | 43 | 10 | 9 | 5 |
+| Every song with a vote, bass over 90 s | 2 | 41 | 35, 85% | 30 | 5 | 1 | 5 |
+| Every song with a vote, bass over 60 s | 2 | 41 | 34, 83% | 28 | 6 | 1 | 6 |
+
+- Most songs are A by both measures, so two measures that knew nothing would still agree on about 72% of the first row. What the table adds is the B side: when the bass is sure of B, the vote says B on 5 of 6 songs, where it says B on about one song in four overall. The rule only ever acts on that side.
+- **Where nothing comes in, the 7 songs:** the bass reads 2.1, 2.4 and 3.0 for A on three, -2.8 on Ronny Dae - You Gotta Go, which moves, and under 1 on three, "Jiory - Eso Es Amor" among them at 0.0.
+
+### Breaking the code on purpose
+
+| Round | Breaks | Caught as the tests stood | What was repaired |
+| --- | --- | --- | --- |
+| The bass and the rule that asks it | 16 | 14 | The 90 seconds: the test passed with 60. And that a bar is compared with the two around it: the test passed with the bar before alone |
+
+- All 16 are caught now. One test runs the whole analysis on a made-up sound, a tone of 80 Hz louder in every other bar, and the count follows it either way.
+
+### Cost
+
+- Paid APIs, network, dependencies: none.
+- Commands outside the sandbox: 1, the whole test run.
+- Time: 22:21 to about 22:40 by the machine's clock.
+- Cost of the Claude Code session itself: not measured from inside the session.
+
+### Decisions
+
+**Mine**
+
+- **The bass is asked only where nothing comes in**: no rise of the first minute that counts. Of the 17 songs with the owner's marks that is the mix alone; of the 104, 7. It moves the count when it is under -2, and never confirms or overrules a vote.
+- **90 seconds, the three lowest bands, 2 for sure.** All three are as first tried. Over 60 s the mix reads -1.7 and would not move: the longer window is there because a mean over bars needs many, and it is the setting the result leans on most.
+- **The analysis is version 4.** Every stored song is analysed again when the program starts.
+- **The count of the first log entry of this session was one short.** "26 moved" on the 104 songs was 27: Loca Manera has 5.4 against 5.4 as printed and moves by the digits behind. With the bass it is 28.
+
 ## 2026-10-06, session 9, second goal: the Me Emborrachare mix, not reached
 
 The owner set a second goal of 60 minutes: count 1 on his mark on all five entry songs, the Me Emborrachare mix included, with no other song worse. After about ten minutes by the machine's clock, 22:04 to 22:14, he stopped it and asked for this record. **The program did not change: the check still reads 4 of 5, with the mix at count 5 at 2.28 s.** Everything below ran from the session's scratch folder, on the 17 songs of `by-ear.json` and Old Town Road, from the sound and beats kept there in the first goal.
@@ -178,7 +252,7 @@ The count enters on 1 on 4 of 5 songs, at least 4 needed.
 
 | Figure | Every rise counts | With the rule about silence, as built |
 | --- | --- | --- |
-| Songs whose count moved by a bar | 29 | 26, 25% |
+| Songs whose count moved by a bar | 29 | 26, 25%. *27: see the third part of this session* |
 | Songs where nothing comes in during the first minute | 7 | 7 |
 | Songs where everything comes in on one side | 49 | 55 |
 | Songs where the smaller side is over 60% of the larger | 15 | 12 |
