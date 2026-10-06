@@ -2,9 +2,14 @@
 
 Rewritten at the end of every session.
 
-## Where things stand (2026-10-06, session 7)
+## Where things stand (2026-10-06, session 8)
 
 Slice 2 is built, in the shape the owner gave it in session 6, and the owner has used it. Every check a program can run passes. What is open is the owner's: the checks of slice 1, one by-ear item of slice 2, and the proposals listed below.
+
+- **A skill breaks the code on purpose**, since session 8: `.claude/skills/break-on-purpose/`. Asked to break a part and see its checks fail, it breaks every claim of the part once, then what no claim speaks of, and repairs each weak check it finds.
+  - It was tried on three tasks before the owner's last changes to it, and not since. `LOG.md`, session 8.
+  - It is committed with the project: `.gitignore` keeps `.claude/` out except that one folder.
+  - The program and its tests did not change in session 8.
 
 - **After a review of the last commit**, the same day, in session 7. A fresh reviewer had four findings in `a775210`, and all four held:
   - **The loop can be switched off and on while the song plays.** The switch did nothing during playback.

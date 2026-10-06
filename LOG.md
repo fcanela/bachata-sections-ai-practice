@@ -2,6 +2,54 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-06, session 8: a skill that breaks the code on purpose
+
+The owner asked for a skill of the work sessions 3, 6 and 7 did by hand: break the code on purpose, one break at a time, and see whether the checks fail. No code of the program and none of its tests changed in this session. The skill is `.claude/skills/break-on-purpose/`: a `SKILL.md` and one script, `scripts/one_break.sh`.
+
+### Runs
+
+Three tasks, each run once with the skill and once without it, by a fresh agent in a copy of the repository of its own, in the session's scratch folder. Two of the copies were at older commits, where the answer is known from sessions 6 and 7.
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| `one_break.sh` on a copy, seven ways: a file not broken, a break, the same break again from its patch, a break that fails two tests, no command, a name not kept, a run killed | It refused the file that was as committed, with exit 2. Every other time the file was written back, also after the kill | under 5 s |
+| A count 1 kept in memory and not on disk, on a copy at `f34f065`, with the tests of the server and the store | 2 failed, 90 passed. Both are tests of the store; the server's own test passed. As in session 6 | 2 s |
+| `countsWith` writing into the count it is given, on a copy at `a775210`, `node --test web/` | 31 pass. As in session 7 | under 1 s |
+| The page's logic, `web/song.js` at `0491825`, with the skill | 54 breaks. 46 of the 51 that are for the tests of `web/` were caught; three tests were changed. 6 of 7 checks of the trial hold | 1573 s, 197,950 tokens |
+| The same without the skill | 128 breaks, by function. 99 caught as the tests stood, 123 after four new tests. 3 of 7 | 935 s, 126,224 tokens |
+| The server's part of count 1, at `f34f065`, with the skill | 25 breaks. It found that the server's own test passes when a count 1 never reaches the disk, and repaired it. 8 of 8 | 820 s, 137,188 tokens |
+| The same without the skill | 49 breaks. Its break stopped every write, renamings too, so the server's test failed for another reason and stayed weak: on the narrow break it still passes, 78 of 78. 3 of 8 | 861 s, 124,715 tokens |
+| An assertion said not to fail, at `a775210`, with the skill | Shown by a run, repaired, seen to fail, recorded. 7 of 7 | 149 s, 67,142 tokens |
+| The same without the skill | The same repair to the test. No message of the failure and nothing in `LOG.md`. 3 of 7 | 39 s, 45,678 tokens |
+| The owner's working tree, before and after the six runs: the commit, the status and a hash of every tracked file | Identical | under 1 s |
+
+**What the trial does not show.** One run of each, so nothing on how much two runs of the same task differ. Three of the checks hold in every run, with or without the skill: the code ends as committed, the checks pass at the end, and in five of six `LOG.md` is written. The skill was then changed as the owner asked, and the six runs were not made again: the skill as installed has not been tried.
+
+### Cost
+
+- Paid APIs: none used, $0.
+- Network: none. Nothing was downloaded or installed.
+- Dependencies: none added.
+- Commands outside the sandbox: 1, the copy of the skill's folder into `.claude/skills/`.
+- Agents: six for the runs and three to grade them, 938,017 tokens together by their own count.
+- A second model was asked for advice twice. What it used is not visible from inside the session.
+- Cost of the Claude Code session itself: not measured from inside the session.
+
+### Decisions
+
+**The owner's**
+
+- The skill is for this repository only, and is committed with it. `.gitignore` keeps `.claude/` out except `.claude/skills/break-on-purpose/`.
+- The skill chooses the breaks, and takes the owner's list when there is one. There is no limit on their number: every claim of the part once, then a second pass for what no claim speaks of, as the runs without the skill did.
+- A weak check is repaired and the repair is proved, as it is found. The owner first asked for a proposal only, and took that back.
+- The skill names its inputs: the part under test and the command that runs its checks. When the part is not named it asks, and does nothing else.
+- The six runs are not made again for these changes.
+
+**Mine**
+
+- A break is kept as a patch in the git folder, under `breaks/`, so the very same break runs again after a test is repaired.
+- In the second pass, a break that nothing catches gets a test only where the claims around it leave no doubt what is right. Otherwise it goes to the owner: a run without the skill had added assertions for behaviour written down nowhere.
+
 ## 2026-10-06, session 7: four findings of a review of the last commit
 
 The owner handed over four findings that a fresh reviewer made in commit `a775210`. Each was first checked against the code, and all four hold. Two are faults of the page: the loop's switch, and the contrast of a large beat that has sounded. Two are faults of its checks: an assertion that cannot fail, and no test that reads the large view.

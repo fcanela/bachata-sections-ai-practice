@@ -8,6 +8,10 @@ models/
 # The browser the end-to-end tests fetch: see e2e/page_test.py.
 .playwright/
 # Claude Code's settings for this folder. They hold paths from the owner's machine.
-.claude/
+# The one skill of the project is kept: it holds none.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/break-on-purpose/
 # The working files of the Impeccable design plugin.
 .impeccable/
