@@ -17,6 +17,7 @@ a drum-like click at 120 BPM. Nothing from the reference material is needed.
 import http.client
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -35,6 +36,7 @@ os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(ROOT / ".playwright"))
 RATE = 44100
 BPM = 120
 TAGGED = "Los Tests - Canción de prueba"
+IN_OPUS = "Los Tests - Canción en opus"
 
 
 def a_song(path, seconds, *tags):
@@ -66,14 +68,20 @@ def files(tmp_path_factory):
         "untagged": a_song(folder / "Sin etiquetas.mp3", 22.5),
         "markup": a_song(folder / "markup.mp3", 21.5, "title=<img src=x onerror=document.title='broken'><b>bold</b>"),
         "short": a_song(folder / "short.mp3", 10),
+        # ffmpeg writes the names of an opus file's tags in small letters.
+        "opus": a_song(folder / "track02.opus", 23.5, "title=Canción en opus", "artist=Los Tests"),
+        "short opus": a_song(folder / "short.opus", 10),
+        # Sound of another kind in the same wrapping as opus.
+        "vorbis": a_song(folder / "vorbis.ogg", 21),
         "wav": folder / "track01.wav",
         "text": folder / "notes.mp3",
         "broken": folder / "broken.mp3",
     }
     # Fifteen minutes and one second of silence, small enough to make and to decode quickly.
-    made["long"] = folder / "long.mp3"
     silence = ["-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-t", "901", "-b:a", "32k"]
-    subprocess.run(["ffmpeg", "-v", "error", "-y", *silence, str(made["long"])], check=True)
+    for name, file in (("long", "long.mp3"), ("long opus", "long.opus")):
+        made[name] = folder / file
+        subprocess.run(["ffmpeg", "-v", "error", "-y", *silence, str(made[name])], check=True)
     made["text"].write_text("This is a text file with the name of a song.\n" * 50)
     made["broken"].write_bytes(b"ID3\x04\x00\x00\x00\x00\x00\x00" + bytes(range(256)) * 400)
     return made
@@ -478,6 +486,16 @@ def test_a_marked_range_plays_in_a_loop_with_a_click_on_every_beat_of_every_pass
     page.locator("#play").click()
     assert [sound["loop"] for sound in page.evaluate("window.started.splice(0)") if sound["seconds"] > 1] == [False]
 
+    # Cleared while the song goes round it, the range is gone and the song plays on.
+    visitor.drag_across(first, last)
+    page.locator("#play").click()
+    expect(page.locator("#player")).to_have_attribute("data-state", "looping")
+    page.locator("#loop-clear").click()
+    expect(page.locator("#player")).to_have_attribute("data-state", "playing")
+    expect(page.locator("#now")).to_have_attribute("data-lit", str(last + 2), timeout=10_000)
+    page.locator("#play").click()
+    assert [sound["loop"] for sound in page.evaluate("window.started.splice(0)") if sound["seconds"] > 1] == [True, False]
+
     # The two ends can also be set at the playing position, one at a time.
     visitor.press_beat(20)
     page.locator("#loop-start").click()
@@ -492,6 +510,110 @@ def test_a_marked_range_plays_in_a_loop_with_a_click_on_every_beat_of_every_pass
     page.locator("#loop-end").click()
     expect(page.locator("#loop-range")).to_have_text(f"To {clock(beats[16])}")
     expect(page.locator("#loop")).not_to_be_checked()
+
+
+def test_a_marked_range_can_be_cleared(visit, files):
+    visitor = visit(viewport={"width": 1280, "height": 720})
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    song, clear = page.locator("#map"), page.locator("#loop-clear")
+    beats = visitor.beats(TAGGED)
+    # Nothing is marked yet, so there is nothing to clear.
+    expect(clear).to_be_disabled()
+    expect(song).to_have_attribute("data-range", "")
+
+    visitor.drag_across(8, 11)
+    expect(page.locator("#loop")).to_be_checked()
+    expect(song).to_have_attribute("data-range", "8 11")
+    # The bar that opens the range is on the canvas, at the left edge of its first beat.
+    marks = visitor.marks()
+    edge = [marks[8][0] - (marks[9][0] - marks[8][0]) / 2 + 2, marks[8][1]]
+    page.mouse.move(0, 0)
+    assert page.evaluate(INK, edge)["inked"]
+
+    # Switched off, the loop keeps its range: it can be switched on again.
+    page.locator("#loop").uncheck()
+    expect(song).to_have_attribute("data-range", "8 11")
+    assert page.evaluate(INK, edge)["inked"]
+    expect(clear).to_be_enabled()
+    # Cleared, the range is gone from the song and from the transport bar.
+    clear.click()
+    expect(song).to_have_attribute("data-range", "")
+    assert not page.evaluate(INK, edge)["inked"]
+    expect(page.locator("#loop-range")).to_have_text("Drag across beats")
+    expect(page.locator("#loop")).to_be_disabled()
+    expect(page.locator("#loop")).not_to_be_checked()
+    expect(clear).to_be_disabled()
+
+    # A range with only one end is cleared too, and from the keyboard: it then goes to
+    # the control beside the one that is no longer there to press.
+    visitor.press_beat(20)
+    page.locator("#loop-start").click()
+    expect(page.locator("#loop-range")).to_have_text(f"From {clock(beats[20])}")
+    clear.focus()
+    page.keyboard.press("Enter")
+    expect(page.locator("#loop-range")).to_have_text("Drag across beats")
+    expect(clear).to_be_disabled()
+    expect(page.locator("#loop-start")).to_be_focused()
+    # A new range can be marked afterwards.
+    visitor.drag_across(4, 6)
+    expect(song).to_have_attribute("data-range", "4 6")
+    expect(page.locator("#loop")).to_be_checked()
+
+
+def test_every_song_has_an_address_that_opens_it(visit, files):
+    visitor = visit()
+    page = visitor.page
+    # With no song open the address is the plain one.
+    assert page.url.endswith("/")
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    tagged = visitor.row(TAGGED).get_attribute("data-id")
+    # The address names the song that is open.
+    expect(page).to_have_url(re.compile(rf"/\?song={tagged}$"))
+
+    # Loaded again, the page opens that song. Nothing is sent again.
+    page.reload()
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    expect(page.locator("#song-name")).to_have_text(TAGGED)
+    expect(visitor.row(TAGGED)).to_have_attribute("aria-current", "true")
+    expect(page).to_have_url(re.compile(rf"/\?song={tagged}$"))
+    assert len(visitor.uploads()) == 1
+
+    # Another song has another address.
+    visitor.pick(files["untagged"])
+    expect(page.locator("#song-name")).to_have_text("Sin etiquetas", timeout=READY)
+    untagged = visitor.row("Sin etiquetas").get_attribute("data-id")
+    assert untagged != tagged
+    expect(page).to_have_url(re.compile(rf"/\?song={untagged}$"))
+    visitor.row(TAGGED).get_by_role("button", name="Open").click()
+    expect(page).to_have_url(re.compile(rf"/\?song={tagged}$"))
+
+    # A browser that was given the address opens the song it names.
+    other = visit(path=f"/?song={untagged}")
+    expect(other.page.locator("#player")).to_be_visible(timeout=READY)
+    expect(other.page.locator("#song-name")).to_have_text("Sin etiquetas")
+    expect(other.row("Sin etiquetas")).to_have_attribute("aria-current", "true")
+    assert other.uploads() == []
+
+    # An address that names a song the library does not have says so, and becomes the plain one.
+    lost = visit(path=f"/?song={'0' * 32}")
+    expect(lost.page.locator("#nothing-text")).to_have_text("This song is not in the library.")
+    expect(lost.page.locator("#player")).to_be_hidden()
+    expect(lost.page).to_have_url(re.compile(r"/$"))
+    # So does one that names nothing a song could be called.
+    odd = visit(path="/?song=../../etc/passwd")
+    expect(odd.page.locator("#nothing-text")).to_have_text("This song is not in the library.")
+    expect(odd.page).to_have_url(re.compile(r"/$"))
+
+    # A song deleted in another browser is closed here, and the address is the plain one again.
+    row = visitor.row("Sin etiquetas")
+    row.get_by_role("button", name="Delete").click()
+    row.get_by_role("button", name="Yes, delete").click()
+    expect(other.page.locator("#player")).to_be_hidden(timeout=10_000)
+    expect(other.page.locator("#nothing-text")).to_have_text("The song was deleted.")
+    expect(other.page).to_have_url(re.compile(r"/$"))
 
 
 INK = """([x, y]) => {
@@ -625,6 +747,50 @@ def test_count_1_is_set_by_hand_shown_in_every_browser_and_taken_back(visit, fil
     expect(other.page.locator("#map")).to_have_attribute("data-by-hand", "", timeout=6000)
     assert other.counts() == before
     assert [method for method, url in visitor.changes_of_count()] == ["PUT", "DELETE", "DELETE"]
+
+
+def test_a_list_asked_for_before_a_count_1_was_set_does_not_take_it_back(visit, files):
+    """The list is asked for every two seconds, and an answer may be late."""
+    visitor = visit()
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    beat = 20
+    visitor.press_beat(beat)
+
+    # The next answer to the list is kept back, as it is now: without a count 1. The
+    # lists after it pass, the one the page asks for after its own change among them.
+    held, late, closed = [], [], []
+
+    def on_list(route):
+        if not held:
+            held.append(route)
+        elif closed:
+            late.append(route)
+        else:
+            route.continue_()
+
+    page.route("**/api/songs", on_list)
+    for _ in range(40):
+        if held:
+            break
+        page.wait_for_timeout(100)
+    old = held[0].fetch()
+    assert all(song["ones"] == [] for song in old.json())
+    page.locator("#one").click()
+    expect(page.locator("#map")).to_have_attribute("data-by-hand", str(beat))
+    expect(page.locator("#one")).to_have_text("Not count 1")
+    page.wait_for_timeout(500)
+
+    # The old answer arrives now, and no newer one can put things right behind it.
+    closed.append(True)
+    held[0].fulfill(response=old)
+    for _ in range(8):
+        page.wait_for_timeout(100)
+        assert page.locator("#map").get_attribute("data-by-hand") == str(beat)
+    for route in late:
+        route.continue_()
+    page.unroute("**/api/songs")
 
 
 def test_a_song_is_renamed_in_its_row_and_in_the_top_bar(visit, files):
@@ -767,7 +933,7 @@ def test_the_keyboard_plays_moves_the_position_and_reaches_every_control(visit, 
     # From the top of the page: a press on its heading is where the keyboard starts from.
     page.locator("h1").click()
     reached = {}
-    for _ in range(22):
+    for _ in range(24):
         page.keyboard.press("Tab")
         on = page.evaluate(
             """() => {
@@ -780,7 +946,7 @@ def test_the_keyboard_plays_moves_the_position_and_reaches_every_control(visit, 
         # After the last control the keyboard leaves the page.
         if on["name"] not in ("BODY", "HTML"):
             reached[on["name"]] = on["ring"] and reached.get(on["name"], True)
-    controls = {"rename-open", "file", "rename", "delete", "play", "seek", "loop", "loop-start", "loop-end", "one", "click"}
+    controls = {"rename-open", "file", "rename", "delete", "play", "seek", "loop", "loop-start", "loop-end", "loop-clear", "one", "click"}
     assert controls <= set(reached), controls - set(reached)
     assert all(reached.values()), reached
 
@@ -895,8 +1061,9 @@ def test_a_file_of_the_wrong_type_is_refused_by_the_page(visit, files):
     visitor = visit()
     message = visitor.page.locator("#message")
     for file, said in [
-        (files["wav"], "This is not an mp3 or m4a file."),
-        (files["text"], "This is not an mp3 or m4a file."),
+        (files["wav"], "This is not an mp3, m4a or opus file."),
+        (files["text"], "This is not an mp3, m4a or opus file."),
+        (files["vorbis"], "This is not an mp3, m4a or opus file."),
         (files["broken"], "The browser cannot decode this file."),
     ]:
         visitor.pick(file)
@@ -906,20 +1073,49 @@ def test_a_file_of_the_wrong_type_is_refused_by_the_page(visit, files):
     assert visitor.uploads() == []
 
 
-def test_a_song_that_is_too_short_is_refused_by_the_page(visit, files):
+@pytest.mark.parametrize("file", ["short", "short opus"])
+def test_a_song_that_is_too_short_is_refused_by_the_page(visit, files, file):
     visitor = visit()
-    visitor.pick(files["short"])
+    visitor.pick(files[file])
     expect(visitor.page.locator("#message")).to_have_text("This song is shorter than 20 seconds.")
     expect(visitor.rows()).to_have_count(0)
     assert visitor.uploads() == []
 
 
-def test_a_song_that_is_too_long_is_refused_by_the_page(visit, files):
+@pytest.mark.parametrize("file", ["long", "long opus"])
+def test_a_song_that_is_too_long_is_refused_by_the_page(visit, files, file):
     visitor = visit()
-    visitor.pick(files["long"])
+    visitor.pick(files[file])
     expect(visitor.page.locator("#message")).to_have_text("This song is longer than 15 minutes.", timeout=READY)
     expect(visitor.rows()).to_have_count(0)
     assert visitor.uploads() == []
+
+
+def test_an_opus_file_is_taken_like_an_mp3_or_an_m4a(visit, files):
+    visitor = visit()
+    page = visitor.page
+    visitor.pick(files["opus"])
+    # The name comes from the tags of the file, and the song goes through its states.
+    row = visitor.row(IN_OPUS)
+    expect(row).to_have_attribute("data-state", "ready", timeout=READY)
+    expect(row.locator(".state")).to_have_text("0:23, ready")
+    # What is sent is the same as for any other file: plain samples at 44.1 kHz.
+    assert len(visitor.uploads()) == 1
+    sent = dict(part.split("=") for part in visitor.uploads()[0].split("?")[1].split("&"))
+    assert sent["rate"] == "44100" and abs(int(sent["frames"]) / RATE - 23.5) < 0.1
+
+    # It opens by itself and has its beats, at the tempo of the test song.
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    expect(page.locator("#song-name")).to_have_text(IN_OPUS)
+    assert 42 <= len(visitor.beats(IN_OPUS)) <= 48
+    assert abs(int(page.locator("#bpm").inner_text()) / BPM - 1) <= 0.04
+
+    # Picked again, it is found in the library and not sent again.
+    other = visit()
+    other.pick(files["opus"])
+    expect(other.page.locator("#message")).to_have_text("This song is already in the library.")
+    expect(other.page.locator("#song-name")).to_have_text(IN_OPUS)
+    assert other.uploads() == []
 
 
 def test_a_name_is_shown_as_plain_text(visit, files):

@@ -4,10 +4,18 @@ Rewritten at the end of every session.
 
 ## Where things stand (2026-10-06, session 6)
 
-Slice 2 is built, in the shape the owner gave it in session 6. Every check a program can run passes. What is open is the owner's: the checks of slice 1, one by-ear item of slice 2, and the proposals listed below.
+Slice 2 is built, in the shape the owner gave it in session 6, and the owner has used it. Every check a program can run passes. What is open is the owner's: the checks of slice 1, one by-ear item of slice 2, and the proposals listed below.
+
+- **After the owner's check by hand**, the same day:
+  - **"Clear"**, in the transport bar, takes a marked range away. Switching the loop off still keeps it.
+  - **Every song has an address**, `/?song=` and its id. The address bar shows it while the song is open. Loaded again, or opened from a link, the page opens that song. Back does not go from song to song.
+  - **Opus files are taken**, like mp3 and m4a. The server did not change: it still receives plain samples.
+  - **The checks of slice 2 were seen to fail.** The code was broken on purpose in 25 ways. Two breaks were caught by nothing and one not by the test that claimed it. Three tests were added or changed, and all 25 are caught now. `LOG.md` has the table.
+  - The owner confirmed by ear that Old Town Road is right throughout, and that on Eso Es Amor the first percussion is count 1.
+  - The owner's five notes for later are under "For later slices".
 
 - Session 6 asked the owner five questions, ran an experiment on the three mixes and on 96 songs without labels, and the owner set the shape of the slice from its result. `LOG.md`, session 6, has the figures and the decisions, and `ACCEPTANCE.md` the items.
-- **The analysis** now keeps the place of every beat in its bar, and a count from 1 to 8 that runs in eights from the first bar that is not silence. It is version 2: **the five songs in `data/` are analysed again by themselves at the next start**, about 5 seconds each.
+- **The analysis** now keeps the place of every beat in its bar, and a count from 1 to 8 that runs in eights from the first bar that is not silence. It is version 2. The five songs in `data/` have been analysed again: that happened by itself when the owner started the program.
 - **The page** shows the count as the largest figure, with the tempo small beside the time. The large view is the ocho that is sounding, standing still, each beat at the place of its count. The song is in rows of four ochos, with the count under every mark. Count 1 is an upright bar.
 - **"Count 1 here"**, in the transport bar, makes the beat at the playing position count 1. From there the count runs in eights. On a beat set this way the control reads "Not count 1" and takes it back. A beat set by hand has a cap across its bar.
 - The arrows with Shift move the position by an ocho.
@@ -28,7 +36,8 @@ The redesigned page is built, with what slice 1 has. The owner chose its design,
 - It has a light and a dark ground and takes the one the system is set to. It has no control for that.
 - The program is a Python one. The Node program is gone.
 - **To run it:** `uv run python -m bachata`, then http://127.0.0.1:8080. `PORT` changes the port and `BACHATA_DATA` the folder of the library. Sessions 3 and 5 used port 8081 for everything they started, as the owner asked in session 3.
-- **To test it:** `uv run pytest`. It runs the unit tests, the song checks and the flows through the page, in a little over 3 minutes.
+- **To test it:** `uv run pytest`. It runs the unit tests, the song checks and the flows through the page, 182 tests in about 4 and a half minutes.
+- **A program that is running shows the page it started with.** After a change to the page or to the server, stop it and start it again.
 - **On a new machine, once:**
   - `uv sync`
   - `uv run python scripts/fetch_model.py`, which downloads the Beat This model into `models/` and checks its hash.
@@ -140,7 +149,7 @@ This is the brief the owner confirmed on 2026-10-05, in session 4, with the deci
    - the window of 90 ms for "the same beat", up from 70. It grew for three beats of Old Town Road, and partly because the script puts the first beat at the very start of the attack. With the beat 15 ms later in the attack, where `fixtures/audio/README.md` has it, 70 ms holds on all three mixes; with session 2's figure one beat is at 75 ms. `LOG.md` has the table. The choice is between 90 ms with the reference as it is, and a later reference with 70 ms;
    - the tempos the analysis may follow, 90 to 175 BPM.
 6. Answered on 2026-10-06: a section starts on count 1. It follows from the owner's rule that a half phrase is the last bar of its section.
-7. **Listen to the seven half phrases the rule placed**, and say for each whether the extra bar is the last of its section. On Me Emborrachare: the Intro, the Breakdown and the Ending. On Eso Es Amor: the Intro, both Pre Choruses and the Bridge. Also whether the first labelled beat of each mix is a count 1.
+7. **Listen to the seven half phrases the rule placed**, and say for each whether the extra bar is the last of its section. On Me Emborrachare: the Intro, the Breakdown and the Ending. On Eso Es Amor: the Intro, both Pre Choruses and the Bridge. Also whether the first labelled beat of Me Emborrachare is a count 1: for the other two mixes the owner confirmed it on 2026-10-06. The owner's note on intros and endings, under "For later slices", bears on three of the seven, and on the Outro of Eso Es Amor.
 
 If the click sounds loose rather than wrong: beat times come in steps of 20 ms, because the tracker looks at the song 50 times a second. Moving each beat onto the nearest attack of the sound is the next thing to try. It was not built, because only an ear can say whether it is needed.
 
@@ -148,7 +157,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 
 - **By ear, the two commercial recordings:** a beat shown as 1 or as 5 is the first beat of a bar, wherever the song can be counted.
 - **By eye:** count 1 against the other beats, and a count 1 set by hand against the others, in the large view and on the song.
-- **The proposals in `ACCEPTANCE.md`, under slice 2:** that the first labelled beat of each mix is count 1, the seven half phrases the rule placed (check 7 above), the 9 beats of the Outro of Eso Es Amor, and that the control takes a count 1 back.
+- **The proposals in `ACCEPTANCE.md`, under slice 2:** that the first labelled beat of Me Emborrachare is count 1, the 40 dB under which a bar is silence, the seven half phrases the rule placed (check 7 above), the 9 beats of the Outro of Eso Es Amor, and that the control takes a count 1 back.
 - **The control, in use.** It is one button and nothing more, as asked. Whether a song with several half phrases is quick enough to put right with it is the owner's to say after using it.
 
 ### Then slice 3
@@ -159,6 +168,9 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 
 - **The page plays the samples the server stored**, never an `<audio>` element on the original file. Otherwise the click drifts from the sound by whatever the browser trims at the start of the file.
 - **The page decodes a file at a fixed 44.1 kHz, in stereo**, and sends the rate and the length. An ordinary audio context would resample to the machine's own rate without saying so. The server mixes down and resamples for the analysis.
+- **The type of a file is read from its first bytes**, never from its name: mp3, m4a, and opus, which is `OggS` with `OpusHead` at the start of its first page. Other sound in Ogg is refused. The tags of an opus file run over many pages when it has a cover picture.
+- **The server looks at nothing in the address of the page.** The page reads the song from `?song=`, checks that it could be an id, and asks for it like any other song.
+- **A test that restarts the program to see what reached the disk restarts before it renames.** A renaming writes the whole song again and hides what was only in memory.
 - **The server never reads a media file made elsewhere.** It receives plain samples, stores them as they are and sends them back as they are. No FLAC: Chrome does not decode it back to the same samples.
 - **Every limit the page checks, the server checks again** on what it receives. A page's check can be bypassed.
 - **The analysis must not assume one tempo for the whole song.** It would pass all five songs and be wrong.
@@ -182,6 +194,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
   - Chrome does not start. Playwright's Firefox starts but plays nothing. `uv run pytest` then skips those tests and says so.
   - Playwright's Firefox does draw the page, so a screenshot that needs no sound can be taken inside the sandbox.
   - The whole run needs a command outside the sandbox, which the owner allows one at a time: `TMPDIR=/tmp/claude-1000/e2e BACHATA_TEST_PORT=8081 .venv/bin/python -m pytest`. `TMPDIR` must be a short path, or Chrome dies with "Socket path too long".
+  - When the owner's own program is on 8081, every test of the page fails at once with "Address already in use". Session 6 then used `BACHATA_TEST_PORT=8083` and left the owner's program alone. On 2026-10-06 one was on 8081, started that morning, and another on 8082, started the day before.
 
 ## Open
 
@@ -210,7 +223,23 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **A change of count 1 in another browser arrives with the list**, so up to two seconds later.
 - **The count starts on the first bar that is not silence**, 40 dB under the level of the song. A song that fades in over several bars may start its count late; none of the 101 songs analysed in session 6 does.
 
+- **Back does not go from song to song.** Opening a song rewrites the address in place and adds nothing to the browser's history. The owner asked for reloading and sharing; whether Back should step through the songs is the owner's to say.
+- **An address that names a song still being analysed** shows the page as with no song, and opens the song when it is ready.
+- **"Clear" is one more control in the transport bar.** Its name and its place are the session's choice.
+- **Opus is decoded by the browser**, as mp3 and m4a are. Checked in Chrome and in Playwright's Firefox, with files made by `ffmpeg`, and the type and tags of the 106 files of the owner's folder were read by the page's own code. None of those 106 was uploaded.
+
 **For later slices**
+
+- **The owner's notes of 2026-10-06, after using slice 2. None of it is built.**
+  - Extra bars are not detected, so 1 and 5 swap. They frequently come after 4 phrases, and beat information alone is not enough: the energy of the instruments has to be correlated.
+  - In intros and endings a section can start on an unexpected count or be an isolated bar. That is a way to make sense of the intro or ending, not an extra bar.
+  - The count 1 the owner sets by hand should later serve as feedback: reference data to measure and improve the analysis.
+  - The lower view could show bars instead of every beat. Not critical.
+  - The beats in the silence before the music are shown with counts 5 to 8. They could be shown without a count.
+- **What those notes touch, as the session reads them:**
+  - The second note is about the reference count. Its rules, in `ACCEPTANCE.md` under slice 2, give an intro or an ending whole ochos from its start and count what is left over at its end: the Intro of 36 beats and the Ending of 4 on Me Emborrachare, the Intro of 20 and the Outro of 9 on Eso Es Amor. How those four are counted is to be settled with check 7, before slice 4 makes the count strict.
+  - The third note already has data. On 2026-10-06 the owner's library held five beats set by hand on the mix of Eso Es Amor, at labelled beats 20, 112, 268, 360 and 436, and one on El Perdedor at 1:39. All five are a count 1 in the reference. With them, 460 of the 505 labelled beats have the count of the reference, against 257 without. The 45 that differ are in the Mambo, beats 344 to 359 and 380 to 399, and after the last Chorus, from beat 496. `data/` is not in git: a copy of those beats is in `LOG.md`.
+  - The first note agrees with what session 6 measured: the harmony alone finds some extra bars and reports others that are not there.
 
 - **Mambo.** It is a rhythm: the owner said so again in session 5, so the page will have three kinds. The labels treat it as a part of the song, like Verse or Chorus, whose rhythm is majao or derecho. No label has mambo as a rhythm, so G1 has nothing to compare mambo against. How G1 is checked for mambo is still to settle before slice 3.
 - **When a section's rhythm and its blocks disagree, which wins?** On Me Emborrachare the Bridge is labelled Derecho, and its two blocks are `-` and Majao.

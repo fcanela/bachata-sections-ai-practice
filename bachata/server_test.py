@@ -99,6 +99,17 @@ def test_the_page_is_served_with_the_security_headers(program):
     assert program.get("/style.css").headers["content-type"] == "text/css; charset=utf-8"
 
 
+def test_the_address_of_a_song_is_the_page(program):
+    # The page reads the song from its address. The server answers with the page whatever
+    # the address names, and looks at none of it.
+    plain = program.get("/")
+    for query in [f"song={ID_A}", "song=../../etc/passwd", "song=", "other=1"]:
+        answer = program.get(f"/?{query}")
+        assert (answer.status_code, answer.content) == (200, plain.content), query
+        for name, value in SECURITY_HEADERS.items():
+            assert answer.headers[name] == value
+
+
 def test_the_typeface_is_served_by_the_program_itself(program):
     # The content security policy lets the page load nothing from elsewhere.
     fonts = sorted(path.name for path in (WEB / "fonts").glob("*.woff2"))
@@ -304,8 +315,13 @@ def test_a_beat_is_set_to_count_1_and_taken_back(tmp_path):
     assert program.get(f"/api/songs/{ID_A}/sound").content == a_song().tobytes()
     assert analysed == [1]
 
-    # It survives a renaming, a restart and a new version of the analysis.
+    # It survives a restart, then a renaming, then a new version of the analysis. The
+    # restart comes first: a renaming writes the whole song again, and would hide a
+    # count 1 that had never reached the disk.
+    program = Program(tmp_path / "data")
+    assert program.ones() == [1.5, 12.345]
     assert program.rename(ID_A, "Renamed").status_code == 204
+    assert program.ones() == [1.5, 12.345]
     program = Program(tmp_path / "data", version=ANALYSIS_VERSION + 1)
     assert program.listed() == [("Renamed", "waiting"), ("A song", "waiting")]
     program.analyse_one()

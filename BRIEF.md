@@ -33,12 +33,15 @@ Also answered on 2026-10-05, in session 4.
 
 - The name is "Bachata sections".
 - The interface is in English. The rhythm names stay in Spanish: derecho, majao, mambo, ocho.
-- Its sentences are short and plain, like "Delete this song?" and "This is not an mp3 or m4a file."
+- Its sentences are short and plain, like "Delete this song?" and "This is not an mp3, m4a or opus file."
 - A section is never told apart by colour alone. Its name, its position or its shape identifies it too.
 - While a song plays, the first thing the dancer reads is where the song is now: the section and the count. What comes next, and the shape of the whole song, come second.
 - One screen serves the desk and the distance. There is no separate view for practising.
 - The user can jump to a section, replay a part of the song in a loop, and rename a song. Play, pause and the position also work from the keyboard.
 - The user can say where count 1 is, with one control: "Count 1 here". From that beat the count runs in eights. The application cannot yet hear which of two bars starts an ocho, nor where a bar is extra; until it does, this is how a wrong count is put right. Decided on 2026-10-06, in session 6, with the words "one simple control, nothing more".
+- A marked range can be taken away again, with "Clear". Switching the loop off keeps the range. Asked for by the owner on 2026-10-06, after using the page.
+- Every song has an address of its own. Loaded again, or opened from a link, the page opens that song. Asked for by the owner on 2026-10-06.
+- A song is an mp3, an m4a or an opus file. Opus was added by the owner on 2026-10-06.
 - A replay is of one section by itself, without the change into the next one. Until the application finds sections, the user marks the range to loop by hand. Decided on 2026-10-05, in session 5.
 - The page has a light and a dark ground, and takes the one the system is set to. Decided on 2026-10-05, in session 5.
 - The page looks after airport sign systems. Where the song is hangs as a yellow sign band with black type; everything else is on black panels, over a ground of concrete grey by day and black by night. A beat is a small square, and the one that is sounding gets the large square a sign keeps for its pictogram. The typeface is Hind. The owner chose this among three designs on 2026-10-05, in session 5.
@@ -75,7 +78,7 @@ The screen of slice 5 is built early, after slice 1, with what slice 1 has. Each
 ## Limits
 
 - Everything runs locally. No paid API.
-- No backward compatibility, no extra features, no abstractions for later. The jump, the loop and the renaming under "The interface" are the owner's additions of 2026-10-05, and count 1 by hand is the owner's addition of 2026-10-06. They are not extras.
+- No backward compatibility, no extra features, no abstractions for later. The jump, the loop and the renaming under "The interface" are the owner's additions of 2026-10-05, and count 1 by hand, clearing a marked range, the address of a song and opus files are the owner's additions of 2026-10-06. They are not extras.
 - The analysis runs on the local server, not in the browser. Decided on 2026-10-05: on the server the beat tracker runs as its authors published it, and more tools are available for the later slices. The cost is that every song is sent to the machine that serves the application.
 - Uploaded songs are kept in one library on the server. Everyone who can reach the application can play every song in it.
 

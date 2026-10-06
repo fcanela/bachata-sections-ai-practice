@@ -42,7 +42,7 @@ Each slice takes a song and shows a visible result. There are five and the numbe
 
 ### 1. Beats and tempo
 
-The owner picks a file, mp3 or m4a, or a song from the list of remembered ones. The page shows one mark per beat, lights the mark of the beat that is sounding, shows the BPM at the playing position, and gives a click on every beat that can be switched off. The marks are not numbered; the count 1 to 8 arrives in slice 2.
+The owner picks a file, mp3, m4a or opus, or a song from the list of remembered ones. Opus was added by the owner on 2026-10-06, in session 6, with the same limits and checks. The page shows one mark per beat, lights the mark of the beat that is sounding, shows the BPM at the playing position, and gives a click on every beat that can be switched off. The marks are not numbered; the count 1 to 8 arrives in slice 2.
 
 Uploaded songs are remembered in one library on the server, the same for everyone who can reach the application.
 
@@ -69,7 +69,7 @@ Slice 1 is done when every item below holds, on all three mixes and both commerc
 - [x] A song opened from the list plays and shows its beats in a browser that never had the file. Nothing is uploaded and nothing is analysed. `e2e/page_test.py`.
 - [x] A file that is already in the library, byte for byte, is not uploaded, not stored twice, and not analysed twice by the same version of the analysis. The stored song opens. `e2e/page_test.py` and `bachata/server_test.py`.
 - [x] A result made by an older version of the analysis is replaced: the server analyses the song again from the stored sound, with no upload. `bachata/server_test.py` and `bachata/queue_test.py`.
-- [x] The name comes from the file's title and artist tags when it has them, and from the file name without its extension otherwise. `web/song.test.js` and `e2e/page_test.py`.
+- [x] The name comes from the file's title and artist tags when it has them, and from the file name without its extension otherwise. For an opus file too, whichever way the names of its tags are written, and when a cover picture makes them run over many pages. `web/song.test.js` and `e2e/page_test.py`.
 - [x] Songs are analysed one at a time, in the order they arrived. A song whose analysis fails is marked failed and does not stop the next one. `bachata/queue_test.py`.
 - [x] Any song can be deleted, with one confirmation, whatever its state. Deleting a waiting song takes it out of the queue. The states: `bachata/server_test.py` and `bachata/queue_test.py`. The confirmation: `e2e/page_test.py`.
 - [x] The library and the queue survive a restart of the program. `bachata/server_test.py`, `bachata/store_test.py` and `bachata/queue_test.py`.
@@ -78,8 +78,8 @@ Slice 1 is done when every item below holds, on all three mixes and both commerc
 
 By the page, before anything is sent:
 
-- [x] A file that is not mp3 or m4a, or that the browser cannot decode. The type is read from the first bytes of the file, not from its name. `e2e/page_test.py` and `web/song.test.js`.
-- [x] A song shorter than 20 seconds or longer than 15 minutes. `e2e/page_test.py`.
+- [x] A file that is not mp3, m4a or opus, or that the browser cannot decode. The type is read from the first bytes of the file, not from its name. Other sound in the wrapping of opus, Vorbis for one, is refused. `e2e/page_test.py` and `web/song.test.js`.
+- [x] A song shorter than 20 seconds or longer than 15 minutes. `e2e/page_test.py`, with an mp3 and with an opus file.
 
 By the server, which cannot trust what a page checked:
 
@@ -101,7 +101,7 @@ What the server never does:
 **How these are tested**
 
 - Logic is covered by unit tests beside the code. The page's logic is in `web/song.js`, with tests for Node's own runner that `pytest` also runs.
-- Whole flows through the page are covered by end-to-end tests in a real browser, in `e2e/page_test.py`: an upload, the list, opening a song in a browser that never had the file, a second upload of the same file, a deletion, a file of the wrong type, a song that is too short, a song that is too long, a name with markup in it, the clicks, and the exact samples that play. They run in the installed Chrome and in Playwright's Firefox, and skip a browser that cannot start.
+- Whole flows through the page are covered by end-to-end tests in a real browser, in `e2e/page_test.py`: an upload, an upload of an opus file, the list, opening a song in a browser that never had the file, a second upload of the same file, a deletion, a file of the wrong type, a song that is too short, a song that is too long, a name with markup in it, the clicks, and the exact samples that play. They run in the installed Chrome and in Playwright's Firefox, and skip a browser that cannot start.
 - The two by-ear items are the owner's.
 
 **Not verified in slice 1**
@@ -115,7 +115,7 @@ The owner decided the shape of this slice on 2026-10-06, in session 6, after an 
 
 **The reference count.** The labels give every section a length in beats, and some sections a list of blocks. The count of every labelled beat follows from them by these rules, which the owner set in session 6. `fixtures/validate.py` applies them.
 
-- The first labelled beat of a song is count 1. *Proposed: the labels were never checked by ear.*
+- The first labelled beat of a song is count 1. The owner confirmed it by ear on 2026-10-06 for Old Town Road, which is right throughout, and for Eso Es Amor, whose first percussion is count 1. *Proposed for Me Emborrachare, which has not been listened to for this.*
 - The count starts again at 1 at every section and at every block.
 - A block of 4 beats is a half phrase. It is counted 1 to 4.
 - A section without blocks is whole ochos from its start. What is left over is at its end: 4 beats are a half phrase, its last bar. So every section starts on count 1, which answers check 6 of session 5.
@@ -157,11 +157,12 @@ One control, "Count 1 here". The owner added it on 2026-10-06, in session 6, wit
 - The count from the analysis and from the beats set by hand: unit tests beside the code, in Python for the analysis and in `web/song.test.js` for the page.
 - The page and the control: `e2e/page_test.py`.
 - Two tests of slice 1 are reworded, because what they checked is no longer true: the one that found the marks of a row all the same distance apart and no text but the tempo and the time, and the one that found the tempo to be the largest figure.
+- The checks were seen to fail. Session 6 broke the code on purpose in 25 ways, in the bar, in count 1 by hand and in the server's part of it. Two breaks were caught by nothing and one not by the test that claimed it; three tests were added or changed, and all 25 are now caught. `LOG.md` has the table.
 
 **Not in slice 2**
 
 - Finding a half phrase from the sound. Session 6 tried the two-bar cycle of the harmony: it found two of three on Me Emborrachare, four of eight at most on Eso Es Amor, and one to four that are not there on Old Town Road.
-- Telling the first bar of an ocho from the second. The analysis starts the count on the first bar it hears and goes on in eights. The first bar it hears is the first whose first beat is not more than 40 dB under the level of the whole song: the tracker carries the pulse back over the silence before a song. *Proposed: the 40.* The beats it puts before that bar are counted as the end of an ocho, up to 8.
+- Telling the first bar of an ocho from the second. The analysis starts the count on the first bar it hears and goes on in eights. The first bar it hears is the first whose first beat is not more than 40 dB under the level of the whole song: the tracker carries the pulse back over the silence before a song. *Proposed: the 40.* On Old Town Road and Eso Es Amor, the two mixes that start with such a bar, the owner's ear agrees with where the count then starts. The beats it puts before that bar are counted as the end of an ocho, up to 8.
 - Any mark of doubt on a count.
 
 ### 3. Derecho or majao for each ocho
@@ -189,6 +190,8 @@ With what slice 1 has:
 - [x] The mark of the beat that is sounding is lit while it sounds. With the click on, the lit mark and the click are the same beat. `e2e/page_test.py`, in Chrome and Firefox, with sound.
 - [x] Nothing is shown that neither an analysis nor the user has produced: before slice 4 no section. `e2e/page_test.py`: the count on screen is the one the server has, changed only by the beats set by hand, and the only text where the song is shown is the count, the tempo and the time. Reworded in session 6, when slice 2 put the count and the ochos on screen.
 - [x] A range of the song can be marked and replays in a loop until the loop is switched off. On every pass each beat inside it gets one click, at its own time. `e2e/page_test.py`, with sound, and `web/song.test.js`.
+- [x] A marked range can be taken away again, whole or with one end only, and while the song goes round it: the song then plays on. Switching the loop off keeps the range. `e2e/page_test.py`, which also reads the canvas. Added by the owner on 2026-10-06, in session 6, after using the page.
+- [x] Every song has an address of its own, `/?song=` and its id. The address bar shows it while the song is open, and the plain address when none is. Loaded again, or opened in another browser, the page opens that song and sends nothing. An address that names a song the library does not have says so. `e2e/page_test.py`, `web/song.test.js` and `bachata/server_test.py`. Added by the owner on 2026-10-06, in session 6.
 - [x] A song can be renamed from the page, and the new name shows in every browser. The server treats a renaming as it treats a deletion and a name: it must come from the application's own page, and the name is at most 200 characters. Part of G7. `e2e/page_test.py`, `bachata/server_test.py` and `bachata/store_test.py`.
 - [x] Playing, pausing, moving the position, the loop, the click switch, count 1, and opening, renaming and deleting a song can all be done from the keyboard, with the focus visible. `e2e/page_test.py`: Space, the arrows, the arrows with Shift for an ocho, the loop and a renaming are done with keys alone, and Tab reaches every control with a ring on each.
 - [ ] Nothing is told by colour alone: two marks that differ in colour also differ in form, in position or in name. By the owner's eye. *Built in session 5: the lit mark is a larger square in the opposite of its ground, a marked range has a bar at each end, and the open song and a failed one say so in words.*

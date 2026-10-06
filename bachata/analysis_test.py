@@ -30,11 +30,14 @@ def test_the_shown_bpm_is_the_mean_tempo_of_the_ocho_around_each_beat():
     assert bpm_at_beats([1.0]) == [0.0]
 
 
-def activations(beat_times, seconds):
+def activations(beat_times, seconds, downbeat_times=()):
     beat = np.full(seconds * 50, 0.001)
+    downbeat = np.full(seconds * 50, 0.001)
     for time in beat_times:
         beat[round(time * 50)] = 0.99
-    return beat, np.full(seconds * 50, 0.001)
+    for time in downbeat_times:
+        downbeat[round(time * 50)] = 0.99
+    return beat, downbeat
 
 
 def test_a_half_time_part_keeps_the_tempo_a_dancer_counts():
@@ -44,6 +47,16 @@ def test_a_half_time_part_keeps_the_tempo_a_dancer_counts():
     beats, bars = beats_from_activations(*activations(marked, 20))
     assert beats == pytest.approx(every, abs=0.021)
     # Every beat has a place in a bar of four, and the places follow each other.
+    assert all(after == before % 4 + 1 for before, after in zip(bars, bars[1:]))
+
+
+def test_a_bar_is_four_beats_even_where_every_third_beat_is_rated_a_downbeat():
+    # 125 BPM for 30 s. A tracker that may choose bars of three would choose them here.
+    every = [0.48 * n for n in range(1, 61)]
+    beats, bars = beats_from_activations(*activations(every, 30, every[::3]))
+    # The tracker may leave out a beat at either end, where it has no bar to put it in.
+    assert len(beats) >= 56 and all(min(abs(time - beat) for beat in every) <= 0.021 for time in beats)
+    assert set(bars) == {1, 2, 3, 4}
     assert all(after == before % 4 + 1 for before, after in zip(bars, bars[1:]))
 
 

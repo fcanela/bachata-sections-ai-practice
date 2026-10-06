@@ -17,8 +17,8 @@
       <div class="add">
         <p id="message" role="status"></p>
         <progress id="sending" max="1" hidden aria-label="Sending the song"></progress>
-        <input id="file" class="hidden-input" type="file" accept=".mp3,.m4a,audio/mpeg,audio/mp4">
-        <label class="button primary" for="file" title="Choose an mp3 or m4a file">Add a song</label>
+        <input id="file" class="hidden-input" type="file" accept=".mp3,.m4a,.opus,audio/mpeg,audio/mp4,audio/ogg,audio/opus">
+        <label class="button primary" for="file" title="Choose an mp3, m4a or opus file">Add a song</label>
       </div>
     </header>
 
@@ -59,6 +59,7 @@
           </div>
           <button id="loop-start" type="button" disabled>Start here</button>
           <button id="loop-end" type="button" disabled>End here</button>
+          <button id="loop-clear" type="button" disabled title="Take the marked range away">Clear</button>
         </div>
         <div class="counting">
           <button id="one" type="button" disabled title="Say that the beat at the playing position is count 1">Count 1 here</button>

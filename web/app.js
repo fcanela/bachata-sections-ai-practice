@@ -6,6 +6,7 @@ import {
   MAX_SECONDS,
   MIN_SECONDS,
   RATE,
+  addressOf,
   beatsUntil,
   bpmAt,
   channelsFrom16,
@@ -21,6 +22,7 @@ import {
   nearestBeat,
   ochoOf,
   ochosOf,
+  songIn,
   tagsOf,
   wrapped,
 } from './song.js'
@@ -98,7 +100,7 @@ $('file').addEventListener('change', async () => {
 async function add(file) {
   say(`Reading ${file.name}…`)
   const bytes = new Uint8Array(await file.arrayBuffer())
-  if (!kindOf(bytes)) return say('This is not an mp3 or m4a file.', true)
+  if (!kindOf(bytes)) return say('This is not an mp3, m4a or opus file.', true)
 
   // A file the library already has is not sent again: the stored song opens.
   const id = idOf(await crypto.subtle.digest('SHA-256', bytes))
@@ -140,6 +142,7 @@ let confirming = null // the song whose deletion waits for its confirmation
 let renaming = null // the name that is being typed: { id, where, draft }, where is 'row' or 'title'
 let opening = null // the song that is being fetched: { id, part }
 let wanted = null // the song to open as soon as it is ready
+let linked = null // the song the address named when the page was loaded, until it is settled
 let focusNext = null // where the keyboard goes once the list is on screen again: { id, where, key }
 const notes = new Map() // what went wrong with a song, shown in its row: id, or 'title', to { text, refused }
 
@@ -164,12 +167,26 @@ async function refresh() {
   if (!player.id && !opening && !nothingSaid) showNothing()
   const song = songs.find((candidate) => candidate.id === wanted)
   if (song?.state === 'ready') {
-    wanted = null
+    wanted = linked = null
     await open(song)
   } else if (wanted && (!song || song.state === 'failed')) {
-    wanted = null
-    say(song ? `The analysis of ${song.name} failed.` : 'The song was deleted.', true)
+    // A song the address named and the library does not have is said in the middle of
+    // the page: no control of the page asked for it.
+    const named = wanted === linked
+    wanted = linked = null
+    if (named) showAddress(null)
+    if (named && !song) showNothing(NOT_THERE)
+    else say(song ? `The analysis of ${song.name} failed.` : 'The song was deleted.', true)
   }
+}
+
+const NOT_THERE = 'This song is not in the library.'
+
+// Every song has an address of its own. The address bar shows the one of the open song,
+// and the plain address of the page when none is open. Nothing is added to the history:
+// Back leaves the page as it always did.
+function showAddress(id) {
+  history.replaceState(null, '', id ? addressOf(id) : location.pathname)
 }
 
 function openWhenReady(id) {
@@ -495,6 +512,7 @@ async function open(song) {
   $('one').disabled = result.beats.length === 0
   $('one-note').textContent = ''
   say('')
+  showAddress(song.id)
   showPlayer()
   showSongs()
   showLoop()
@@ -512,6 +530,7 @@ function closePlayer(text) {
   for (const control of ['play', 'seek', 'loop', 'loop-start', 'loop-end', 'one']) $(control).disabled = true
   $('position').textContent = $('where').textContent = $('duration').textContent = clock(0)
   $('seek').value = 0
+  showAddress(null)
   showNothing(text)
   showLoop()
   showSongs()
@@ -728,6 +747,10 @@ function showLoop() {
   $('loop-range').textContent = text
   $('player').dataset.state = player.playing ? (player.loop ? 'looping' : 'playing') : 'paused'
   for (const end of ['loop-start', 'loop-end']) $(end).disabled = !beats
+  // The keyboard does not stay on a control that can no longer be pressed.
+  const nothingMarked = first === null && last === null
+  if (nothingMarked && document.activeElement === $('loop-clear')) $('loop-start').focus()
+  $('loop-clear').disabled = nothingMarked
 }
 
 // Marks a whole range and plays round it. A position outside it moves to its start.
@@ -758,6 +781,15 @@ function markEnd(end) {
 
 $('loop-start').addEventListener('click', () => markEnd('first'))
 $('loop-end').addEventListener('click', () => markEnd('last'))
+
+// Takes the marked range away, whole or with one end. A song that was going round it
+// plays on from where it is.
+$('loop-clear').addEventListener('click', () => {
+  replay(() => {
+    player.range = { first: null, last: null }
+    player.looping = false
+  })
+})
 
 $('loop').addEventListener('change', () => {
   replay(() => {
@@ -835,6 +867,7 @@ function show() {
   if (from !== mapFrom) {
     mapFrom = from
     drawMap($('map'), layout, { beats, count: player.count, byHand: player.byHand, lit, hover, range })
+    $('map').dataset.range = range ? `${range.first} ${range.last}` : ''
     if (lit !== litShown && player.playing) follow()
     litShown = lit
   }
@@ -966,5 +999,13 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw)
 
 // The list is the same in every browser, so it is asked for again every two seconds.
 setInterval(() => document.hidden || refresh(), 2000)
-showNothing()
+
+// The address may name a song: it opens as soon as the list has it ready.
+linked = wanted = songIn(location.search)
+if (!linked && new URLSearchParams(location.search).has('song')) {
+  showAddress(null)
+  showNothing(NOT_THERE)
+} else {
+  showNothing()
+}
 refresh()

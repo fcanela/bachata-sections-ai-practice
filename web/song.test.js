@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  addressOf,
   beatsUntil,
   bpmAt,
   channelsFrom16,
@@ -16,6 +17,7 @@ import {
   nearestBeat,
   ochoOf,
   ochosOf,
+  songIn,
   tagsOf,
   wrapped,
 } from './song.js'
@@ -53,10 +55,41 @@ const m4a = (...tags) =>
     box('moov', box('mvhd', be32(0)), box('udta', box('meta', be32(0), box('hdlr', be32(0)), box('ilst', ...tags)))),
   )
 
+const le32 = (value) => [value & 255, (value >>> 8) & 255, (value >>> 16) & 255, value >>> 24]
+
+// One packet of an Ogg file, cut into pages that hold `perPage` segments each. A segment
+// is 255 bytes, and a shorter one ends the packet.
+function oggPages(packet, perPage = 255) {
+  const body = [...bytesOf(...packet)]
+  const lacing = [...new Array(Math.floor(body.length / 255)).fill(255), body.length % 255]
+  const pages = []
+  for (let from = 0, at = 0; from < lacing.length; from += perPage) {
+    const segments = lacing.slice(from, from + perPage)
+    const size = segments.reduce((sum, length) => sum + length, 0)
+    // "OggS", the version, a flag for a page that goes on with a packet, then 20 bytes
+    // the page has no use for here: a position, the number of the stream, of the page,
+    // and a checksum.
+    pages.push(...bytesOf('OggS', [0, from > 0 ? 1 : 0], new Array(20).fill(0), [segments.length], segments, body.slice(at, at + size)))
+    at += size
+  }
+  return pages
+}
+
+// An Ogg file with sound of the kind `head` names, tags, and a page of sound.
+const ogg = (head, ...tags) => bytesOf(oggPages([head, new Array(11).fill(0)]), ...tags, oggPages([new Array(300).fill(7)]))
+const opusTags = (comments, perPage) =>
+  oggPages(['OpusTags', le32(4), 'test', le32(comments.length), comments.flatMap((comment) => [...le32(utf8(comment).length), ...utf8(comment)])], perPage)
+const opus = (comments = [], perPage) => ogg('OpusHead', opusTags(comments, perPage))
+
 test('the type of a file comes from its first bytes', () => {
   assert.equal(kindOf(bytesOf(audio)), 'mp3')
   assert.equal(kindOf(id3(3, [])), 'mp3')
   assert.equal(kindOf(m4a()), 'm4a')
+  assert.equal(kindOf(opus()), 'opus')
+  // Other sound in the wrapping of opus is not taken: Vorbis, and a film.
+  assert.equal(kindOf(ogg('\x01vorbis')), null)
+  assert.equal(kindOf(ogg('\x80theora')), null)
+  assert.equal(kindOf(bytesOf('OggS', new Array(22).fill(0), [1, 19], 'Opus')), null)
   assert.equal(kindOf(bytesOf('RIFF', be32(0), 'WAVEfmt ')), null)
   assert.equal(kindOf(bytesOf('fLaC', be32(0), be32(0))), null)
   assert.equal(kindOf(bytesOf('OggS', be32(0), be32(0))), null)
@@ -112,7 +145,36 @@ test('title and artist are read from an m4a', () => {
   assert.deepEqual(tagsOf(bytesOf(box('ftyp', 'M4A ', be32(0)), box('mdat', audio))), {})
 })
 
+test('title and artist are read from an opus file, however their names are written', () => {
+  assert.deepEqual(tagsOf(opus(['TITLE=Me Emborracharé', 'ARTIST=Grupo Extra', 'ALBUM=Colores'])), { title: 'Me Emborracharé', artist: 'Grupo Extra' })
+  // ffmpeg writes the names in small letters.
+  assert.deepEqual(tagsOf(opus(['encoder=Lavf62', 'artist=Jiory', 'title=Eso Es Amor'])), { title: 'Eso Es Amor', artist: 'Jiory' })
+  assert.deepEqual(tagsOf(opus(['Title=A = B'])), { title: 'A = B' })
+  // Of two artists the first is taken. A text without a name, or with another, is passed over.
+  assert.deepEqual(tagsOf(opus(['=nothing', 'no name', 'ARTIST=First', 'ARTIST=Second', 'SUBTITLE=x'])), { artist: 'First' })
+  assert.deepEqual(tagsOf(opus()), {})
+})
+
+test('the tags of an opus file are read across its pages', () => {
+  // A cover picture among the tags makes them run over many pages. Here a page holds
+  // two segments, and the title comes after a text of 2,000 bytes.
+  const picture = `METADATA_BLOCK_PICTURE=${'A'.repeat(2000)}`
+  const file = opus(['artist=Aventura', picture, 'title=Por un Segundo'], 2)
+  assert.ok(file.length > 2000)
+  assert.deepEqual(tagsOf(file), { title: 'Por un Segundo', artist: 'Aventura' })
+  // Tags that end exactly at the end of a segment have an empty one after them.
+  const exact = opus([`title=${'x'.repeat(255 - 8 - 8 - 4 - 4 - 6)}`])
+  assert.equal(tagsOf(exact).title.length, 255 - 8 - 8 - 4 - 4 - 6)
+})
+
 test('a file without tags, or with a broken tag, has none', () => {
+  // An opus file cut short inside its tags, one whose tags say they are longer than they
+  // are, and one with something else where its tags should be.
+  const whole = opus(['title=Cut'])
+  assert.deepEqual(tagsOf(whole.subarray(0, 60)), {})
+  assert.deepEqual(tagsOf(ogg('OpusHead', oggPages(['OpusTags', le32(4), 'test', le32(1), le32(5000), 'title=Short']))), {})
+  assert.deepEqual(tagsOf(ogg('OpusHead', oggPages(['NotTags!', le32(0), le32(0)]))), {})
+  assert.deepEqual(tagsOf(ogg('OpusHead')), {})
   assert.deepEqual(tagsOf(bytesOf(audio)), {})
   assert.deepEqual(tagsOf(id3(3, [])), {})
   // A tag that says it is far longer than the file.
@@ -325,4 +387,18 @@ test('an ocho starts at every count 1 and may be short', () => {
 
   assert.deepEqual([0, 1, 2, 9, 10, 13, 14, 22].map((beat) => ochoOf(ochos, beat)), [0, 0, 1, 1, 2, 2, 3, 4])
   assert.equal(ochoOf([], 3), -1)
+})
+
+test('a song has an address of its own', () => {
+  const id = 'ab01'.repeat(8)
+  assert.equal(addressOf(id), `?song=${id}`)
+  assert.equal(songIn(addressOf(id)), id)
+  assert.equal(songIn(`?from=mail&song=${id}`), id)
+  // No song, or something that cannot be the id of one.
+  assert.equal(songIn(''), null)
+  assert.equal(songIn('?song='), null)
+  assert.equal(songIn('?song=../../etc/passwd'), null)
+  assert.equal(songIn(`?song=${id.toUpperCase()}`), null)
+  assert.equal(songIn(`?song=${id}0`), null)
+  assert.equal(songIn(`?song=${id.slice(1)}`), null)
 })

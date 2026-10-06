@@ -1,7 +1,7 @@
 // What the page works out about a song without the screen or the sound card:
 // the type of a file, its id, its name from its tags, the samples to send, what to
-// show at a playing position, the count with what the user set, and where a loop and its
-// clicks fall. song.test.js checks it.
+// show at a playing position, the count with what the user set, where a loop and its
+// clicks fall, and the address of a song. song.test.js checks it.
 
 // What the page decodes to and sends. The server checks the same numbers again.
 export const RATE = 44100
@@ -14,10 +14,18 @@ const number = (bytes, at, length) => bytes.subarray(at, at + length).reduce((su
 // The sizes in an ID3 tag keep the top bit of every byte clear.
 const synchsafe = (bytes, at) => bytes.subarray(at, at + 4).reduce((sum, byte) => sum * 128 + (byte & 0x7f), 0)
 
-// 'mp3' or 'm4a', from the first bytes of the file and not from its name. null for anything else.
+// Where the content of the first page of an Ogg file starts: after 27 bytes of header
+// and one byte for each of its segments.
+const oggStart = (bytes) => 27 + bytes[26]
+
+// 'mp3', 'm4a' or 'opus', from the first bytes of the file and not from its name. null
+// for anything else.
 export function kindOf(bytes) {
   if (bytes.length < 12) return null
   if (ascii(bytes, 4, 4) === 'ftyp') return 'm4a'
+  // Opus comes wrapped in Ogg, and its first page says "OpusHead". Other sound in the
+  // same wrapping, Vorbis for one, is not taken.
+  if (ascii(bytes, 0, 4) === 'OggS') return bytes.length > 27 && ascii(bytes, oggStart(bytes), 8) === 'OpusHead' ? 'opus' : null
   if (ascii(bytes, 0, 3) === 'ID3') return 'mp3'
   // An mp3 without a tag starts with a frame: eleven set bits, then a layer that is not 0.
   if (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0 && (bytes[1] & 0x06) !== 0) return 'mp3'
@@ -33,6 +41,7 @@ export function idOf(sha256) {
 export function tagsOf(bytes) {
   try {
     if (kindOf(bytes) === 'm4a') return m4aTags(bytes)
+    if (kindOf(bytes) === 'opus') return opusTags(bytes)
     if (ascii(bytes, 0, 3) === 'ID3') return id3Tags(bytes)
     // The old tag at the end of an mp3: "TAG", then 30 bytes of title and 30 of artist.
     const old = bytes.subarray(bytes.length - 128)
@@ -119,6 +128,51 @@ function m4aTags(bytes) {
     if (names[tag.type] && data && number(bytes, data.start, 4) === 1) {
       tags[names[tag.type]] = new TextDecoder('utf-8').decode(bytes.subarray(data.start + 8, data.end))
     }
+  }
+  return tags
+}
+
+// The second packet of an Ogg file, put together from the segments it was cut into. A
+// page has 27 bytes of header, the lengths of its segments, then the segments. A packet
+// ends with a segment shorter than 255 bytes, and may run over many pages.
+function secondOggPacket(bytes) {
+  const parts = []
+  let packet = 0
+  for (let at = 0; at + 27 <= bytes.length && ascii(bytes, at, 4) === 'OggS'; ) {
+    const lengths = bytes.subarray(at + 27, at + 27 + bytes[at + 26])
+    at += 27 + lengths.length
+    for (const length of lengths) {
+      if (packet === 1) parts.push(bytes.subarray(at, at + length))
+      at += length
+      if (length < 255 && ++packet > 1) {
+        const whole = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0))
+        parts.reduce((to, part) => (whole.set(part, to), to + part.length), 0)
+        return whole
+      }
+    }
+  }
+  return new Uint8Array(0)
+}
+
+// The tags of an opus file: its second packet, "OpusTags", then the name of the program
+// that wrote it, then texts of the form NAME=value, each with its length before it. The
+// names may be in capitals or in small letters. A cover picture is one of those texts.
+function opusTags(bytes) {
+  const packet = secondOggPacket(bytes)
+  if (ascii(packet, 0, 8) !== 'OpusTags') return {}
+  const length = (at) => (at + 4 <= packet.length ? new DataView(packet.buffer).getUint32(at, true) : Infinity)
+  let at = 12 + length(8)
+  const count = length(at)
+  at += 4
+  const names = { TITLE: 'title', ARTIST: 'artist' }
+  const tags = {}
+  for (let n = 0; n < count && at + 4 + length(at) <= packet.length; n++) {
+    const text = packet.subarray(at + 4, at + 4 + length(at))
+    at += 4 + text.length
+    const equals = text.indexOf(0x3d)
+    const name = equals > 0 && equals <= 6 ? names[ascii(text, 0, equals).toUpperCase()] : undefined
+    // Of several titles or artists the first is taken.
+    if (name && !(name in tags)) tags[name] = new TextDecoder('utf-8').decode(text.subarray(equals + 1))
   }
   return tags
 }
@@ -272,6 +326,17 @@ export function clicksUntil(beats, loop, from, until) {
     beat++
   }
   return { clicks, next: { beat, pass } }
+}
+
+// The address of a song: what follows the address of the page. Loaded with it, the page
+// opens that song.
+export const addressOf = (id) => `?song=${id}`
+
+// The song an address names: its id, as the server checks one, or null when the address
+// names no song or nothing that could be one.
+export function songIn(search) {
+  const id = new URLSearchParams(search).get('song')
+  return id !== null && /^[0-9a-f]{32}$/.test(id) ? id : null
 }
 
 // 75.4 seconds is shown as 1:15.

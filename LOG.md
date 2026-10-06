@@ -4,7 +4,7 @@ Newest session first. Only measured figures go in here.
 
 ## 2026-10-06, session 6: slice 2, the questions, the experiment and the shape it took
 
-The owner asked for five questions before slice 2, then for a review of the proposal that came out of them, then for the experiment the review named, on a set of 96 songs as well as on the three mixes. The experiment changed the shape of the slice. The owner then asked for the specification, a commit of it, and the build.
+The owner asked for five questions before slice 2, then for a review of the proposal that came out of them, then for the experiment the review named, on a set of 96 songs as well as on the three mixes. The experiment changed the shape of the slice. The owner then asked for the specification, a commit of it, and the build. After using the built page the owner came back with three findings and a request to break the code on purpose; that is the last part of this entry.
 
 ### Runs
 
@@ -151,6 +151,85 @@ Other songs that stand apart, for the owner to look at:
 - **Left as it is:** at 1280 wide the transport bar wraps to two lines.
 
 **What the experiment does not show.** It tried plain measures of the sound, not a model taught on labelled ochos. Three songs have labels, which is too few to teach or to test one.
+
+### After the owner's check by hand
+
+The owner used the built page and came back with three findings, a request to break the code on purpose and see the checks of slice 2 fail, and five notes for later.
+
+**Breaking the code on purpose.** One break at a time, on the committed build: the file is changed, the checks run, and the file is written back as it was. The checks of the page ran in Playwright's Firefox inside the sandbox. 25 breaks; 23 were caught as the tests stood, and after three fixes to the tests all 25 are.
+
+| Break | Caught by |
+| --- | --- |
+| **The bar and the analysis's count** | |
+| Every place in the bar moved on by one | `test_every_labelled_beat_is_in_its_place_of_the_bar`, on all three mixes: every labelled beat reported, 505 of 505 on Eso Es Amor and 396 of 396 on Me Emborrachare |
+| Bars of three beats only | The same test on all three mixes, and three more: the beats of Eso Es Amor then have 19 problems |
+| Bars of three allowed again beside bars of four | **Nothing.** The DBN chooses bars of four on these songs either way. Now `test_a_bar_is_four_beats_even_where_every_third_beat_is_rated_a_downbeat` |
+| The count goes to 4 and not to 8 | `test_the_count_runs_in_eights_from_the_first_bar_that_is_heard`, and both tests of the page that read the count |
+| A bar in silence starts the count | `test_a_bar_in_the_silence_before_a_song_does_not_start_the_count` |
+| **Count 1 by hand, on the page** | |
+| The beats set by hand do not change the count | Three tests of `web/song.test.js` and `test_count_1_is_set_by_hand_shown_in_every_browser_and_taken_back` |
+| A time finds its beat only when it is exactly on it | "a time kept by the server finds its beat again after another analysis", in `web/song.test.js` |
+| The control sets the beat after the playing position | The test of count 1 by hand: the song says another beat was set |
+| The control never takes a count 1 back on the server | The same test: the count does not go back |
+| A count 1 set by hand has no cap | The same test, where it reads the canvas |
+| Another browser is not told | The same test, at the second browser |
+| A list asked for before a change is believed | **Nothing.** Now `test_a_list_asked_for_before_a_count_1_was_set_does_not_take_it_back`, which keeps one answer of the list back and lets it arrive after the change |
+| The large figure shows the count of the analysis | The test of count 1 by hand: the figure does not read 1 |
+| **The server** | |
+| A count 1 is taken from any page | `test_a_count_1_that_is_not_from_the_own_page_is_refused`, for all ten kinds of foreign request |
+| A time after the end of the song is kept | `test_a_count_1_is_checked_before_it_is_kept` |
+| A time may have four digits after the point | The same |
+| Anything a number can be read from is a time | The same, and `test_every_answer_has_the_security_headers` |
+| A song takes any number of beats set by hand | `test_a_song_takes_200_beats_set_to_count_1_and_no_more`, and the test of the store for the same |
+| A song takes 201 | The same two |
+| Taking back sets instead | `test_a_beat_is_set_to_count_1_and_taken_back`, and the test of the 200 |
+| A count 1 is kept in memory and not on disk | Two tests of the store. **Not the server's own test**, which claimed it: it renamed the song before the restart, and a renaming writes the whole song. It now restarts first, and catches it |
+| The list does not carry the beats set by hand | 13 tests |
+| A new result forgets the beats set by hand | `test_a_beat_is_set_to_count_1_and_taken_back` |
+| A renaming forgets them | The same, and a test of the store |
+| The id of the song is not checked | `test_a_count_1_is_checked_before_it_is_kept` |
+
+**The three findings: a check that fails, then the fix**
+
+| Finding | The check, before the fix | After |
+| --- | --- | --- |
+| A marked range cannot be taken away | `test_a_marked_range_can_be_cleared`: "Locator expected to be disabled … element(s) not found", for the control that was not there | passes |
+| The address is the same for every song | `test_every_song_has_an_address_that_opens_it`: "Page URL expected to be …/?song=a24c9a69… Actual value: http://127.0.0.1:45719/". In `web/song.test.js` the whole file failed: `song.js` "does not provide an export named 'addressOf'" | passes |
+| An opus file is refused | Four tests of the page: an opus file never reaches the list, and a short one, a long one and an Ogg Vorbis file all get "This is not an mp3 or m4a file." Three tests of `web/song.test.js`: the type, the tags, and tags that run over several pages | pass |
+
+**Runs**
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| The 25 breaks, each with the checks of its part | As in the table above | about 7 min |
+| The three breaks that were not caught, or not where claimed, again after the fixes to the tests | Each caught: `{1, 2, 3} == {1, 2, 3, 4}`, `'' == '20'`, `[] == [1.5, 12.345]` | 55 s |
+| The new checks of the page before any fix, `pytest e2e -k "firefox and (cleared or address or opus or wrong_type or too_short or too_long)"` | 6 failed, 2 passed. The two are the mp3 files of the short and the long test | 158 s |
+| The same after the fixes, with the test of the keyboard | 9 passed | 37 s |
+| `node --test web/` | 31 pass | under 1 s |
+| The type and the tags of the 106 opus files then in the owner's folder, by the page's own code under Node | 106 are taken as opus, each with an artist and a title that ends its file name. The slowest took 5.3 ms. Their tags run over many pages: one has a cover picture of 223,639 bytes among them, and its names are in small letters | under 5 s |
+| Pictures of the transport bar with "Clear", Playwright's Firefox, inside the sandbox | One line at 1920, two at 1280, as before | not timed |
+| `TMPDIR=/tmp/claude-1000/e2e BACHATA_TEST_PORT=8081 .venv/bin/python -m pytest`, outside the sandbox | Every test of the page failed at once: port 8081 was taken. The owner's own program has been running on it since 10:56, on the real library. It was left alone | not timed |
+| The same with `BACHATA_TEST_PORT=8083` | 182 passed, none skipped | 271 s |
+
+**The beats the owner set by hand, read from the library on 2026-10-06.** `data/` is not in git, so they are copied here.
+
+| Song | Set to count 1 at | As labelled beats | Count of the reference there |
+| --- | --- | --- | --- |
+| Eso Es Amor, the mix | 10.96, 52.78, 123.68, 165.5 and 200.06 s | 20, 112, 268, 360, 436 | 1 at all five |
+| El Perdedor | 99.62 s | no labels | |
+
+- On Eso Es Amor, 257 of 505 labelled beats have the count of the reference without those five, and 460 with them.
+- The 45 that still differ: beats 344 to 359 and 380 to 399, in the Mambo, and 496 to 504, after the last Chorus. The reference has three half phrases in the Mambo, by its blocks. A beat set by hand says where a count 1 is, not which bar before it is the extra one.
+
+**Decisions**
+
+- **"Clear"**, in the loop's group of the transport bar, takes the marked range away, whole or with one end, and switches the loop off. A song that was going round it plays on. Switching the loop off still keeps the range, to switch it on again. *The name and the place are mine.*
+- **The address of a song is `/?song=<id>`.** The server needed no change: it answers with the page whatever follows the question mark, and a test now says so. A path of its own for every song would have needed a new route and its refusals, for the same result. *Mine.*
+- **The address bar is rewritten in place.** Opening a song adds nothing to the browser's history, so Back leaves the page as it always did and does not go from song to song. *Mine: the owner asked for reloading and sharing.*
+- **An address that names a song the library does not have** says "This song is not in the library." in the middle of the page and becomes the plain address. So does one that names nothing a song could be called.
+- **An opus file is known by its first bytes**: `OggS`, and `OpusHead` at the start of its first page. Other sound in the same wrapping, Vorbis for one, is refused. Its name comes from its `TITLE` and `ARTIST` tags, whichever way those names are written. The refusal now reads "This is not an mp3, m4a or opus file."
+- **The server did not change for opus.** It receives plain samples, as before. The browser decodes the file, at 44.1 kHz like the others.
+- **The owner confirmed by ear:** Old Town Road is right throughout, and on Eso Es Amor the first percussion is count 1. The first labelled beat of both is where the measuring script found the first percussion, so for those two mixes the first labelled beat is count 1. Me Emborrachare has not been confirmed.
 
 ## 2026-10-05, session 5: the redesigned page, three designs and the one that stays
 
