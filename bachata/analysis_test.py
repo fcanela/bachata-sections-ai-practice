@@ -100,6 +100,10 @@ def test_a_band_is_as_loud_at_a_beat_as_the_sound_is_there():
     # The band of the tone is much louder from the fifth beat on, and was not before.
     assert all(levels[beat, loudest] > levels[2, loudest] + 30 for beat in range(4, 8))
     assert all(abs(levels[beat, loudest] - levels[2, loudest]) < 6 for beat in range(3))
+    # Each beat is the sound from it to the next: the tone is whole in the fifth beat, and
+    # the fourth has only the edge of it.
+    assert all(abs(levels[beat, loudest] - levels[6, loudest]) < 1 for beat in range(4, 8))
+    assert levels[3, loudest] < levels[4, loudest] - 6
     # A band far from the tone stays as it was.
     assert abs(levels[6, 0] - levels[2, 0]) < 6
 
@@ -147,6 +151,10 @@ def test_of_rises_close_together_only_the_largest_is_something_coming_in():
     bars = [1, 2, 3, 4] * 6
     rise = np.zeros(24)
     rise[7], rise[8], rise[9] = 6, 9, 7
+    assert entries(rise, bars) == [(8, 9.0)]
+    # Three beats apart they are still one.
+    rise = np.zeros(24)
+    rise[8], rise[11] = 9, 7
     assert entries(rise, bars) == [(8, 9.0)]
     # Four beats apart they are two.
     rise = np.zeros(24)
