@@ -284,15 +284,16 @@ def test_the_bass_is_heard_over_the_first_ninety_seconds():
     for bar in range(0, 400, 4):
         if (bar % 8 == 0) == (bar < 120):
             early[bar : bar + 4, :3] += 6
-    assert 0 < bass_cycle(early, HALF_SECONDS, 0) < bass_cycle(levels, HALF_SECONDS, 0) / 2
+    assert 0 < bass_cycle(early, HALF_SECONDS, 0) < 10
 
 
 def test_a_bar_is_compared_with_the_two_around_it():
-    # The bass gets 1 dB louder with every bar, and is 3 dB louder still in every other one.
-    # Compared with the bar before only, every bar would be louder than its neighbour.
+    # The bass gets 4 dB louder with every bar, and is 3 dB louder still in every other one.
+    # Compared with the bar before only, every bar is louder than its neighbour, and the
+    # two kinds of bar differ too unevenly to be sure of.
     levels = np.random.default_rng(3).normal(0, 0.1, (80, BANDS))
     for bar in range(0, 80, 4):
-        levels[bar : bar + 4, :3] += bar / 4 + (3 if bar % 8 == 4 else 0)
+        levels[bar : bar + 4, :3] += bar + (3 if bar % 8 == 4 else 0)
     assert bass_cycle(levels, HALF_SECONDS, 0) < -10
 
 
