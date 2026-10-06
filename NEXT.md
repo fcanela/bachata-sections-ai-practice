@@ -11,6 +11,12 @@ Slice 2 is built, in the shape the owner gave it in session 6, and the owner has
   - It is committed with the project: `.gitignore` keeps `.claude/` out except that one folder.
   - The program and its tests did not change in session 8.
 
+- **The reference changed on 2026-10-06, outside git.** The owner's label files now carry the site's order of phrases, as blocks, for every section with a phrase shorter than an ocho.
+  - The Intro of Me Emborrachare has its short bar first. The old reference had it last, by the last-bar rule, and was wrong: the owner listened.
+  - The measured count is 88 of 396 on Me Emborrachare, where it was 120. Eso Es Amor is still 257 of 505 and Old Town Road 416 of 416. The analysis did not change: it lost the 32 beats it had only shared with the wrong reference.
+  - The last-bar rule stays for a section without blocks, and decides nothing on these three mixes.
+  - No code changed but one docstring. `LOG.md`, session 8, and `ACCEPTANCE.md`, slice 2.
+
 - **After a review of the last commit**, the same day, in session 7. A fresh reviewer had four findings in `a775210`, and all four held:
   - **The loop can be switched off and on while the song plays.** The switch did nothing during playback.
   - **A large beat that has sounded is `#7a6500`**, 3.9 to 1 against the band in light and 3.5 in dark. It was the black of the marks at 28%, which is 1.8 to 1. It is less faint than it was: whether it is faint enough is the owner's to say.
@@ -31,7 +37,7 @@ Slice 2 is built, in the shape the owner gave it in session 6, and the owner has
 - **"Count 1 here"**, in the transport bar, makes the beat at the playing position count 1. From there the count runs in eights. On a beat set this way the control reads "Not count 1" and takes it back. A beat set by hand has a cap across its bar.
 - The arrows with Shift move the position by an ocho.
 - The server has two new requests, `PUT` and `DELETE /api/songs/<id>/ones?at=<seconds>`.
-- **The count is right only where no half phrase has passed.** On Me Emborrachare it is four off from 0:17, the end of the Intro. Open the mix, move to the first beat of the Verse, and press "Count 1 here": that is what the control is for.
+- **The count is right only where no half phrase has passed.** On Me Emborrachare the Intro starts with one: the count is four off from the fifth beat of the song, at 0:02, to the end of the Breakdown, at 2:31. "Count 1 here" on those two beats puts all 396 right: that is what the control is for. *Corrected in session 8. This said "from 0:17, the end of the Intro", by a reference that had the short bar last.*
 
 Before that, in session 5:
 
@@ -159,8 +165,8 @@ This is the brief the owner confirmed on 2026-10-05, in session 4, with the deci
 5. **Confirm two numbers of session 3**:
    - the window of 90 ms for "the same beat", up from 70. It grew for three beats of Old Town Road, and partly because the script puts the first beat at the very start of the attack. With the beat 15 ms later in the attack, where `fixtures/audio/README.md` has it, 70 ms holds on all three mixes; with session 2's figure one beat is at 75 ms. `LOG.md` has the table. The choice is between 90 ms with the reference as it is, and a later reference with 70 ms;
    - the tempos the analysis may follow, 90 to 175 BPM.
-6. Answered on 2026-10-06: a section starts on count 1. It follows from the owner's rule that a half phrase is the last bar of its section.
-7. **Listen to the seven half phrases the rule placed**, and say for each whether the extra bar is the last of its section. On Me Emborrachare: the Intro, the Breakdown and the Ending. On Eso Es Amor: the Intro, both Pre Choruses and the Bridge. Also whether the first labelled beat of Me Emborrachare is a count 1: for the other two mixes the owner confirmed it on 2026-10-06. The owner's note on intros and endings, under "For later slices", bears on three of the seven, and on the Outro of Eso Es Amor.
+6. Answered on 2026-10-06: a section starts on count 1.
+7. **Listen to the half phrases the owner has not heard**, and say for each whether the short bar is where the site puts it. The Intro of Me Emborrachare is answered: the owner heard it on 2026-10-06, and the short bar is first. Left: on Me Emborrachare the Breakdown, short bar last, and the Ending. On Eso Es Amor the Intro, both Pre Choruses and the Bridge, short bar last in each. Since session 8 these come from the site's blocks, not from a rule of ours. Also whether the first labelled beat of Me Emborrachare is a count 1: for the other two mixes the owner confirmed it on 2026-10-06. The owner's note on intros and endings, under "For later slices", bears on three of the seven, and on the Outro of Eso Es Amor.
 
 If the click sounds loose rather than wrong: beat times come in steps of 20 ms, because the tracker looks at the song 50 times a second. Moving each beat onto the nearest attack of the sound is the next thing to try. It was not built, because only an ear can say whether it is needed.
 
@@ -168,7 +174,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 
 - **By ear, the two commercial recordings:** a beat shown as 1 or as 5 is the first beat of a bar, wherever the song can be counted.
 - **By eye:** count 1 against the other beats, and a count 1 set by hand against the others, in the large view and on the song. Since session 7 also the large beats that have sounded, in their new colour, against the ones to come.
-- **The proposals in `ACCEPTANCE.md`, under slice 2:** that the first labelled beat of Me Emborrachare is count 1, the 40 dB under which a bar is silence, the seven half phrases the rule placed (check 7 above), the 9 beats of the Outro of Eso Es Amor, and that the control takes a count 1 back.
+- **The proposals in `ACCEPTANCE.md`, under slice 2:** that the first labelled beat of Me Emborrachare is count 1, the 40 dB under which a bar is silence, the half phrases the owner has not heard (check 7 above), and that the control takes a count 1 back.
 - **The control, in use.** It is one button and nothing more, as asked. Whether a song with several half phrases is quick enough to put right with it is the owner's to say after using it.
 
 ### Then slice 3

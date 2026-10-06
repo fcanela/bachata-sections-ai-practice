@@ -148,9 +148,12 @@ def reference_beats(labels, mix_sha256):
 def reference_counts(labels):
     """The count of every labelled beat, 1 to 8, by the rules of ACCEPTANCE.md, slice 2.
 
-    The count starts again at every section and at every block. A section without blocks
-    is whole ochos from its start, and what is left over is at its end: a half phrase,
-    counted 1 to 4, is the last bar of its section.
+    The count starts again at every section and at every block. The blocks say where a
+    half phrase is: the labels carry the site's order of phrases for every section that
+    has one shorter than an ocho, and a block of 4 beats is counted 1 to 4 where it stands.
+
+    Only a section without blocks falls back on a rule: it is whole ochos from its start,
+    and what is left over is at its end.
     """
     counts = []
     for section in labels["sections"]:

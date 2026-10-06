@@ -2,7 +2,7 @@
 
 Newest session first. Only measured figures go in here.
 
-## 2026-10-06, session 8: a skill that breaks the code on purpose
+## 2026-10-06, session 8: a skill that breaks the code on purpose, and a changed reference
 
 The owner asked for a skill of the work sessions 3, 6 and 7 did by hand: break the code on purpose, one break at a time, and see whether the checks fail. No code of the program and none of its tests changed in this session. The skill is `.claude/skills/break-on-purpose/`: a `SKILL.md` and one script, `scripts/one_break.sh`.
 
@@ -49,6 +49,22 @@ Three tasks, each run once with the skill and once without it, by a fresh agent 
 
 - A break is kept as a patch in the git folder, under `breaks/`, so the very same break runs again after a test is repaired.
 - In the second pass, a break that nothing catches gets a test only where the claims around it leave no doubt what is right. Otherwise it goes to the owner: a run without the skill had added assertions for behaviour written down nowhere.
+
+### The reference changed, outside git
+
+The owner changed the label files in `fixtures/audio/dev/` the same day and handed the change over. A section that holds a phrase shorter than an ocho now has the site's own order of phrases as blocks. Before, the converter kept blocks only where the rhythm changes, and the last-bar rule placed the short bar. The owner listened to the Intro of Me Emborrachare: the short bar is first, as the site has it, and the old reference had it last. The label files, `data/` and the analysis were not touched in this session.
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| The blocks of every section that has them, read from the three `labels.json` | Me Emborrachare: Intro 4, 8, 8, 8, 8 and Breakdown 8, 8, 8, 8, 4. Eso Es Amor: Intro and both Pre Choruses 8, 8, 4, Bridge 8, 8, 8, 8, 4, Outro 8, 1. Old Town Road: whole ochos only | under 1 s |
+| `pytest bachata/songs_test.py fixtures -s`, inside the sandbox | 26 passed, none skipped. The validator finds no problem in the three label files, and every labelled beat is found once and is in its place of the bar. The count: Me Emborrachare 88 of 396, Eso Es Amor 257 of 505, Old Town Road 416 of 416 | 24 s |
+| Arithmetic on the labels of Me Emborrachare: a count in eights from the first beat against `reference_counts()` | 88 of 396: the first 4 beats and the 84 after the Breakdown | under 1 s |
+| The same with a count 1 at the fifth beat, 2.28 s, and at the first beat after the Breakdown, 151.31 s | 396 of 396. The owner reports the same from the two beats set by hand in the library, which this session did not read | under 1 s |
+| `pytest bachata fixtures scripts`, inside the sandbox, after the docstring changed | 135 passed, none skipped | 27 s |
+
+- **The 120 of 396 of sessions 6 and 7 was against the old reference.** The entries below keep it, as what was measured then. The analysis counts the Intro in eights from its first beat, and so did the wrong reference: 32 of the 120 were shared with that error.
+- **Decided by the owner:** the blocks say where a half phrase is. The last-bar rule is kept only for a section without blocks, and decides nothing on the three mixes.
+- Changed: `ACCEPTANCE.md`, `NEXT.md`, `fixtures/audio/README.md`, which git ignores, and the docstring of `reference_counts()`. No other code.
 
 ## 2026-10-06, session 7: four findings of a review of the last commit
 

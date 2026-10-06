@@ -113,19 +113,21 @@ What the server never does:
 
 The owner decided the shape of this slice on 2026-10-06, in session 6, after an experiment that `LOG.md` records. The analysis hears the bar on every labelled beat of the three mixes. Nothing at hand hears which of two bars is the first of an ocho, or where a bar is extra. So the slice is strict on the bar. The count from 1 to 8 is shown and measured, and becomes strict in slice 4, where a section gives it a place to start again. Until then the user can say where count 1 is.
 
-**The reference count.** The labels give every section a length in beats, and some sections a list of blocks. The count of every labelled beat follows from them by these rules, which the owner set in session 6. `fixtures/validate.py` applies them.
+**The reference count.** The labels give every section a length in beats, and some sections a list of blocks. Since 2026-10-06, in session 8, a section that holds a phrase shorter than an ocho has the site's own order of its phrases as blocks, so the blocks say where a half phrase is. The count of every labelled beat follows by these rules, which the owner set in session 6. `fixtures/validate.py` applies them.
 
 - The first labelled beat of a song is count 1. The owner confirmed it by ear on 2026-10-06 for Old Town Road, which is right throughout, and for Eso Es Amor, whose first percussion is count 1. *Proposed for Me Emborrachare, which has not been listened to for this.*
 - The count starts again at 1 at every section and at every block.
 - A block of 4 beats is a half phrase. It is counted 1 to 4.
-- A section without blocks is whole ochos from its start. What is left over is at its end: 4 beats are a half phrase, its last bar. So every section starts on count 1, which answers check 6 of session 5.
-- By these rules Eso Es Amor has eight half phrases, Me Emborrachare three and Old Town Road none. Seven of the eleven are placed by the rule and have not been heard: on Me Emborrachare the Intro, the Breakdown and the Ending, and on Eso Es Amor the Intro, both Pre Choruses and the Bridge. *Proposed, until the owner has listened to those seven.*
-- The Outro of Eso Es Amor is 9 beats: one ocho and one beat on count 1. *Proposed.*
+- A section without blocks is whole ochos from its start, and what is left over is at its end: 4 beats are a half phrase, its last bar. This is only what is done where the labels give no blocks. On the three mixes it now decides nothing: every section with a short phrase has blocks, and the one section of 4 beats is a half phrase whole.
+- Every section starts on count 1, which answers check 6 of session 5.
+- Eso Es Amor has eight half phrases, Me Emborrachare three and Old Town Road none. All are where the site puts them. On Me Emborrachare the Intro is 4, 8, 8, 8, 8, the short bar first, and the Breakdown 8, 8, 8, 8, 4. On Eso Es Amor the Intro and both Pre Choruses are 8, 8, 4 and the Bridge 8, 8, 8, 8, 4.
+- The owner listened to the Intro of Me Emborrachare on 2026-10-06: the short bar is first, as the site has it. Until then the last-bar rule had put it last, which was wrong. *The other half phrases are the site's and have not been heard by the owner.*
+- The Outro of Eso Es Amor is 9 beats: one ocho and one beat on count 1. The site's blocks say the same, 8 and 1.
 
 **The three mixes, checked automatically**
 
 - [x] Every labelled beat is the beat of its bar that the reference says: first, second, third or fourth. A bar is always four beats. If a part makes this impossible, the numbers go to the owner, who decides. The item is not loosened any other way. `bachata/songs_test.py`: 396, 505 and 416 beats, all in their place.
-- [x] The share of labelled beats that get the count of the reference is measured on each mix and written in `LOG.md`. There is no limit to pass in this slice. The limit is in slice 4. `bachata/songs_test.py` prints it: 120 of 396 on Me Emborrachare, 257 of 505 on Eso Es Amor, 416 of 416 on Old Town Road.
+- [x] The share of labelled beats that get the count of the reference is measured on each mix and written in `LOG.md`. There is no limit to pass in this slice. The limit is in slice 4. `bachata/songs_test.py` prints it: 88 of 396 on Me Emborrachare, 257 of 505 on Eso Es Amor, 416 of 416 on Old Town Road. Me Emborrachare read 120 of 396 until session 8, against a reference that had the short bar of its Intro last: the analysis counts that Intro in eights from its first beat, and so did the wrong reference.
 
 **The two commercial recordings**
 
