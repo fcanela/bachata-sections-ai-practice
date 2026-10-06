@@ -22,7 +22,7 @@ top of it, and the page lets the user say where count 1 is.
 
 Which of two bars starts an ocho is ours too, and is read from the sound: an instrument
 that comes in, comes in on count 1. The count is set once, for the whole song, by the
-places where the sound rises in its first minute. Nothing here hears a bar that is extra
+places where the sound rises in its first minute, over music that is already playing. Nothing here hears a bar that is extra
 later in the song (LOG.md, sessions 6 and 9).
 """
 
@@ -65,6 +65,11 @@ RISE_SPAN_BEATS = 4
 # beats rises more.
 ENTRY_RISE_DB = 5.0
 ENTRY_APART_BEATS = 3
+# A rise comes out of silence when the 4 beats before it are this far under the level of
+# the song, in dB. That is the song starting, and it cannot move the count: where a song
+# starts quietly, the place of its first bars is the tracker's guess. Seen on the songs
+# the owner checked by ear (LOG.md, session 9).
+OUT_OF_SILENCE_DB = 15
 # The count is set by what comes in during this many seconds from the start. Later in a
 # song a bar that is extra moves the ochos, and what comes in after it would vote wrong.
 ENTRY_WINDOW_S = 60
@@ -158,8 +163,21 @@ def rises(levels):
     return rise
 
 
-def entries(rise, bars):
-    """Where something comes in: the bar it starts, as the number of a beat, and its rise.
+def over_music(levels):
+    """For each beat, whether the beats before it are music and not silence."""
+    if not len(levels):
+        return []
+    power = (10 ** (levels / 10)).sum(axis=1)
+    song = np.median(10 * np.log10(power))
+    return [
+        beat > 0 and 10 * np.log10(power[max(0, beat - RISE_SPAN_BEATS) : beat].mean()) >= song - OUT_OF_SILENCE_DB
+        for beat in range(len(levels))
+    ]
+
+
+def entries(rise, bars, music):
+    """Where something comes in: the bar it starts, as the number of a beat, its rise, and
+    whether it comes in over music.
 
     What comes in is often led in by a beat or two, so it starts the nearest bar, and
     the bar after when it is in the middle of one.
@@ -169,7 +187,8 @@ def entries(rise, bars):
         near = rise[max(0, beat - ENTRY_APART_BEATS) : beat + ENTRY_APART_BEATS + 1]
         if rise[beat] >= ENTRY_RISE_DB and rise[beat] == near.max():
             place = bars[beat]
-            found.append((beat - (place - 1) if place <= 2 else beat + (BEATS_PER_BAR + 1 - place), float(rise[beat])))
+            bar = beat - (place - 1) if place <= 2 else beat + (BEATS_PER_BAR + 1 - place)
+            found.append((bar, float(rise[beat]), bool(music[beat])))
     return found
 
 
@@ -178,14 +197,14 @@ def first_ocho(first, beats, found):
 
     Each thing that comes in during the first minute says which of the two it is, by the
     bar it starts, with the weight of its rise. The first bar that is heard stays unless
-    the other has more.
+    the other has more, and a rise out of silence says nothing for the other.
     """
     for_first = for_next = 0.0
-    for bar, rise in found:
+    for bar, rise, music in found:
         if bar < len(beats) and beats[bar] < ENTRY_WINDOW_S:
             if (bar - first) % BEATS_PER_OCHO == 0:
                 for_first += rise
-            else:
+            elif music:
                 for_next += rise
     return first + BEATS_PER_BAR if for_next > for_first else first
 
@@ -217,7 +236,8 @@ def analyse(samples, rate):
     mono = samples.astype(np.float32).mean(axis=1) / 32768.0
     beats, bars = beats_from_activations(*beat_activations(mono, rate))
     first = first_heard_bar(mono, rate, beats, bars)
-    first = first_ocho(first, beats, entries(rises(band_levels(mono, rate, beats)), bars))
+    levels = band_levels(mono, rate, beats)
+    first = first_ocho(first, beats, entries(rises(levels), bars, over_music(levels)))
     return {
         "beats": [round(time, 3) for time in beats],
         "bpm": [round(bpm, 1) for bpm in bpm_at_beats(beats)],

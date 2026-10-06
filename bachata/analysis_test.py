@@ -12,6 +12,7 @@ from bachata.analysis import (
     entries,
     first_heard_bar,
     first_ocho,
+    over_music,
     rises,
 )
 
@@ -132,34 +133,61 @@ def test_the_sound_rises_where_the_beats_after_are_louder_than_the_beats_before(
     assert rises(levels)[8] == pytest.approx(10)
 
 
+MUSIC = [True] * 24
+
+
+def test_a_beat_is_over_music_when_the_beats_before_it_are_not_silence():
+    # 16 beats: the first six are 30 dB under the others.
+    levels = np.zeros((16, BANDS))
+    levels[:6] = -30
+    music = over_music(levels)
+    # The first beat has nothing before it. Up to the seventh, all that is before is silence.
+    assert music[:7] == [False] * 7
+    # From the eighth the loud beats before it carry: one loud beat in four is 6 dB under.
+    assert music[7:] == [True] * 9
+    assert over_music(np.zeros((0, BANDS))) == []
+
+
+def test_silence_is_fifteen_decibels_under_the_song():
+    levels = np.zeros((16, BANDS))
+    levels[:6] = -14
+    assert over_music(levels)[1:] == [True] * 15
+    levels[:6] = -16
+    assert over_music(levels)[1:7] == [False] * 6
+
+
 def test_what_comes_in_starts_the_nearest_bar_and_the_bar_after_from_the_middle_of_one():
     bars = [1, 2, 3, 4] * 6
 
     def one_rise(beat, rise=8.0):
         return [rise if n == beat else 0.0 for n in range(24)]
 
-    assert entries(np.array(one_rise(8)), bars) == [(8, 8.0)]
-    assert entries(np.array(one_rise(9)), bars) == [(8, 8.0)]
-    assert entries(np.array(one_rise(10)), bars) == [(12, 8.0)]
-    assert entries(np.array(one_rise(11)), bars) == [(12, 8.0)]
+    assert entries(np.array(one_rise(8)), bars, MUSIC) == [(8, 8.0, True)]
+    assert entries(np.array(one_rise(9)), bars, MUSIC) == [(8, 8.0, True)]
+    assert entries(np.array(one_rise(10)), bars, MUSIC) == [(12, 8.0, True)]
+    assert entries(np.array(one_rise(11)), bars, MUSIC) == [(12, 8.0, True)]
     # A rise under 5 dB is nothing coming in.
-    assert entries(np.array(one_rise(8, 4.9)), bars) == []
-    assert entries(np.array(one_rise(8, 5.0)), bars) == [(8, 5.0)]
+    assert entries(np.array(one_rise(8, 4.9)), bars, MUSIC) == []
+    assert entries(np.array(one_rise(8, 5.0)), bars, MUSIC) == [(8, 5.0, True)]
+    # Whether it comes in over music is that of the beat that rises, not of the bar it starts.
+    quiet_until_ten = [False] * 10 + [True] * 14
+    assert entries(np.array(one_rise(9)), bars, quiet_until_ten) == [(8, 8.0, False)]
+    assert entries(np.array(one_rise(10)), bars, quiet_until_ten) == [(12, 8.0, True)]
 
 
 def test_of_rises_close_together_only_the_largest_is_something_coming_in():
     bars = [1, 2, 3, 4] * 6
     rise = np.zeros(24)
     rise[7], rise[8], rise[9] = 6, 9, 7
-    assert entries(rise, bars) == [(8, 9.0)]
+    assert entries(rise, bars, MUSIC) == [(8, 9.0, True)]
     # Three beats apart they are still one.
     rise = np.zeros(24)
     rise[8], rise[11] = 9, 7
-    assert entries(rise, bars) == [(8, 9.0)]
+    assert entries(rise, bars, MUSIC) == [(8, 9.0, True)]
     # Four beats apart they are two.
     rise = np.zeros(24)
     rise[8], rise[12] = 9, 7
-    assert entries(rise, bars) == [(8, 9.0), (12, 7.0)]
+    assert entries(rise, bars, MUSIC) == [(8, 9.0, True), (12, 7.0, True)]
 
 
 def test_the_first_ocho_starts_on_the_bar_that_more_comes_in_on():
@@ -167,25 +195,29 @@ def test_the_first_ocho_starts_on_the_bar_that_more_comes_in_on():
     # Nothing comes in: the first bar that is heard starts the count.
     assert first_ocho(4, beats, []) == 4
     # What comes in on the ochos counted from that bar keeps it.
-    assert first_ocho(4, beats, [(12, 8.0), (36, 6.0)]) == 4
+    assert first_ocho(4, beats, [(12, 8.0, True), (36, 6.0, True)]) == 4
     # What comes in on the bars between moves the count by a bar.
-    assert first_ocho(4, beats, [(16, 8.0), (40, 6.0)]) == 8
+    assert first_ocho(4, beats, [(16, 8.0, True), (40, 6.0, True)]) == 8
     # The larger rises win, whichever way.
-    assert first_ocho(4, beats, [(12, 8.0), (16, 6.0), (40, 5.0)]) == 8
-    assert first_ocho(4, beats, [(12, 12.0), (16, 6.0), (40, 5.0)]) == 4
+    assert first_ocho(4, beats, [(12, 8.0, True), (16, 6.0, True), (40, 5.0, True)]) == 8
+    assert first_ocho(4, beats, [(12, 12.0, True), (16, 6.0, True), (40, 5.0, True)]) == 4
     # Even, the count stays where it was.
-    assert first_ocho(4, beats, [(12, 8.0), (16, 8.0)]) == 4
+    assert first_ocho(4, beats, [(12, 8.0, True), (16, 8.0, True)]) == 4
+    # A rise out of silence cannot move the count, and can keep it.
+    assert first_ocho(4, beats, [(16, 30.0, False)]) == 4
+    assert first_ocho(4, beats, [(12, 9.0, False), (16, 8.0, True)]) == 4
+    assert first_ocho(4, beats, [(12, 7.0, False), (16, 8.0, True)]) == 8
     # A bar before the first that is heard has its say too.
-    assert first_ocho(4, beats, [(0, 8.0)]) == 8
+    assert first_ocho(4, beats, [(0, 8.0, True)]) == 8
 
 
 def test_what_comes_in_after_the_first_minute_does_not_set_the_count():
     beats = [0.5 * n for n in range(200)]
     # Beat 112 is at 56 s and beat 128 at 64 s.
-    assert first_ocho(4, beats, [(12, 6.0), (112, 9.0)]) == 8
-    assert first_ocho(4, beats, [(12, 6.0), (128, 9.0)]) == 4
+    assert first_ocho(4, beats, [(12, 6.0, True), (112, 9.0, True)]) == 8
+    assert first_ocho(4, beats, [(12, 6.0, True), (128, 9.0, True)]) == 4
     # A bar that would start after the last beat is not there.
-    assert first_ocho(4, beats, [(200, 9.0)]) == 4
+    assert first_ocho(4, beats, [(200, 9.0, True)]) == 4
 
 
 def test_the_tempo_range_cannot_hold_a_tempo_and_its_double():
