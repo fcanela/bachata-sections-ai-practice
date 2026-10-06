@@ -252,10 +252,10 @@ def test_what_comes_in_between_two_ochos_moves_the_count_of_the_whole_song(monke
 
 
 def test_a_song_that_starts_quietly_keeps_its_count_on_the_first_bar_that_is_heard(monkeypatch):
-    # The same noise, 28 dB quieter for its first six beats: it gets loud in the middle of a bar.
+    # The same noise, 28 dB quieter for its first ten beats: it gets loud where the fourth bar is led in.
     rate = 8000
     sound = 0.5 * np.random.default_rng(2).uniform(-1, 1, 20 * rate)
-    sound[: 6 * rate // 2] *= 0.04
+    sound[: 10 * rate // 2] *= 0.04
     result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate)
     assert result["count"][:9] == [1, 2, 3, 4, 5, 6, 7, 8, 1]
 
