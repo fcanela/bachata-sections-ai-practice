@@ -4,7 +4,7 @@ Newest session first. Only measured figures go in here.
 
 ## 2026-10-06, session 9: the entry, by the owner's ear
 
-The owner listened to 13 songs in full, wrote his marks into `fixtures/audio/by-ear.json`, and asked for a check of the entry before any fix: on five songs the count was four off from the start, so where the main part enters the page showed 5 and he heard 1. He then set a goal of 180 minutes on that check. It was reached in the first hour. All of it is on the branch `goal-entry`, which is not merged.
+The owner listened to 13 songs in full, wrote his marks into `fixtures/audio/by-ear.json`, and asked for a check of the entry before any fix: on five songs the count was four off from the start, so where the main part enters the page showed 5 and he heard 1. He then set a goal of 180 minutes on that check. It was reached in the first hour. All of it was done on the branch `goal-entry`. The owner then had it merged into `master` with a fast-forward and deleted: he works on a single branch.
 
 ### Runs
 
