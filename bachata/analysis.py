@@ -170,7 +170,7 @@ def over_music(levels):
     power = (10 ** (levels / 10)).sum(axis=1)
     song = np.median(10 * np.log10(power))
     return [
-        beat > 0 and 10 * np.log10(power[max(0, beat - RISE_SPAN_BEATS) : beat].mean()) >= song - OUT_OF_SILENCE_DB
+        bool(beat > 0 and 10 * np.log10(power[max(0, beat - RISE_SPAN_BEATS) : beat].mean()) >= song - OUT_OF_SILENCE_DB)
         for beat in range(len(levels))
     ]
 

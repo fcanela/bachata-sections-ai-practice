@@ -146,6 +146,10 @@ def test_a_beat_is_over_music_when_the_beats_before_it_are_not_silence():
     # From the eighth the loud beats before it carry: one loud beat in four is 6 dB under.
     assert music[7:] == [True] * 9
     assert over_music(np.zeros((0, BANDS))) == []
+    # It is the four beats before that are looked at: two quiet ones after two loud are music.
+    levels = np.zeros((16, BANDS))
+    levels[6:8] = -30
+    assert over_music(levels)[8] is True
 
 
 def test_silence_is_fifteen_decibels_under_the_song():
@@ -154,6 +158,10 @@ def test_silence_is_fifteen_decibels_under_the_song():
     assert over_music(levels)[1:] == [True] * 15
     levels[:6] = -16
     assert over_music(levels)[1:7] == [False] * 6
+    # The level of the song is that of its usual beat, not of its loudest.
+    levels[:6] = -14
+    levels[12:14] = 10
+    assert over_music(levels)[1:7] == [True] * 6
 
 
 def test_what_comes_in_starts_the_nearest_bar_and_the_bar_after_from_the_middle_of_one():
@@ -170,9 +178,9 @@ def test_what_comes_in_starts_the_nearest_bar_and_the_bar_after_from_the_middle_
     assert entries(np.array(one_rise(8, 4.9)), bars, MUSIC) == []
     assert entries(np.array(one_rise(8, 5.0)), bars, MUSIC) == [(8, 5.0, True)]
     # Whether it comes in over music is that of the beat that rises, not of the bar it starts.
-    quiet_until_ten = [False] * 10 + [True] * 14
-    assert entries(np.array(one_rise(9)), bars, quiet_until_ten) == [(8, 8.0, False)]
-    assert entries(np.array(one_rise(10)), bars, quiet_until_ten) == [(12, 8.0, True)]
+    quiet_until_nine = [False] * 9 + [True] * 15
+    assert entries(np.array(one_rise(8)), bars, quiet_until_nine) == [(8, 8.0, False)]
+    assert entries(np.array(one_rise(9)), bars, quiet_until_nine) == [(8, 8.0, True)]
 
 
 def test_of_rises_close_together_only_the_largest_is_something_coming_in():
@@ -218,6 +226,38 @@ def test_what_comes_in_after_the_first_minute_does_not_set_the_count():
     assert first_ocho(4, beats, [(12, 6.0, True), (128, 9.0, True)]) == 4
     # A bar that would start after the last beat is not there.
     assert first_ocho(4, beats, [(200, 9.0, True)]) == 4
+
+
+def analysed_with_a_beat_every_half_second(monkeypatch, sound, rate):
+    """The analysis of a made-up sound, with made-up beats in place of the tracker's."""
+    from bachata import analysis
+
+    beats = [0.5 * n for n in range(len(sound) // (rate // 2))]
+    monkeypatch.setattr(analysis, "beat_activations", lambda mono, rate: (None, None))
+    monkeypatch.setattr(
+        analysis, "beats_from_activations", lambda beat, downbeat: (beats, [n % 4 + 1 for n in range(len(beats))])
+    )
+    return analysis.analyse((sound[:, None] * 32767).astype(np.int16).repeat(2, axis=1), rate)
+
+
+def test_what_comes_in_between_two_ochos_moves_the_count_of_the_whole_song(monkeypatch):
+    # 20 s of noise at 8 kHz. From the eleventh beat it is 12 dB louder: that starts the fourth bar.
+    rate = 8000
+    sound = 0.1 * np.random.default_rng(2).uniform(-1, 1, 20 * rate)
+    result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate)
+    assert result["count"][:9] == [1, 2, 3, 4, 5, 6, 7, 8, 1]
+    sound[10 * rate // 2 :] *= 4
+    result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate)
+    assert result["count"][:13] == [5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1]
+
+
+def test_a_song_that_starts_quietly_keeps_its_count_on_the_first_bar_that_is_heard(monkeypatch):
+    # The same noise, 28 dB quieter for its first six beats: it gets loud in the middle of a bar.
+    rate = 8000
+    sound = 0.5 * np.random.default_rng(2).uniform(-1, 1, 20 * rate)
+    sound[: 6 * rate // 2] *= 0.04
+    result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate)
+    assert result["count"][:9] == [1, 2, 3, 4, 5, 6, 7, 8, 1]
 
 
 def test_the_tempo_range_cannot_hold_a_tempo_and_its_double():
