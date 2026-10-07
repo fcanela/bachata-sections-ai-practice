@@ -2043,18 +2043,23 @@ def test_the_list_says_how_long_an_analysis_has_run_and_what_to_do_when_it_faile
     # The list is answered here, so that the song stays in each state for as long as needed.
     song = {"id": "ab" * 16, "name": "Una", "seconds": 200.0, "ones": []}
     state = {"now": "waiting"}
-    page.route("**/api/songs", lambda route: route.fulfill(json=[{**song, "state": state["now"]}]))
+    page.route(
+        "**/api/songs",
+        lambda route: route.fulfill(json=[{**song, "state": state["now"], **{key: state[key] for key in state if key != "now"}}]),
+    )
     said = visitor.row("Una").locator(".state")
     expect(said).to_have_text("3:20, waiting")
     state["now"] = "analysing"
     expect(said).to_have_text(re.compile(r"^3:20, being analysed for 0:0[0-2]$"))
     expect(said).to_have_text(re.compile(r"^3:20, being analysed for 0:0[4-9]$"), timeout=12_000)
 
+    # It failed: for how long it ran is what the server kept, not what this page counted.
     state["now"] = "failed"
-    expect(said).to_have_text("3:20, failed")
-    expect(visitor.row("Una").locator(".note")).to_have_text(
-        "The analysis failed. To try again, delete the song and add the file again."
-    )
+    state["failure"] = {"reason": "memory", "seconds": 41.7}
+    expect(said).to_have_text("3:20, failed after 0:42")
+    expect(visitor.row("Una").locator(".note")).to_have_text("The analysis ran out of memory.")
+    expect(visitor.row("Una").get_by_role("button", name="Try again")).to_be_visible()
+    del state["failure"]
 
     # An analysis that was running when the page was loaded: the page cannot say for how long.
     state["now"] = "analysing"
@@ -2062,6 +2067,146 @@ def test_the_list_says_how_long_an_analysis_has_run_and_what_to_do_when_it_faile
     expect(said).to_have_text("3:20, being analysed")
     page.wait_for_timeout(4500)
     expect(said).to_have_text("3:20, being analysed")
+
+
+# What the row of every song of the example says: its state, the sentence under it, and
+# whether it has "Try again". The test carries its own list: made from the example by the
+# rules of the page, it would agree with a page that had them wrong.
+EXAMPLE_ROWS = [
+    ("Lista", "ready", "0:20, ready", None),
+    ("Sin memoria", "failed", "3:20, failed after 0:42", "The analysis ran out of memory."),
+    ("Sin modelo", "failed", "0:21, failed after 0:00", "A file the analysis needs is missing or was changed."),
+    ("Sin sonido", "failed", "0:20, failed after 0:00", "The stored sound could not be read."),
+    ("Otra cosa", "failed", "0:20, failed after 1:02", "The analysis failed."),
+    ("De antes", "failed", "0:20, failed", "The analysis failed."),
+    ("Sin nombre", "failed", "0:20, failed after 0:02", "The analysis failed."),
+    ("Version vieja", "waiting", "0:20, waiting", None),
+    ("En cola", "waiting", "0:20, waiting", None),
+]
+
+
+def test_every_song_of_the_example_says_its_state_and_why_it_failed_and_a_failed_one_is_tried_again(visit):
+    example = json.loads((ROOT / "fixtures" / "failed_songs.json").read_text())["songs"]
+    listed = [one["listed"] for one in example]
+    assert [song["name"] for song in listed] == [name for name, *_ in EXAMPLE_ROWS]
+    visitor = visit()
+    page = visitor.page
+    # The list and the request are answered here: the example is what the server will say.
+    asked = []
+
+    def on_again(route):
+        request = route.request
+        asked.append((request.method, request.url.split("/api/", 1)[1], request.post_data))
+        if request.method != "DELETE":
+            return route.fulfill(status=404, body="Not found\n")
+        # The song waits again, and nothing else of it changed.
+        at = next(n for n, song in enumerate(listed) if f"/{song['id']}/" in request.url)
+        listed[at] = {key: value for key, value in listed[at].items() if key != "failure"} | {"state": "waiting"}
+        return route.fulfill(status=204)
+
+    page.route("**/api/songs", lambda route: route.fulfill(json=listed))
+    page.route("**/api/songs/*/result", on_again)
+
+    expect(visitor.rows().locator(".name")).to_have_text([name for name, *_ in EXAMPLE_ROWS])
+    for one, (name, state, said, why) in zip(example, EXAMPLE_ROWS):
+        row = visitor.row(name)
+        expect(row).to_have_attribute("data-state", state)
+        expect(row.locator(".state")).to_have_text(said)
+        expect(row.locator(".note")).to_have_text([why] if why else [])
+        # "Try again" is in every row that failed, which are the ones the server would take it from.
+        expect(row.get_by_role("button", name="Try again")).to_have_count(1 if state == "failed" else 0)
+        assert (one["again"] == 204) == (state == "failed")
+    assert asked == []
+
+    # The one with a count 1 set by hand, from the keyboard.
+    row = visitor.row("Sin memoria")
+    row.get_by_role("button", name="Try again").focus()
+    page.keyboard.press("Enter")
+    expect(row.locator(".state")).to_have_text("3:20, waiting")
+    assert asked == [("DELETE", "songs/a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/result", None)]
+    expect(row).to_have_attribute("data-state", "waiting")
+    expect(row.locator(".note")).to_have_count(0)
+    expect(row.get_by_role("button", name="Try again")).to_have_count(0)
+    # The button went with the failure, and the keyboard stays in the row.
+    expect(row.get_by_role("button", name="Rename")).to_be_focused()
+    # It kept its place, and the other rows are as they were.
+    expect(visitor.rows().locator(".name")).to_have_text([name for name, *_ in EXAMPLE_ROWS])
+    expect(page.get_by_role("button", name="Try again")).to_have_count(5)
+
+    # When it is ready it does not open by itself: nobody asked for it to be opened.
+    listed[1] = listed[1] | {"state": "ready"}
+    expect(row.get_by_role("button", name="Open")).to_be_visible()
+    page.wait_for_timeout(2500)
+    expect(page.locator("#player")).to_be_hidden()
+    expect(row.get_by_role("button", name="Open")).to_be_visible()
+    assert len(asked) == 1
+    assert not [url for _, url in visitor.sent if url.endswith("/sound")]
+
+
+def test_try_again_says_nothing_when_the_next_list_explains_the_answer_and_says_the_rest_in_the_row(visit):
+    visitor = visit()
+    page = visitor.page
+    names = ["Otro fue antes", "Ya borrada", "Rechazada", "Sin red"]
+    listed = [
+        {"id": f"b{n}" * 16, "name": name, "state": "failed", "seconds": 200.0, "ones": [], "failure": {"reason": "model", "seconds": 3.0}}
+        for n, name in enumerate(names)
+    ]
+    answers = {"Otro fue antes": 409, "Ya borrada": 404, "Rechazada": 500, "Sin red": None}
+    asked = []
+
+    def on_again(route):
+        song = next(song for song in listed if f"/{song['id']}/" in route.request.url)
+        asked.append((route.request.method, song["name"]))
+        status = answers[song["name"]]
+        if status is None:
+            return route.abort()
+        if status == 409:
+            # Another browser pressed first, and the analysis is over by now.
+            listed[listed.index(song)] = {key: value for key, value in song.items() if key != "failure"} | {"state": "ready"}
+        if status == 404:
+            listed.remove(song)
+        if status == 204:
+            listed[listed.index(song)] = {key: value for key, value in song.items() if key != "failure"} | {"state": "waiting"}
+        return route.fulfill(status=status, body="" if status == 204 else "Said by the test\n")
+
+    page.route("**/api/songs", lambda route: route.fulfill(json=listed))
+    page.route("**/api/songs/*/result", on_again)
+    expect(visitor.rows()).to_have_count(4)
+    message = page.locator("#message").text_content()
+    why = "A file the analysis needs is missing or was changed."
+
+    # 409: the list is asked again, and nothing is said.
+    row = visitor.row("Otro fue antes")
+    row.get_by_role("button", name="Try again").click()
+    expect(row.locator(".state")).to_have_text("3:20, ready")
+    expect(row.locator(".note")).to_have_count(0)
+    expect(row.get_by_role("button", name="Try again")).to_have_count(0)
+
+    # 404: the song was deleted meanwhile. Its row goes, as it does for every other browser.
+    visitor.row("Ya borrada").get_by_role("button", name="Try again").click()
+    expect(visitor.rows().locator(".name")).to_have_text(["Otro fue antes", "Rechazada", "Sin red"])
+    expect(page.locator("#message")).to_have_text(message)
+
+    # Anything else is said in the row, under the reason, and the song can be tried once more.
+    for name in ["Rechazada", "Sin red"]:
+        row = visitor.row(name)
+        row.get_by_role("button", name="Try again").click()
+        expect(row.locator(".note")).to_have_text([why, f"{name} could not be tried again."])
+        expect(row.locator(".state")).to_have_text("3:20, failed after 0:03")
+        expect(row.get_by_role("button", name="Try again")).to_be_visible()
+    expect(page.locator("#message")).to_have_text(message)
+    answers["Rechazada"] = 204
+    row = visitor.row("Rechazada")
+    row.get_by_role("button", name="Try again").click()
+    expect(row.locator(".state")).to_have_text("3:20, waiting")
+    expect(row.locator(".note")).to_have_count(0)
+    # What was said of the other song stays with it.
+    expect(visitor.row("Sin red").locator(".note")).to_have_text([why, "Sin red could not be tried again."])
+
+    assert asked == [("DELETE", name) for name in [*names, "Rechazada"]]
+    # The browser writes every refusal to its console: these are the ones the test made.
+    assert all(any(sign in error for sign in ["409", "404", "500", "ERR_FAILED", "NS_ERROR"]) for error in visitor.errors), visitor.errors
+    visitor.errors.clear()
 
 
 def test_a_song_that_does_not_reach_the_server_is_said_so(visit, files):

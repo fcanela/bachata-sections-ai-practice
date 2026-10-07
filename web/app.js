@@ -16,6 +16,7 @@ import {
   clicksUntil,
   clock,
   countsWith,
+  failureOf,
   idOf,
   interleaved16,
   kindOf,
@@ -26,6 +27,7 @@ import {
   ochosOf,
   songIn,
   tagsOf,
+  triedAgain,
   wrapped,
 } from './song.js'
 import { barAt, drawMap, drawNow, forgetTokens, mapLayout, nowLayout, rowOf } from './draw.js'
@@ -142,8 +144,7 @@ async function add(file) {
 
 // ---- The list
 
-const STATES = { waiting: 'waiting', analysing: 'being analysed', ready: 'ready', failed: 'failed' }
-const FAILED = 'The analysis failed. To try again, delete the song and add the file again.'
+const STATES = { waiting: 'waiting', analysing: 'being analysed', ready: 'ready' }
 
 let songs = []
 const rows = new Map() // the rows on screen, by song: { row, from }, where `from` is what the row was built from
@@ -160,6 +161,7 @@ let listed = false // whether the list has been on screen before
 // What the row of a song says of its state. An analysis this page saw start says for how
 // long it has run: one that was already running when the page was loaded cannot.
 function stateOf(song) {
+  if (song.state === 'failed') return failureOf(song).said
   const since = analysedSince.get(song.id)
   if (since === undefined) return STATES[song.state]
   return `${STATES[song.state]} for ${clock((performance.now() - since) / 1000)}`
@@ -303,13 +305,15 @@ function rowFor(song) {
   } else if (!isRenaming) {
     if (isOpen) actions.append(element('span', 'current', 'Open now'))
     else if (song.state === 'ready') actions.append(button('Open', () => open(song), 'open'))
+    if (song.state === 'failed') actions.append(button('Try again', () => tryAgain(song), 'again'))
     actions.append(
       button('Rename', () => startRenaming(song, 'row'), 'rename', 'quiet'),
       button('Delete', () => askToDelete(song.id), 'delete', 'quiet'),
     )
   }
   if (actions.childElementCount) row.append(actions)
-  const note = noteOf(song.id) ?? (song.state === 'failed' ? element('p', 'note refused', FAILED) : null)
+  if (song.state === 'failed') row.append(element('p', 'note refused why', failureOf(song).why))
+  const note = noteOf(song.id)
   if (note) row.append(note)
   return row
 }
@@ -415,6 +419,27 @@ async function remove(song) {
   }
   if (failed) notes.set(song.id, { text: `${song.name} could not be deleted.`, refused: true })
   await refresh()
+}
+
+// Asks for a failed song to be analysed again. It keeps its place, its name and its count,
+// and it is not opened when it is ready: nobody asked for that.
+async function tryAgain(song) {
+  notes.delete(song.id)
+  const held = rows.get(song.id)?.row.contains(document.activeElement)
+  let settled = false
+  try {
+    const response = await fetch(`/api/songs/${song.id}/result`, { method: 'DELETE' })
+    settled = triedAgain(response.status)
+  } catch {
+    settled = false
+  }
+  if (!settled) notes.set(song.id, { text: `${song.name} could not be tried again.`, refused: true })
+  await refresh()
+  // The button goes with the failure, and the keyboard stays in the row.
+  if (held && document.activeElement === document.body) {
+    focusNext = { id: song.id, key: 'rename' }
+    showSongs()
+  }
 }
 
 function startRenaming(song, where) {
