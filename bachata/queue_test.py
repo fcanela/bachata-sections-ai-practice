@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from bachata import model
-from bachata.queue import Queue, failure_of
+from bachata.queue import REASONS, Queue, failure_of
 from bachata.store import RATE, Store
 
 ID_A, ID_B, ID_C = "a" * 32, "b" * 32, "c" * 32
@@ -185,6 +185,12 @@ TORCH_NO_MEMORY = (
 )
 
 
+# Two more texts the installed torch has for it, in the case it writes them in: the first
+# is in torch/lib/libc10.so, the second in torch/lib/libtorch_cpu.so. Neither was provoked.
+TORCH_OUT_OF_MEMORY = "C10 Out of Memory. Trying to allocate 3221225472 bytes"
+TORCH_NOT_ENOUGH = "Intel oneMKL DFTI ERROR: Not enough memory to allocate"
+
+
 class OutOfMemoryError(RuntimeError):
     """Stands for torch.OutOfMemoryError, which has this name and this parent."""
 
@@ -208,7 +214,14 @@ def raising(error):
 
 @pytest.mark.parametrize(
     "error",
-    [MemoryError(), RuntimeError(TORCH_NO_MEMORY), OutOfMemoryError("CUDA out of memory. Tried to allocate 20.00 MiB"), OutOfMemoryError()],
+    [
+        MemoryError(),
+        RuntimeError(TORCH_NO_MEMORY),
+        RuntimeError(TORCH_OUT_OF_MEMORY),
+        RuntimeError(TORCH_NOT_ENOUGH),
+        OutOfMemoryError("CUDA out of memory. Tried to allocate 20.00 MiB"),
+        OutOfMemoryError(),
+    ],
 )
 def test_an_analysis_that_gets_no_memory_fails_for_memory(tmp_path, capsys, error):
     assert failed(tmp_path, raising(error)) == {"version": 1, "error": type(error).__name__, "reason": "memory", "seconds": 0.0}
@@ -341,10 +354,19 @@ def test_a_failed_song_waits_again_once_its_failure_is_thrown_away(tmp_path, cap
     assert tries == [1, 13, 13]
 
 
-def test_a_failed_song_is_not_tried_again_after_a_restart(tmp_path, capsys):
+# For whatever reason it failed: a rule that tried the failures for memory again by
+# itself would pass a test that knows one reason only.
+@pytest.mark.parametrize("reason", [*REASONS, None])
+def test_a_failed_song_is_not_tried_again_after_a_restart(tmp_path, capsys, reason):
     store = Store(tmp_path)
     add(store, ID_A, 13)
-    Queue(store, analyse, version=1).run_one()
+    queue = Queue(store, analyse, version=1)
+    queue.run_one()
+    kept = {key: value for key, value in store.song(ID_A)["result"].items() if key != "reason"}
+    store.write_result(ID_A, kept if reason is None else {**kept, "reason": reason})
+    # Not a second time right after the failure.
+    assert states(store, queue) == [("a", "failed")]
+    assert queue.run_one() is False
 
     store = Store(tmp_path)
     queue = Queue(store, lambda samples, rate: pytest.fail("the failed song was analysed again"), version=1)

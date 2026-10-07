@@ -4,9 +4,9 @@ Rewritten at the end of every session.
 
 ## Where things stand (2026-10-08, session 12)
 
-A failed song says why it failed and for how long the analysis ran, and "Try again" in its row has it analysed again without deleting it. It is on `master` since 2026-10-08, merged from the branches `server` and `page`. **It is built and not accepted yet**: the whole run had one failure, in a test of another part, and its checks were not seen to fail. `LOG.md`, session 12, has the figures, and `ACCEPTANCE.md` the items, under slice 5.
+A failed song says why it failed and for how long the analysis ran, and "Try again" in its row has it analysed again without deleting it. It is on `master` since 2026-10-08, merged from the branches `server` and `page`. **Every item a program can check is ticked**: a second whole run passed whole, and its checks were seen to fail. What is left is the owner's: the questions below. `LOG.md`, session 12, has the figures, and `ACCEPTANCE.md` the items, under slice 5.
 
-- **How it was built.** From `CONTRACT.md`, which has the owner's six decisions and an example both sides test against, `fixtures/failed_songs.json`. Worker A built the server and the queue in `wt/server`, worker B the page in `wt/page`, at the same time and with no word between them. An integrator checked the join from git, merged both with a merge commit each, `0f28ebb` and `b7db610`, and added one test through the real program, the real page and the real analysis.
+- **How it was built.** From `CONTRACT.md`, which had the owner's six decisions and an example both sides test against, `fixtures/failed_songs.json`. Worker A built the server and the queue in `wt/server`, worker B the page in `wt/page`, at the same time and with no word between them. An integrator checked the join from git, merged both with a merge commit each, `0f28ebb` and `b7db610`, and added one test through the real program, the real page and the real analysis.
 - **What it is.**
   - The queue stores a failure with a reason, `memory`, `model`, `sound` or `other`, and the seconds the analysis ran.
   - The list sends them as `failure`, for a failed song only.
@@ -15,10 +15,12 @@ A failed song says why it failed and for how long the analysis ran, and "Try aga
   - A failed song is never tried again by itself.
   - `ANALYSIS_VERSION` is still 5.
 - **The whole run on `master` after the merge:** 316 tests, 315 passed, 1 failed, none skipped, in 1251 s, where it took 1113 s for 256 in session 11. The one failure is `test_an_opus_file_is_taken_like_an_mp3_or_an_m4a` in Chrome: a file picked a second time was still being read after 5 s. It is a test of adding a song, which this work does not change, and it passed three times of three when run alone afterwards. Every test of this work passed, the flow through the real program in Chrome and in Firefox among them.
-- **Left before `CONTRACT.md` can be deleted and the work is accepted:**
-  1. **The checks seen to fail**: the `break-on-purpose` skill on this part. Not run: the owner asks for it after the workflow. It writes files back from the last commit, so it starts from a clean tree.
-  2. **A whole run with no failure**, outside the sandbox: `TMPDIR=/tmp/claude-1000/e2e-i BACHATA_TEST_PORT=8089 .venv/bin/python -m pytest`, about 21 minutes now. If the opus test in Chrome fails again, it is a fault of its own to look into: the 5 s it waits for the message.
-  3. Then `CONTRACT.md` is deleted, and with it the last place outside the records where "delete the song and add the file again" is written. The example, `fixtures/failed_songs.json`, stays: tests read it.
+- **Done after the workflow, at the owner's word, the same day:**
+  1. **The workflow's script is committed** as it was, at `61e3cc6`: `.claude/workflows/failed-analysis.js`. It names the base `4390edf` and is for that task only.
+  2. **A second whole run passed whole**, outside the sandbox, on `master` at `61e3cc6`: 316 passed, none failed, none skipped, in 910 s. The opus test passed in Chrome. **Why it failed once in the first run was not found**, and nothing was looked into: it failed once in five runs, late in a run of 21 minutes, on the 5 s it waits for "This song is already in the library.".
+  3. **The checks were seen to fail**: 62 breaks. 54 were caught where they should be, and after two tests of `bachata/queue_test.py` were made stronger, 59. The three left: a number that is not finite, which JSON cannot carry; `ANALYSIS_VERSION`, which has no test on purpose; and "Try again" while a row asks "Delete this song?", which is a question below. No break was tried in Chrome.
+  4. **`CONTRACT.md` is deleted**, as it said of itself. It is in git's history, last at `61e3cc6`. The example, `fixtures/failed_songs.json`, stays: tests read it.
+- **Not run:** the whole run after the two tests were made stronger. The three server files were: 154 passed.
 - **The integrator ran twice.** The owner stopped the first on purpose, as an exercise of his course. What it left is on the branch `integrator-stopped`, at `4db1e67`: `master` has the same files, by merges of its own and by that branch's test of the flow, taken with `git cherry-pick`.
 
 #### Why an analysis failed, and "Try again": for the owner
@@ -30,7 +32,10 @@ A failed song says why it failed and for how long the analysis ran, and "Try aga
 - **Is "<name> could not be tried again." the line you want** when the server answers something else, or is not reached? It stays under the reason until the next press of Try again, Rename or Delete.
 - **On 404 the page says nothing**: the row goes at the next list, as for a deletion from another browser. Is that enough?
 - **When "Try again" had the keyboard and goes with the failure, the keyboard is put on Rename of the same row.** Is that the place?
-- **"Try again" is not shown while the row asks "Delete this song?" or while its name is typed**, as Open, Rename and Delete are not.
+- **"Try again" is not shown while the row asks "Delete this song?" or while its name is typed**, as Open, Rename and Delete are not. No test holds it: shown there on purpose, every check passed. Say whether it is right, and it gets a test.
+- **The opus test in Chrome failed once and was not looked into**, because it did not fail again. Say if you want the 5 s it waits looked at all the same.
+- **"delete the song and add the file again" is still quoted in the workflow's script**, which tells the page's worker what the reason replaces, and in `LOG.md`. The item in `ACCEPTANCE.md` is ticked for the program and its tests, and says so.
+- **The patch of what the first integrator changed and did not commit** is in the session's scratch folder under `/tmp/claude-1000/`, which does not last. The records were written anew, so nothing needs it.
 - **A `RuntimeError` of any origin that says "out of memory" is sorted as `memory`.** Is that acceptable? No real failure for memory was provoked: the tests use Python's `MemoryError`, torch's text and a stand-in class.
 - **A process the system kills for memory writes no failure.** The song waits again at the next start and is tried again by itself. Only a failure Python gets to see becomes `memory`.
 - **Song `a2` of the example has `"error": "RuntimeError"`**, and the queue now writes `"Checkpoint"` for that case. It is read the same. Should the example say what is written today?
@@ -163,7 +168,7 @@ The critique of 2026-10-08 is kept in `wt/bars-xhigh/.impeccable/critique/`, whi
 
 - **`audit`, not run.** For the one major issue that is open: the two canvases, `#now` and `#map`, have no role and cannot take the keyboard, and their labels tell the user to press what a keyboard cannot press. The count, an `<output>`, is said by a screen reader at every beat. The position control gives its value as raw seconds. What the critique proposes: labels that describe, the count said once an ocho or not at all, the time in words on the position control, and the song as one stop of Tab where the arrows move by a bar and Shift marks a range. A ring on a canvas has to be black: the yellow of the focus ring is 1.0 to 1 on the band and 1.1 on the light ground.
 - **`polish`, not run.** The last pass. What the critique left for it: weight 600 is asked for in five places of `web/style.css` and only 500 and 700 are served; in dark the band and the lit bar are `#f2c500` while Play, "Add a song" and the focus ring stay `#ffd200`; "Add a song to see its beats." speaks of beats; and the end of a song has no state of its own.
-- **Needs the server, so not built in a branch for the page:** why an analysis failed, and a way to try it again without deleting the song. *Built in session 12, from `CONTRACT.md`, and not accepted yet: see the top of this file.*
+- **Needs the server, so not built in a branch for the page:** why an analysis failed, and a way to try it again without deleting the song. *Built in session 12, from a contract that is deleted since, `CONTRACT.md`: see the top of this file.*
 - **Not tried:** "Add a song" pressed with the pointer still leaves the keyboard on the file control, so Space opens the file window again. Where Tab starts from after a press with the pointer on the bar. The two lines of the message beside "Add a song", in a browser.
 - **The rest of what the critique found**, not asked for: no key for the loop, its ends, "Clear" or count 1; no search in the list; a song's name in the list does not open it; Tab goes through three controls a song before it reaches Play; nothing says the count may be wrong and that "Count 1 here" puts it right; and from three metres nothing says whether the loop is on.
 - **`BRIEF.md`**, under "The interface", says "A beat is a small square, and the one that is sounding gets the large square a sign keeps for its pictogram". That is the large view now. On the song a bar is a plate, and the one that is sounding a yellow block. The brief was not changed: it is the owner's to word.
@@ -426,5 +431,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
   - `wt/server`, branch `server`, at `79ca61d`: the server's side of why an analysis failed and "Try again", merged in session 12 at `0f28ebb`. No copy of `data/`.
   - `wt/page`, branch `page`, at `1e2227e`: the page's side of the same, merged in session 12 at `b7db610`. No copy of `data/`.
   - No folder, branch `integrator-stopped`, at `4db1e67`: what the first integrator of session 12 left when the owner stopped it. `master` has the same files.
-- **`CONTRACT.md` is for one task and is deleted when that task is accepted.** What is left before that is at the top of this file.
+- **A contract between two builders is for one task and is deleted when that task is accepted.** `CONTRACT.md` of session 12 went that way: it is in git's history, last at `61e3cc6`.
+- **A test of a rule about every failed song tries every reason.** Both tests of "a failed song is not tried again by itself" made one failure, of the reason `other`, and passed while the failures for memory were tried again. The test of the restart now runs once for each reason and once for a failure with none.
+- **The test of what torch says for memory carries each text the code looks for, in the case torch writes it.** It knew one of three, in small letters, so two texts and the lowering of the case could go with no test failing.
 - **`.claude/workflows/` is not in git**: the script of the workflow of session 12. It was left as it is.

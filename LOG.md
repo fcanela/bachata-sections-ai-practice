@@ -6,7 +6,9 @@ Newest session first. Only measured figures go in here.
 
 A failed song now says why it failed and for how long the analysis ran, and "Try again" in its row has it analysed again without deleting it. It was built from `CONTRACT.md` by two workers that did not speak to each other, each in a work folder and on a branch of its own, and joined on `master` by an integrator. The base of both branches is `4390edf`.
 
-**Not accepted yet.** The whole run had one failure, in a test of another part, and the checks of this part were not seen to fail: the `break-on-purpose` skill was not run, because the owner asks for it himself after the workflow. `CONTRACT.md` therefore stays.
+**Not accepted by the integrator.** Its whole run had one failure, in a test of another part, and the checks of this part were not seen to fail: the `break-on-purpose` skill was not run, because the owner asks for it himself after the workflow. `CONTRACT.md` therefore stayed.
+
+**Finished after the workflow**, the same day, by the owner's session, at his word. The workflow's script was committed as it was, at `61e3cc6`. A second whole run passed whole, 316 of 316. The checks were seen to fail: 62 breaks, the table under "Breaking the code on purpose". `CONTRACT.md` was then deleted, as it says of itself. It is in git's history, last at `61e3cc6`.
 
 **The integrator ran twice.** The owner stopped the first one on purpose, as an exercise of his course, and had the workflow launched again. What the first one left is on the branch `integrator-stopped`, at `4db1e67`: its two merges and its test of the flow. `master` was put back to `4390edf` before the second one started. The second one checked the join again, merged again, and took the test of the flow from `4db1e67` with `git cherry-pick`, after reading it: it was not written a second time. The two workers were not run again. What the first integrator had changed and not committed was kept by the owner's session outside the repository and was not read here.
 
@@ -38,10 +40,95 @@ A failed song now says why it failed and for how long the analysis ran, and "Try
 | `torch.OutOfMemoryError` in the installed torch, 2.14.1+cpu | It is there, a subclass of `RuntimeError` | 2 s |
 | The whole run, on `master` at `6eb63a8`, outside the sandbox, which the owner's session allowed: `TMPDIR=/tmp/claude-1000/e2e-i BACHATA_TEST_PORT=8089 .venv/bin/python -m pytest` | **1 failed, 315 passed, none skipped**, of 316. Failed: `test_an_opus_file_is_taken_like_an_mp3_or_an_m4a` in Chrome. A second visitor picks the same opus file, and the page still said "Reading track02.opus…" and then nothing after 5 s, where "This song is already in the library." was expected. The same test passed in Firefox. The test of the flow passed in Chrome and in Firefox, and so did every other test of this work | 1251 s |
 | That one test again, alone, outside the sandbox, three times: `... -m pytest -q -p no:cacheprovider e2e/page_test.py -k "test_an_opus_file_is_taken_like_an_mp3_or_an_m4a and chrome"` | 1 passed each time. The changes of this work to `web/app.js` do not touch the message beside "Add a song". Not repaired: the fault is not where the two sides meet. Whether it is the 5 s the test gives Chrome to read the file again, late in a run of 20 minutes, was not measured | 13 s each |
-| The whole run a second time | **Not run**: the integrator's 40 minutes did not leave the 20 it takes | |
-| The checks seen to fail: the `break-on-purpose` skill on this part | **Not run.** The owner asks for it after the workflow | |
+| The whole run a second time, by the integrator | **Not run**: the integrator's 40 minutes did not leave the 20 it takes | |
+| The whole run a second time, after the workflow, on `master` at `61e3cc6`, outside the sandbox: the same command | **316 passed, none failed, none skipped.** The opus test passed in Chrome, so there was nothing to look into | 910 s |
+| Before the breaks, on the code as committed, inside the sandbox: the three server files; `node --test web/`; the four tests of the page in Firefox, the flow among them | 148 passed; 38 passed; 4 passed, none skipped | 3.3 s, under 1 s, 34 s |
+| The 62 breaks, one at a time | 54 caught where they should be, 1 not by the test that claims it, 7 by nothing: the table below | about 3 s each on the server, under 1 s in Node, about 30 s in Firefox |
+| The by-itself break for `memory` again, after the repair | `test_a_failed_song_is_not_tried_again_after_a_restart[memory]` fails: `[('a', 'waiting')] == [('a', 'failed')]` | 3.0 s |
+| The same break for `sound` again | `test_a_failed_song_is_not_tried_again_after_a_restart[sound]` fails, with the same message | 3.1 s |
+| The three breaks of torch's texts again, after the repair | Each fails `test_an_analysis_that_gets_no_memory_fails_for_memory`, on the new forms: one, one and both | 3.3 s each |
+| The by-itself break for `memory` against the test of the flow, in Firefox | It fails: "Locator expected to have attribute 'failed'" | 7 s |
+| After the repairs, on the code as committed: the three server files, and `node --test web/` | 154 passed, where they were 148: six forms more. 38 passed | 3.3 s, under 1 s |
+| The whole run after the repairs | **Not run.** The only file changed after the whole run above is `bachata/queue_test.py`, and its tests are in the 154 | |
 
 **What the workers said they ran**, not run again here beyond the rows above. Worker A, 7 minutes: 21 breaks of its own by hand in `queue.py`, `store.py`, `server.py` and `model.py`, each made a test fail. Worker B, 9 minutes: its three tests of the page outside the sandbox, 6 passed in Chrome and Firefox, and five breaks of `web/app.js` by hand, each made a Firefox test fail. Neither is the `break-on-purpose` skill.
+
+### Breaking the code on purpose
+
+**Breaking the code on purpose.** One break at a time, on the committed build at `61e3cc6`: the file is changed, the checks run through the skill's `one_break.sh`, and the file is written back as it was. 62 breaks, 38 from the claims of `ACCEPTANCE.md` and 24 that no claim speaks of. 54 were caught where they should be as the tests stood, one was caught but not by the test that claims it, and 7 by nothing. After two tests of `bachata/queue_test.py` were made stronger, 59 are caught where they should be. Three are left: one alters nothing, one has no test on purpose, one is the owner's to decide.
+
+The breaks were made by a small program that replaces one piece of text, exactly once, and then calls `one_break.sh`: not by hand with the Edit tool, as the skill words it. The checks, taken from the skill's table: the three server files with pytest, `node --test web/`, and the page's tests in Firefox inside the sandbox, where Chrome does not start. No break was tried in Chrome.
+
+| Break | Caught by |
+| --- | --- |
+| **A failure is stored with a reason and its seconds** | |
+| A `MemoryError` is stored as `other` | `test_an_analysis_that_gets_no_memory_fails_for_memory`, and one test of the server |
+| A missing or changed checkpoint is stored as `other` | `test_a_checkpoint_that_is_missing_or_changed_fails_for_the_model`, both forms |
+| A sound that cannot be read is stored as `other` | `test_a_stored_sound_that_cannot_be_read_fails_for_the_sound`, and the test of the seconds |
+| Any other failure is stored as `memory` | `test_any_other_failure_of_the_analysis_fails_for_another_reason`, with 7 more |
+| A failure keeps no seconds | `test_a_failure_keeps_for_how_long_the_analysis_ran`, with 17 more |
+| The seconds are kept to the second, not the tenth | `test_a_failure_keeps_for_how_long_the_analysis_ran`, alone |
+| **A failed song is listed with `failure`, and no other** | |
+| A failure of an older version, which waits, has `failure` | The server's test of the example, with 2 more |
+| A failure stored before this work is listed without `failure` | The server's test of the example, with 1 more |
+| A failure with no reason is listed with reason null | `test_a_stored_failure_is_read_with_one_of_the_four_reasons`, with 2 more |
+| A stored reason that is not of the four is passed on | The same |
+| The name of the exception is sent | `test_a_failed_song_says_why_and_after_how_long_and_no_other_song_does`, with 4 more |
+| **`DELETE /api/songs/<id>/result`** | |
+| The failed result stays on disk | `test_a_failure_is_thrown_away_and_the_song_keeps_everything_else`, with 3 more |
+| The failed result stays in memory | The same, with 7 more |
+| Taken from any page | `test_trying_again_that_is_not_from_the_own_page_is_refused`, 10 forms |
+| What is not an id answers 404, not 400 | `test_a_song_id_that_is_not_well_formed_is_refused`, 8 forms: `(404, 'No such song')` where `(400, 'Not a song id')` |
+| A failure of an older version is thrown away with 204 | The server's test of the example, with 1 more |
+| The store throws away a result that succeeded | `test_only_a_failure_is_thrown_away`, alone |
+| A song deleted meanwhile answers 409 | `test_a_song_deleted_while_it_is_tried_again_is_no_such_song`, alone |
+| The queue is not woken | `test_the_running_queue_is_woken_by_a_song_that_is_tried_again`, alone |
+| The count 1s set by hand are lost | `test_a_failure_is_thrown_away_and_the_song_keeps_everything_else`, with 2 more |
+| **A failed song is not analysed again by itself** | |
+| A song that failed for memory is tried again by itself | **Not the test that claims it.** Four tests failed, the two of the example among them, and neither `test_a_failed_song_is_not_tried_again_after_a_restart` nor `test_a_failed_song_is_not_analysed_again_by_itself`: both make one failure, of the reason `other`. This is the rule the owner turned down in the interview. Now the first runs once for each of the four reasons and once for a failure with none, and looks right after the failure as well: `[('a', 'waiting')] == [('a', 'failed')]` for `memory` |
+| The same for the reason `sound`, against the test of the flow in Firefox | **Nothing**, in that test: its two failed songs are for memory and for another reason. Now `test_a_failed_song_is_not_tried_again_after_a_restart[sound]`. With the break for `memory` the test of the flow fails: "Locator expected to have attribute 'failed'" |
+| **The row of a failed song** | |
+| 41.7 s is said as `0:41` | `a failed song says for how long the analysis ran and why it failed`, in `web/song.test.js` |
+| An unknown length says `failed after 0:00` | The same, and the test of what the page cannot read |
+| A failure for memory says the sentence of `other` | The same two |
+| A reason the page does not know has no sentence | `a failure the page cannot read is one with no reason and no duration` |
+| "Try again" in the rows of songs that wait | The page's test of the example, in Firefox |
+| No "Try again" in a row that failed for the sound | The same |
+| The row does not say for how long | The same, with the 2 other tests of the page |
+| The row has no sentence for the reason | The same three |
+| **After "Try again"** | |
+| A 409 is said in the row | `only an answer that the next list explains leaves "Try again" with nothing to say`, and in Firefox `test_try_again_says_nothing_when_the_next_list_explains_the_answer_and_says_the_rest_in_the_row` |
+| A 500 is not said | The first of those two; and the second, with the page taking every answer as settled |
+| A request that does not reach the server is not said | The second |
+| The song opens by itself when it is ready | Both tests of the page |
+| "Try again" sends POST | Both tests of the page |
+| **`ANALYSIS_VERSION` is 5** | |
+| It is 6 | **Nothing**, in the three server files, and no test was written: a test that holds the number would have to be changed with every version of the analysis, which is what the number is for. The item stays read by eye |
+| **What no claim speaks of** | |
+| A class named `OutOfMemoryError` is not `memory` | `test_an_analysis_that_gets_no_memory_fails_for_memory`, one form |
+| torch's `RuntimeError` for memory is `other` | The same, one form |
+| "allocate memory" is not read as memory | The same, one form |
+| "out of memory" is not read as memory | **Nothing.** The test knew one of the three texts, the one of the CPU allocator. Now it has "C10 Out of Memory. Trying to allocate", as `torch/lib/libc10.so` of the installed torch has it |
+| "not enough memory" is not read as memory | **Nothing**, for the same reason. Now it has "Intel oneMKL DFTI ERROR: Not enough memory to allocate", as `torch/lib/libtorch_cpu.so` has it |
+| The text is read in the case it came in | **Nothing**: the one text the test knew is in small letters. Now both new forms fail, each has a capital |
+| The text of any exception is read, not of a `RuntimeError` alone | `test_any_other_failure_of_the_analysis_fails_for_another_reason`, one form |
+| A sound failure is stored under the name of the queue's own wrapper | `test_a_stored_sound_that_cannot_be_read_fails_for_the_sound`, 2 forms |
+| Only a file that cannot be opened is `sound` | The same, the two forms of a wrong length, and the test of the seconds |
+| A missing checkpoint raises a plain `RuntimeError` | `test_a_checkpoint_that_is_missing_or_changed_fails_for_the_model`, one form |
+| A changed checkpoint raises a plain `RuntimeError` | The same, the other form |
+| The 403 is checked after the song is looked up | `test_trying_again_that_is_not_from_the_own_page_is_refused`, 10 forms |
+| A failure with no seconds is listed with 0 | `test_a_stored_failure_is_read_with_one_of_the_four_reasons`, with 2 more |
+| A discard the store refused is taken as done | `test_two_browsers_that_try_again_at_once_start_one_analysis`, with 1 more |
+| POST to the result also tries again | `test_everything_else_is_a_404` |
+| A song that has not failed is listed with `failure` null | `test_a_failed_song_says_why_and_after_how_long_and_no_other_song_does`, with 6 more |
+| A `seconds` that is a string is said as a duration | `a failure the page cannot read is one with no reason and no duration` |
+| A `seconds` that is not finite is said as a duration | **Nothing, and it alters nothing**: the list is JSON, which has no number that is not finite |
+| A failed song with no `failure` breaks the list | `a failure the page cannot read is one with no reason and no duration` |
+| The note of an earlier refusal stays after a try that went through | `test_try_again_says_nothing_...`: "Locator expected to have count '0'" |
+| The keyboard leaves the row when "Try again" goes | The page's test of the example: "Locator expected to be focused" |
+| The keyboard goes to Delete, not Rename | The same |
+| "Try again" sends the deletion of the song | Both tests of the page |
+| "Try again" is shown while the row asks "Delete this song?" | **Nothing**, and no test was written: it is one of the questions for the owner in `NEXT.md` |
 
 ### The test of the flow
 
@@ -61,6 +148,12 @@ The version is written in the test as the number 5: with another `ANALYSIS_VERSI
 - **After the state check, a song that is gone answers 404 and one that has no failure 409.** The 403 is checked before the id. Both as the contract's table.
 - **The page reads a failed song with no `failure`, and a `seconds` that is not a finite number, as "not known".** The server sends `seconds` as stored, so a string written by hand in `result.json` reaches the page and is read so.
 - **On 204, 409 and 404 the page asks for the list again and says nothing.** A second press while the first is out gets 409 and is silent.
+
+**While repairing the checks:**
+
+- **The test of "not by itself" tries every reason.** A rule that tries some failures again and not others is what the owner was offered and turned down, so a test that knows one reason cannot stand for the claim.
+- **The two new texts for memory are the installed torch's own**, read from its libraries with `strings`. Neither was provoked: no test makes torch run out of memory.
+- **What the repaired checks still do not look at:** a real failure for memory; whether `ANALYSIS_VERSION` is 5; "Try again" while a row asks "Delete this song?" or its name is typed; and any break in Chrome.
 
 **Left to the owner**: the list is in `NEXT.md`, under "Why an analysis failed, and Try again".
 
