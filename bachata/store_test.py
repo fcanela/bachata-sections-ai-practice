@@ -197,3 +197,48 @@ def test_a_song_takes_only_so_many_beats_set_to_count_1(tmp_path):
         store.set_one(ID_A, 1000.0, True)
     assert len(store.song(ID_A)["ones"]) == MAX_ONES
     assert files_under(tmp_path) == [f"songs/{ID_A}/song.json", f"songs/{ID_A}/sound.raw"]
+
+
+def test_a_failure_is_thrown_away_and_the_song_keeps_everything_else(tmp_path):
+    store = Store(tmp_path)
+    samples = some_samples()
+    add(store, ID_B, "Arrived first")
+    add(store, ID_A, "Failed", samples)
+    store.set_one(ID_A, 12.34, True)
+    store.write_result(ID_A, {"version": 5, "error": "MemoryError", "reason": "memory", "seconds": 41.7})
+    song_file = tmp_path / "songs" / ID_A / "song.json"
+    before = song_file.read_bytes()
+
+    assert store.discard_failure(ID_A) is True
+    for library in (store, Store(tmp_path)):
+        song = library.song(ID_A)
+        assert (song["name"], song["frames"], song["ones"], song["result"]) == ("Failed", RATE, [12.34], None)
+        assert [each["id"] for each in library.songs()] == [ID_B, ID_A]
+        assert np.array_equal(library.samples(ID_A), samples)
+    assert song_file.read_bytes() == before
+    assert files_under(tmp_path) == [f"songs/{song_id}/{name}" for song_id in (ID_A, ID_B) for name in ("song.json", "sound.raw")]
+    # There is none to throw away a second time.
+    assert store.discard_failure(ID_A) is False
+
+
+def test_a_failure_stored_before_reasons_were_kept_is_thrown_away_too(tmp_path):
+    store = Store(tmp_path)
+    add(store, ID_A)
+    store.write_result(ID_A, {"version": 5, "error": "MemoryError"})
+    assert Store(tmp_path).discard_failure(ID_A) is True
+    assert Store(tmp_path).song(ID_A)["result"] is None
+
+
+def test_only_a_failure_is_thrown_away(tmp_path):
+    store = Store(tmp_path)
+    add(store, ID_A)
+    assert store.discard_failure(ID_A) is False
+    assert store.discard_failure(ID_B) is False
+    result = {"version": 5, "beats": [1.0], "bpm": [120.0], "bar": [1], "count": [1], "seconds": 3.2}
+    store.write_result(ID_A, result)
+    assert store.discard_failure(ID_A) is False
+    for library in (store, Store(tmp_path)):
+        assert library.song(ID_A)["result"] == result
+    assert files_under(tmp_path) == [f"songs/{ID_A}/{name}" for name in ("result.json", "song.json", "sound.raw")]
+    # An id that is not one names no song, and no file.
+    assert store.discard_failure("../" + "a" * 29) is False

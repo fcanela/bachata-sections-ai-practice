@@ -27,12 +27,16 @@ def sha256_of(path):
     return digest.hexdigest()
 
 
+class Checkpoint(RuntimeError):
+    """A checkpoint is missing, or is not the recorded file."""
+
+
 def _checked(path, sha256):
     if not path.exists():
-        raise RuntimeError(f"{path} is missing: run `uv run python scripts/fetch_model.py`")
+        raise Checkpoint(f"{path} is missing: run `uv run python scripts/fetch_model.py`")
     found = sha256_of(path)
     if found != sha256:
-        raise RuntimeError(f"{path} has sha256 {found}, expected {sha256}")
+        raise Checkpoint(f"{path} has sha256 {found}, expected {sha256}")
     return path
 
 

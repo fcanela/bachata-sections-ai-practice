@@ -147,6 +147,19 @@ class Store:
             else:
                 partial.unlink()
 
+    def discard_failure(self, song_id):
+        """Throws away the result of an analysis that failed. Returns whether there was one.
+
+        The result of an analysis that succeeded stays, and so does all of song.json.
+        """
+        with self._lock:
+            song = self._songs.get(song_id)
+            if song is None or song["result"] is None or "error" not in song["result"]:
+                return False
+            (self._folder(song_id) / "result.json").unlink(missing_ok=True)
+            song["result"] = None
+        return True
+
     def _change(self, song_id, change):
         """Writes a song again with what `change` makes of it. Returns whether it was there."""
         with self._lock:
