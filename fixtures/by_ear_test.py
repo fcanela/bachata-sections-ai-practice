@@ -62,3 +62,18 @@ def test_a_file_opened_under_a_watched_folder_is_listed(tmp_path):
     # Outside the block nothing more is listed.
     (tmp_path / "watched" / "marks.json").read_text()
     assert len(found) == 1
+
+
+def test_a_file_reached_through_a_link_under_a_watched_folder_is_listed(tmp_path):
+    # The file is kept elsewhere, and the watched folder holds a link to it and a link to its folder.
+    (tmp_path / "kept").mkdir()
+    (tmp_path / "kept" / "marks.json").write_text("{}")
+    (tmp_path / "watched").mkdir()
+    (tmp_path / "watched" / "marks.json").symlink_to(tmp_path / "kept" / "marks.json")
+    (tmp_path / "watched" / "kept").symlink_to(tmp_path / "kept")
+    with reading(tmp_path / "watched") as found:
+        (tmp_path / "watched" / "marks.json").read_text()
+        (tmp_path / "watched" / "kept" / "marks.json").read_text()
+        # Opened where it is kept, it is not under the watched folder.
+        (tmp_path / "kept" / "marks.json").read_text()
+    assert found == [str((tmp_path / "kept" / "marks.json").resolve())] * 2

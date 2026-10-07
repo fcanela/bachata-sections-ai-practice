@@ -17,6 +17,7 @@ What a check compares the analysis with:
 
 import contextlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -76,9 +77,12 @@ _hooked = []
 
 def _note_what_is_opened(event, args):
     if _watched and event == "open" and isinstance(args[0], (str, bytes, Path)):
-        opened = Path(args[0].decode() if isinstance(args[0], bytes) else args[0]).resolve()
+        asked = Path(os.path.abspath(args[0].decode() if isinstance(args[0], bytes) else args[0]))
+        opened = asked.resolve()
         for folders, found in _watched:
-            if any(opened.is_relative_to(folder) for folder in folders):
+            # As it was asked for and as it is on disk: a watched folder may hold links to
+            # files that are kept elsewhere, and those are under it too.
+            if any(path.is_relative_to(folder) for folder in folders for path in (asked, opened)):
                 found.append(str(opened))
 
 
@@ -90,7 +94,7 @@ def reading(*folders):
         sys.addaudithook(_note_what_is_opened)
         _hooked.append(_note_what_is_opened)
     found = []
-    entry = ([Path(folder).resolve() for folder in folders], found)
+    entry = ([path for folder in folders for path in (Path(os.path.abspath(folder)), Path(folder).resolve())], found)
     _watched.append(entry)
     try:
         yield found
