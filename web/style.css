@@ -335,13 +335,17 @@ progress {
   min-width: 0;
 }
 
+/* Two lines at most: a refusal with its reason is longer than one. */
 #message {
+  display: -webkit-box;
   overflow: hidden;
   max-width: 26rem;
   color: var(--panel-soft);
+  line-height: 1.25;
   text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 #message.refused {

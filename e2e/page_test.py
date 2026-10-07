@@ -1950,6 +1950,125 @@ def test_the_keyboard_plays_moves_the_position_and_reaches_every_control(visit, 
     assert all(reached.values()), reached
 
 
+def test_a_press_with_the_pointer_leaves_space_to_play_and_pause(visit, files):
+    visitor = visit()
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    play = page.locator("#play")
+
+    def space_plays_and_pauses():
+        page.keyboard.press("Space")
+        expect(play).to_have_text("Pause")
+        page.keyboard.press("Space")
+        expect(play).to_have_text("Play")
+
+    # An end of the loop is set with the pointer. Space then plays: it does not press the
+    # control again.
+    visitor.press_beat(10)
+    page.locator("#loop-start").click()
+    start = f"From {clock(visitor.beats(TAGGED)[10])}"
+    expect(page.locator("#loop-range")).to_have_text(start)
+    space_plays_and_pauses()
+    expect(page.locator("#loop-range")).to_have_text(start)
+
+    # Clear is gone once it is pressed. The keyboard is not put on the control beside it.
+    page.locator("#loop-clear").click()
+    expect(page.locator("#loop-range")).to_have_text("Drag across bars")
+    space_plays_and_pauses()
+    expect(page.locator("#loop-range")).to_have_text("Drag across bars")
+
+    # The switch of the loop, pressed on its name.
+    visitor.drag_bars(2, 3)
+    expect(page.locator("#loop")).to_be_checked()
+    page.locator("#loop-label").click()
+    expect(page.locator("#loop")).not_to_be_checked()
+    space_plays_and_pauses()
+    expect(page.locator("#loop")).not_to_be_checked()
+
+    # Count 1 set with the pointer is not taken back by the Space that follows.
+    visitor.press_beat(10)
+    page.locator("#one").click()
+    expect(page.locator("#map")).to_have_attribute("data-by-hand", "10")
+    space_plays_and_pauses()
+    visitor.press_beat(10)
+    expect(page.locator("#map")).to_have_attribute("data-by-hand", "10")
+    assert [method for method, _ in visitor.changes_of_count()] == ["PUT"]
+
+    # A control the keyboard went to by itself keeps the key.
+    page.locator("#loop").focus()
+    page.keyboard.press("Space")
+    expect(page.locator("#loop")).to_be_checked()
+    expect(play).to_have_text("Play")
+
+
+def test_a_song_that_is_ready_while_another_plays_does_not_cut_it_off(visit, files):
+    visitor = visit()
+    page = visitor.page
+    visitor.pick(files["longer"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    # In a loop the song goes on for as long as the other one takes.
+    visitor.drag_bars(2, 3)
+    page.locator("#play").click()
+    expect(page.locator("#player")).to_have_attribute("data-state", "looping")
+
+    visitor.pick(files["tagged"])
+    row = visitor.row(TAGGED)
+    # The page does not promise to open it.
+    expect(page.locator("#message")).to_have_text(f"{TAGGED} is in the library. It is ready when it has been analysed.", timeout=READY)
+    expect(row).to_have_attribute("data-state", "ready", timeout=READY)
+    expect(page.locator("#message")).to_have_text(f"{TAGGED} is ready. Open it from the list.")
+    expect(page.locator("#song-name")).to_have_text(LONGER)
+    expect(page.locator("#player")).to_have_attribute("data-state", "looping")
+    # It waits in the list, and opens when it is asked for.
+    row.get_by_role("button", name="Open").click()
+    expect(page.locator("#song-name")).to_have_text(TAGGED)
+
+
+def test_the_list_says_how_long_an_analysis_has_run_and_what_to_do_when_it_failed(visit):
+    visitor = visit()
+    page = visitor.page
+    # The list is answered here, so that the song stays in each state for as long as needed.
+    song = {"id": "ab" * 16, "name": "Una", "seconds": 200.0, "ones": []}
+    state = {"now": "waiting"}
+    page.route("**/api/songs", lambda route: route.fulfill(json=[{**song, "state": state["now"]}]))
+    said = visitor.row("Una").locator(".state")
+    expect(said).to_have_text("3:20, waiting")
+    state["now"] = "analysing"
+    expect(said).to_have_text(re.compile(r"^3:20, being analysed for 0:0[0-2]$"))
+    expect(said).to_have_text(re.compile(r"^3:20, being analysed for 0:0[4-9]$"), timeout=12_000)
+
+    state["now"] = "failed"
+    expect(said).to_have_text("3:20, failed")
+    expect(visitor.row("Una").locator(".note")).to_have_text(
+        "The analysis failed. To try again, delete the song and add the file again."
+    )
+
+    # An analysis that was running when the page was loaded: the page cannot say for how long.
+    state["now"] = "analysing"
+    page.reload()
+    expect(said).to_have_text("3:20, being analysed")
+    page.wait_for_timeout(4500)
+    expect(said).to_have_text("3:20, being analysed")
+
+
+def test_a_song_that_does_not_reach_the_server_is_said_so(visit, files):
+    visitor = visit()
+    page = visitor.page
+    page.route(
+        re.compile(r"/api/songs/[0-9a-f]+\?"),
+        lambda route: route.abort() if route.request.method == "PUT" else route.continue_(),
+    )
+    visitor.pick(files["tagged"])
+    message = page.locator("#message")
+    expect(message).to_have_text("The song did not reach the server. It was not added.", timeout=READY)
+    expect(message).to_have_class(re.compile("refused"))
+    expect(page.locator("#empty")).to_be_visible()
+    # The browser logs the request that was cut. Nothing else went wrong.
+    assert all("ERR_FAILED" in error or "NS_ERROR" in error or "404" in error for error in visitor.errors), visitor.errors
+    visitor.errors.clear()
+
+
 def test_a_message_appears_beside_its_cause_and_the_list_says_which_song_is_open(visit, files):
     visitor = visit()
     page = visitor.page

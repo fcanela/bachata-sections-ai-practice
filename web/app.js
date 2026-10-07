@@ -127,16 +127,23 @@ async function add(file) {
   const samples = interleaved16(sound.getChannelData(0), right)
   say(`Sending ${name}…`, false, 0)
   const query = new URLSearchParams({ name, rate: RATE, frames: sound.length })
-  const answer = await send(`/api/songs/${id}?${query}`, samples, (part) => say(`Sending ${name}…`, false, part))
+  let answer
+  try {
+    answer = await send(`/api/songs/${id}?${query}`, samples, (part) => say(`Sending ${name}…`, false, part))
+  } catch {
+    return say('The song did not reach the server. It was not added.', true)
+  }
   // 409: another browser sent the same song in the meantime.
   if (!answer.ok && answer.status !== 409) return say(`The server refused the song. ${answer.text.trim()}`, true)
-  say(`${name} is in the library. It opens when it has been analysed.`)
+  // A song that is sounding is left to sound: see `refresh`.
+  say(`${name} is in the library. ${player.playing ? 'It is ready' : 'It opens'} when it has been analysed.`)
   return openWhenReady(id)
 }
 
 // ---- The list
 
 const STATES = { waiting: 'waiting', analysing: 'being analysed', ready: 'ready', failed: 'failed' }
+const FAILED = 'The analysis failed. To try again, delete the song and add the file again.'
 
 let songs = []
 const rows = new Map() // the rows on screen, by song: { row, from }, where `from` is what the row was built from
@@ -147,6 +154,16 @@ let wanted = null // the song to open as soon as it is ready
 let linked = null // the song the address named when the page was loaded, until it is settled
 let focusNext = null // where the keyboard goes once the list is on screen again: { id, where, key }
 const notes = new Map() // what went wrong with a song, shown in its row: id, or 'title', to { text, refused }
+const analysedSince = new Map() // when this page saw the analysis of a song start, by song
+let listed = false // whether the list has been on screen before
+
+// What the row of a song says of its state. An analysis this page saw start says for how
+// long it has run: one that was already running when the page was loaded cannot.
+function stateOf(song) {
+  const since = analysedSince.get(song.id)
+  if (since === undefined) return STATES[song.state]
+  return `${STATES[song.state]} for ${clock((performance.now() - since) / 1000)}`
+}
 
 async function refresh() {
   let response
@@ -157,7 +174,13 @@ async function refresh() {
     return
   }
   if (!response.ok) return
+  const before = new Map(songs.map((song) => [song.id, song.state]))
   songs = await response.json()
+  for (const id of analysedSince.keys()) if (!songs.some((song) => song.id === id && song.state === 'analysing')) analysedSince.delete(id)
+  for (const song of songs) {
+    if (listed && song.state === 'analysing' && before.get(song.id) !== 'analysing') analysedSince.set(song.id, performance.now())
+  }
+  listed = true
   // A count 1 set in another browser. A list that was asked for before this browser's
   // own last change may not have it yet, and is not believed.
   const playing = songs.find((song) => song.id === player.id)
@@ -170,7 +193,9 @@ async function refresh() {
   const song = songs.find((candidate) => candidate.id === wanted)
   if (song?.state === 'ready') {
     wanted = linked = null
-    await open(song)
+    // A song that is sounding is not cut off by one that has just been analysed.
+    if (player.playing) say(`${song.name} is ready. Open it from the list.`)
+    else await open(song)
   } else if (wanted && (!song || song.state === 'failed')) {
     // A song the address named and the library does not have is said in the middle of
     // the page: no control of the page asked for it.
@@ -259,7 +284,7 @@ function rowFor(song) {
     name.title = song.name
     row.append(name)
   }
-  row.append(element('span', 'state', `${clock(song.seconds)}, ${STATES[song.state]}`))
+  row.append(element('span', 'state', `${clock(song.seconds)}, ${stateOf(song)}`))
 
   const actions = element('div', 'actions')
   if (opening?.id === song.id) {
@@ -284,7 +309,7 @@ function rowFor(song) {
     )
   }
   if (actions.childElementCount) row.append(actions)
-  const note = noteOf(song.id)
+  const note = noteOf(song.id) ?? (song.state === 'failed' ? element('p', 'note refused', FAILED) : null)
   if (note) row.append(note)
   return row
 }
@@ -311,6 +336,7 @@ function showList() {
   for (const song of songs) {
     const from = JSON.stringify([
       song,
+      stateOf(song),
       player.id === song.id,
       confirming === song.id,
       renaming?.id === song.id && renaming.where,
@@ -1007,6 +1033,17 @@ document.addEventListener('keydown', (event) => {
     if (event.shiftKey) stepOcho(by)
     else step(by)
   }
+})
+
+// A press with the pointer does not leave the keyboard on the control it pressed. Space
+// would press that control again, and take back a count 1 or move an end of the loop,
+// when it was meant to play. A control the keyboard itself went to keeps it.
+let pointed = false // whether the last thing pressed was the pointer, not a key
+document.addEventListener('pointerdown', () => (pointed = true), true)
+document.addEventListener('keydown', () => (pointed = false), true)
+document.querySelector('.transport').addEventListener('click', (event) => {
+  const on = document.activeElement
+  if (pointed && event.currentTarget.contains(on) && on.matches('button, input[type="checkbox"]')) on.blur()
 })
 
 new ResizeObserver(layOut).observe($('song'))
