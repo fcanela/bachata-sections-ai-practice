@@ -37,7 +37,7 @@
         <div class="now">
           <p class="figure">
             <output id="count" aria-label="Count">–</output>
-            <span class="under"><span class="tempo"><span id="bpm">–</span> <span class="unit">BPM</span></span> <span id="where" aria-hidden="true">0:00</span></span>
+            <span class="under"><span class="tempo"><span id="bpm">–</span> <span class="unit">BPM</span></span> <span id="position">0:00</span></span>
           </p>
           <canvas id="now" aria-label="The ocho that is sounding, with a place for each count. The beat that is sounding is lit. Press a beat to move the playing position there."></canvas>
         </div>
@@ -50,8 +50,11 @@
 
       <footer class="transport">
         <button id="play" class="primary" type="button" disabled>Play</button>
-        <p class="time"><span id="position">0:00</span> <span aria-hidden="true">/</span> <span id="duration">0:00</span></p>
-        <input id="seek" type="range" min="0" max="1" step="any" value="0" disabled aria-label="Position in the song">
+        <div class="position">
+          <span id="seek-loop" aria-hidden="true" hidden></span>
+          <input id="seek" type="range" min="0" max="1" step="any" value="0" disabled aria-label="Position in the song">
+        </div>
+        <p id="duration" class="time" title="Length of the song">0:00</p>
         <div class="loop" role="group" aria-labelledby="loop-label">
           <div class="marked">
             <label class="switch"><input id="loop" type="checkbox" disabled> <span id="loop-label">Loop</span></label>

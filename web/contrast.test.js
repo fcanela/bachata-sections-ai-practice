@@ -57,6 +57,8 @@ const TEXT = [
 // A mark, a rule or a focus ring and what it is drawn on.
 const MARKS = [
   ['--focus', '--panel'],
+  ['--seek-line', '--panel'],
+  ['--accent', '--seek-line'],
   ['--panel-ink', '--panel'],
   ['--mark', '--ground'],
   ['--loop', '--ground'],

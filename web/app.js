@@ -557,8 +557,9 @@ function closePlayer(text) {
   Object.assign(player, { id: null, buffer: null, result: null, offset: 0, range: { first: null, last: null }, looping: false })
   Object.assign(player, { ones: [], count: [], byHand: new Set(), ochos: [], bars: [] })
   for (const control of ['play', 'seek', 'loop', 'loop-start', 'loop-end', 'one']) $(control).disabled = true
-  $('position').textContent = $('where').textContent = $('duration').textContent = clock(0)
+  $('position').textContent = $('duration').textContent = clock(0)
   $('seek').value = 0
+  $('seek').style.setProperty('--at', 0)
   showAddress(null)
   showNothing(text)
   showLoop()
@@ -779,6 +780,14 @@ function showLoop() {
   else if (first !== null) text = `From ${clock(beats[first])}`
   else if (last !== null) text = `To ${clock(beats[last])}`
   $('loop-range').textContent = text
+  // The range on the position control: two ends, and filled while the playing goes round it.
+  const onSeek = $('seek-loop')
+  onSeek.hidden = !loop
+  if (loop) {
+    onSeek.style.setProperty('--from', loop.start / player.buffer.duration)
+    onSeek.style.setProperty('--to', loop.end / player.buffer.duration)
+    onSeek.toggleAttribute('data-on', player.looping)
+  }
   $('player').dataset.state = player.playing ? (player.loop ? 'looping' : 'playing') : 'paused'
   for (const end of ['loop-start', 'loop-end']) $(end).disabled = !beats
   // The keyboard does not stay on a control that can no longer be pressed.
@@ -872,12 +881,14 @@ function show() {
   const lit = beatsUntil(beats, now) - 1
 
   const time = clock(now)
-  if ($('position').textContent !== time) $('position').textContent = $('where').textContent = time
+  if ($('position').textContent !== time) $('position').textContent = time
   const tempo = String(bpmAt(player.result, now) ?? '–')
   if ($('bpm').textContent !== tempo) $('bpm').textContent = tempo
   const count = String(player.count[lit] ?? '–')
   if ($('count').textContent !== count) $('count').textContent = count
   $('seek').value = now
+  // How far along the song is, from 0 to 1: the line of the position control is drawn to there.
+  $('seek').style.setProperty('--at', now / player.buffer.duration)
   // The control says what a press would do to the beat the song is on.
   const one = player.byHand.has(Math.max(0, lit)) ? 'Not count 1' : 'Count 1 here'
   if ($('one').textContent !== one) $('one').textContent = one

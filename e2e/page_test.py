@@ -2081,6 +2081,78 @@ def test_a_song_that_does_not_reach_the_server_is_said_so(visit, files):
     visitor.errors.clear()
 
 
+def test_the_bar_under_the_song_gives_the_position_room_and_shows_the_marked_range_on_it(visit, files):
+    visitor = visit(viewport={"width": 1920, "height": 1080})
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    parts = ["#play", "#seek", "#duration", "#loop", "#loop-start", "#loop-end", "#one", "#click"]
+
+    def lines():
+        """The controls of the bar, in the lines they stand in."""
+        tops = [round(page.locator(part).bounding_box()["y"] + page.locator(part).bounding_box()["height"] / 2) for part in parts]
+        found = []
+        for part, top in zip(parts, tops):
+            if found and abs(found[-1][1] - top) <= 12:
+                found[-1][0].append(part)
+            else:
+                found.append(([part], top))
+        return [line for line, _ in found]
+
+    # The position is said once, large, on the band. The bar says how long the song is.
+    assert page.locator("#position").count() == 1 and page.locator(".now #position").count() == 1
+    expect(page.locator("footer.transport .time")).to_have_text("0:24")
+    # At 1920 the bar is one line, and the position control has 20rem or more.
+    assert lines() == [parts]
+    assert page.locator("#seek").bounding_box()["width"] >= 320
+    # At 1280 and at 1100 it is two: Play, the position and the length, and under them
+    # the loop, count 1 and the click together. No control is left on a line by itself.
+    for wide in (1280, 1100):
+        page.set_viewport_size({"width": wide, "height": 800})
+        page.wait_for_timeout(300)
+        assert lines() == [parts[:3], parts[3:]], wide
+        assert page.locator("#seek").bounding_box()["width"] >= 600, wide
+
+    # Clear is not shown while nothing is marked, and its room is kept: the controls after
+    # it do not move when it comes.
+    clear, on_seek = page.locator("#loop-clear"), page.locator("#seek-loop")
+    expect(clear).to_be_hidden()
+    expect(on_seek).to_be_hidden()
+    before = page.locator("#one").bounding_box()
+    visitor.press_beat(10)
+    page.locator("#loop-start").click()
+    expect(clear).to_be_visible()
+    assert page.locator("#one").bounding_box() == before
+    # One end is not a range: the position control shows none.
+    expect(on_seek).to_be_hidden()
+
+    # A range is shown on the position control, from its first beat to its end, where the
+    # handle stands for those times: the handle is 16 wide and stays inside the control.
+    page.locator("#loop-clear").click()
+    visitor.drag_bars(2, 3)
+    expect(page.locator("#loop")).to_be_checked()
+    beats, bars = visitor.beats(TAGGED), visitor.bars()
+    length = float(page.locator("#seek").get_attribute("max"))
+    seek, shown = page.locator("#seek").bounding_box(), on_seek.bounding_box()
+    place = lambda seconds: seek["x"] + 8 + seconds / length * (seek["width"] - 16)
+    assert abs(shown["x"] - place(beats[bars[2]])) <= 1.5 and abs(shown["x"] + shown["width"] - place(beats[bars[4]])) <= 2.5, (shown, seek)
+    # Filled while the playing goes round it, and its two ends alone while it does not.
+    filled = lambda: page.evaluate("getComputedStyle(document.getElementById('seek-loop')).backgroundColor")
+    ends = page.evaluate("getComputedStyle(document.getElementById('seek-loop')).borderLeftWidth")
+    assert ends == "2px" and filled() != "rgba(0, 0, 0, 0)"
+    page.locator("#loop-label").click()
+    expect(on_seek).to_be_visible()
+    assert filled() == "rgba(0, 0, 0, 0)"
+    # The line of the control is drawn as far as the song has got.
+    visitor.press_bar(4)
+    at = float(page.evaluate("document.getElementById('seek').style.getPropertyValue('--at')"))
+    assert abs(at - beats[bars[4]] / length) < 0.001
+    # Cleared, it is gone.
+    clear.click()
+    expect(on_seek).to_be_hidden()
+    expect(clear).to_be_hidden()
+
+
 def test_a_message_appears_beside_its_cause_and_the_list_says_which_song_is_open(visit, files):
     visitor = visit()
     page = visitor.page
