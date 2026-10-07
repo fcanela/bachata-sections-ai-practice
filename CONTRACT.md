@@ -4,7 +4,7 @@ The task is in `NEXT.md`, under "Left open by the critique": why an analysis fai
 
 This file is what the server and the page agree on for that task, and how the work is split. It is for this task only. The integrator deletes it when the work is accepted: by then `ACCEPTANCE.md` has the checks, the header of `bachata/server.py` has the request, and `LOG.md` has the decisions. The example, `fixtures/failed_songs.json`, stays, because tests read it.
 
-Nothing is built yet. Written on 2026-10-08, after `d76b864`.
+Nothing is built yet. Written on 2026-10-08, after `d76b864`, and changed the same day to give each worker a folder and a branch.
 
 ## Decided by the owner on 2026-10-08
 
@@ -13,6 +13,7 @@ Nothing is built yet. Written on 2026-10-08, after `d76b864`.
 3. **By itself, never.** A failed song is analysed again only when the page asks, or when the version of the analysis changes, as today. Not at a restart, and not a second time right after the failure.
 4. **Also kept: how long the analysis ran** before it failed. No count of tries and no date.
 5. **This file**, with the example in `fixtures/`, until the work is built.
+6. **A work folder and a branch for each worker**, `wt/server` on the branch `server` and `wt/page` on the branch `page`, both made from the same commit. Said after the interview: the course the owner follows requires it. A worker may commit on its own branch.
 
 ## What does not change
 
@@ -121,7 +122,8 @@ This is the page worker's to build. What the two sides need to agree on is above
                  ┌──────────────────────────────────────────┐
                  │ CONTRACT                                 │
                  │ CONTRACT.md, fixtures/failed_songs.json  │
-                 │ committed on master; nobody changes it   │
+                 │ committed on master: that commit is the  │
+                 │ base of both branches; nobody changes it │
                  └────────────────────┬─────────────────────┘
                                       │ both read it whole
                  ┌────────────────────┴─────────────────────┐
@@ -129,6 +131,7 @@ This is the page worker's to build. What the two sides need to agree on is above
   ┌─────────────────────────────┐          ┌─────────────────────────────┐
   │ WORKER A                    │          │ WORKER B                    │
   │ the server and the queue    │          │ the page                    │
+  │ wt/server, branch `server`  │          │ wt/page, branch `page`      │
   │                             │          │                             │
   │ bachata/queue.py            │          │ web/app.js                  │
   │ bachata/store.py            │          │ web/song.js                 │
@@ -144,9 +147,9 @@ This is the page worker's to build. What the two sides need to agree on is above
   │                             │          │                             │
   │ port 8087                   │          │ port 8088                   │
   │                             │          │                             │
-  │ returns: changed files,     │          │ returns: changed files,     │
-  │ executed checks,            │          │ executed checks,            │
-  │ open assumptions            │          │ open assumptions            │
+  │ returns: the base commit,   │          │ returns: the base commit,   │
+  │ changed files, executed     │          │ changed files, executed     │
+  │ checks, open assumptions    │          │ checks, open assumptions    │
   └──────────────┬──────────────┘          └──────────────┬──────────────┘
                  │        at the same time, no word       │
                  │        between them but the contract   │
@@ -154,15 +157,18 @@ This is the page worker's to build. What the two sides need to agree on is above
                                       ▼
                  ┌──────────────────────────────────────────┐
                  │ JOIN                                     │
-                 │ both have returned; no file is in both   │
-                 │ lists; the contract and the example are  │
-                 │ as committed; each side's test of the    │
+                 │ both have returned; both branches start  │
+                 │ at the base; no file is in both lists;   │
+                 │ the contract and the example are as      │
+                 │ committed; each side's test of the       │
                  │ example passes                           │
                  └────────────────────┬─────────────────────┘
                                       ▼
                  ┌──────────────────────────────────────────┐
                  │ INTEGRATOR, owns acceptance              │
-                 │ one flow through the real program and    │
+                 │ in the main folder, on master            │
+                 │ both branches merged into master; one    │
+                 │ flow through the real program and        │
                  │ the real page; the whole run; the open   │
                  │ assumptions, settled or taken to the     │
                  │ owner; ACCEPTANCE.md, LOG.md, NEXT.md;   │
@@ -174,34 +180,58 @@ This is the page worker's to build. What the two sides need to agree on is above
 
 ### What the two workers share
 
-They work at the same time in one folder, on `master`, and neither commits. So everything below is shared, and each line says how it is kept from harm.
+Each worker has a work folder of its own, on a branch of its own, and both branches start at the same commit: **the base**, which is the commit of `master` that holds this file as it is now.
+
+| Worker | Folder | Branch |
+|---|---|---|
+| A, the server and the queue | `wt/server` | `server` |
+| B, the page | `wt/page` | `page` |
+
+**How a work folder is made**, by its worker, from the main folder. `NEXT.md` describes it under "Rules that are easy to break" and "Housekeeping".
+
+- `git worktree add -b <branch> wt/<name> <base>`.
+- Links to the main folder: `.venv`, `models`, `.playwright`, and each item under `fixtures/audio/` except its `.gitignore`: `README.md`, `by-ear.json`, `dev`, `entries`, `entry-pairs.json`.
+- **No copy of `data/`**, where `NEXT.md` gives a work folder one: no check a worker runs reads the library.
+- **Every check is started from inside the work folder.** Started from the main folder, it tests `master`.
+- `.git/info/exclude` keeps `wt/` and the three links at the root out of git's listing. It is set, and it is not part of any commit.
+
+**A worker starts by checking that its folder is at the base**: `git rev-parse HEAD` in it is the base, and `git status` shows no work. A folder that is already there with work in it, or a branch that is past the base, is put back to the base, the links are made again, and the worker starts over. It returns the hash it started from.
+
+**A worker may commit**, on its own branch, from inside its own folder, staging each file by its path.
+
+What is still one thing for both, and how it is kept from harm:
 
 | Shared | Rule |
 |---|---|
-| **The folder and git** | A worker writes only the files in its box. It does not stage, commit, stash, check out or restore: a restore would take the other's work with it. For the same reason neither runs the `break-on-purpose` skill, which writes files back from the last commit. |
+| **The repository** | One `.git` behind both folders and the main one: the commits, the branches, and the stash. A worker commits on its own branch and touches no other: it does not check out, merge, rebase, move or delete a branch, stash, clean up the repository, or run a `git worktree` command for a folder that is not its own. It writes nothing in the main folder but its work folder. |
+| **`.venv`** | One, through the link. Read only. Checks are run with `.venv/bin/python -m pytest`, not `uv run`, which may change it. No `uv sync`, no `uv add`, no change to `pyproject.toml` or `uv.lock`. A dependency that seems needed is an open assumption. |
+| **`models/`** | One, through the link. Read only: the two checkpoints, 3 GB between them in memory when both are loaded. Neither worker fetches, moves or renames them. A test of the reason `model` uses a path of its own in a temporary folder. |
+| **`.playwright/`** | One, through the link. The browsers, read only. Only worker B and the integrator start one. |
+| **`fixtures/audio/`** | One, through the links. The owner's recordings and marks, read only. No check of a worker needs them. |
+| **`data/`** | The owner's library, 18 songs, in the main folder only. Neither worker reads or writes it. Tests make their library in a temporary folder, and the program is never started without `BACHATA_DATA` set to one. |
 | **Ports** | The owner's own program may be on 8080 to 8083, and a work folder used 8086. Worker A: `BACHATA_TEST_PORT=8087`. Worker B: `8088`. The integrator: `8089`. With no port named a test takes a free one, which is also safe. |
-| **`data/`** | The owner's library, 18 songs. Neither reads or writes it. Tests make their library in a temporary folder, and the program is never started without `BACHATA_DATA` set to one. |
-| **`.venv`** | Read only. Checks are run with `.venv/bin/python -m pytest`, not `uv run`, which may change it. No `uv sync`, no `uv add`, no change to `pyproject.toml` or `uv.lock`. A dependency that seems needed is an open assumption. |
-| **`models/`** | Read only: the two checkpoints, 3 GB between them in memory when both are loaded. Neither fetches, moves or renames them. A test of the reason `model` uses a path of its own in a temporary folder. |
-| **`.playwright/`** | The browsers, read only. Only worker B and the integrator start one. |
-| **Memory and time** | A real analysis takes 3 GB. Each worker runs its own checks and not the song checks (`bachata/songs_test.py`, `entry_test.py`, `entry_pairs_test.py`, `fills_test.py`): the whole run is the integrator's, alone, once both have stopped. |
+| **Memory and time** | A real analysis takes 3 GB. Each worker runs its own checks and not the song checks (`bachata/songs_test.py`, `entry_test.py`, `entry_pairs_test.py`, `fills_test.py`): the whole run is the integrator's, alone, once both have stopped. A worker stops after 35 minutes of work and returns what it has. |
 | **Temporary files** | A folder each, with a short path: `/tmp/claude-1000/e2e-a`, `e2e-b`, `e2e-i`. Chrome dies on a long one. |
-| **The contract and the example** | Read only, for both. |
+| **The contract and the example** | Each folder has them as the base has them. Neither worker changes them, on its branch or anywhere. |
 | **The four project files** | `ACCEPTANCE.md`, `BRIEF.md`, `LOG.md`, `NEXT.md`: the integrator's. A worker that wants a line in one says so in what it returns. |
+| **`break-on-purpose`** | The integrator's, after the merge. It writes files back from the last commit, and it takes longer than a worker has. |
+
+Not shared any more: the files being written, git's index, and `.pytest_cache`. Each folder has its own.
 
 `NEXT.md`, under "In the session's sandbox", says what does not run inside the sandbox: Chrome does not start, and the whole run needs a command outside it that the owner allows.
 
 ### What each worker returns
 
-Three lists, and nothing is taken as done that is not in them.
+The base commit its folder was at when it started, the commit its branch is at when it stops, and three lists. Nothing is taken as done that is not in them.
 
-1. **Changed files.** Every path it wrote. Each is in its box, or the worker says why not.
+1. **Changed files.** Every path that differs from the base on its branch, and every path it wrote and did not commit. Each is in its box, or the worker says why not.
 2. **Executed checks.** Each command as it was run, and what it printed at the end: how many passed, failed and were skipped, and why the skipped ones were. And the checks it did not run, with the reason. A check that was not run is not reported as passing.
 3. **Open assumptions.** Everything it decided that this file does not say, and everything in this file or in the example it found wrong, short or impossible. It does not change the contract to fit: it says so and builds to the contract as written, or stops.
 
 ### What the integrator accepts
 
-- **The join holds**: the four conditions in its box above.
+- **The join holds**: the five conditions in its box above, read from git and not from what the workers said.
+- **Both branches are merged into `master`**, in the main folder, each with a merge commit. No file is in both, so a conflict means the join did not hold: the merge is taken back and the owner is told. No work folder and no branch is removed.
 - **One flow, through the real program and the real page**, which neither worker can run alone. A library made on disk with one song whose `result.json` is a failure of this version, and a count 1 set by hand: the row says the reason, "Try again" is pressed, the real analysis runs, the song is ready, and it has the same id, the same place and the same count 1.
 - **The whole run passes** outside the sandbox, with the number of tests and none skipped: `TMPDIR=/tmp/claude-1000/e2e-i BACHATA_TEST_PORT=8089 .venv/bin/python -m pytest`.
 - **`ANALYSIS_VERSION` is 5**, and the sentence "delete the song and add the file again" is in no file.
@@ -212,4 +242,4 @@ Three lists, and nothing is taken as done that is not in them.
 
 - **A process the system kills for memory writes no failure.** The song waits again at the next start, and is tried again by itself. Only a failure Python gets to see becomes `memory`.
 - **`sound` and "Try again".** A sound that cannot be read will fail again. The button is there all the same, by the answer "every failed row"; the sentence could say to delete the song and add the file.
-- **Two workers in one folder** follows the rule of one branch. A work folder each would keep them apart more surely, and would need a branch each.
+- **Two branches beside `master`**, `server` and `page`, by the owner's word of 2026-10-08 for this task. They and their folders are kept after the merge, as the others are.
