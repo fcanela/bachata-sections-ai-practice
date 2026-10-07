@@ -616,8 +616,8 @@ def test_a_marked_range_can_be_cleared(visit, files):
     expect(page.locator("#loop-range")).to_have_text("Drag across beats")
     expect(clear).to_be_disabled()
     expect(page.locator("#loop-start")).to_be_focused()
-    # A new range can be marked afterwards.
-    visitor.drag_across(4, 6)
+    # A new range can be marked afterwards, and by a drag that goes from right to left.
+    visitor.drag_across(6, 4)
     expect(song).to_have_attribute("data-range", "4 6")
     expect(page.locator("#loop")).to_be_checked()
 
@@ -827,6 +827,16 @@ def test_a_press_on_the_song_reaches_every_beat_and_the_position_shows_at_its_pl
     assert page.evaluate(INK, marks[bar]) == unlit
     here = page.evaluate(INK, places[inside])
     assert here["tall"] > 20 and here["light"] == beside(places[inside])["light"], here
+    # A place answers over its whole width, so no press between two marks falls between
+    # two beats: just inside either edge of this place, a press still reaches its beat.
+    box = page.locator("#map").bounding_box()
+    wide = places[inside + 1][0] - places[inside][0]
+    for edge in (2 - wide / 2, wide / 2 - 2):
+        visitor.press_beat(first)
+        expect(page.locator("#now")).to_have_attribute("data-lit", str(first))
+        page.mouse.click(box["x"] + places[inside][0] + edge, box["y"] + places[inside][1])
+        expect(page.locator("#now")).to_have_attribute("data-lit", str(inside))
+    page.mouse.move(0, 0)
     # The arrows move it from place to place, onto the mark of the next bar and past it.
     for beat in (inside + 1, inside + 2, inside + 3):
         page.keyboard.press("ArrowRight")
