@@ -2,7 +2,27 @@
 
 Rewritten at the end of every session.
 
-## Where things stand (2026-10-07, session 10)
+## Where things stand (2026-10-08, session 11)
+
+The lower view of the page is in plates, one for each bar, and it is on `master` since 2026-10-08. The owner accepted it. A critique of the page followed the same day, and three changes it led to are merged with it. Every check a program can run passed on the branch that was merged: 266 tests, none skipped. No test was run on `master` after the merge. What is open of this work is two commands of the critique that were not run, and what the owner has not yet seen. `LOG.md`, session 11, has the figures.
+
+- **The plates**, merged from `bars-xhigh` at `cbd2241`, with a merge commit, `a1983b2`.
+  - **The first attempt was rejected.** It is on the branch `d4-bars`. The owner: "It was like it just removed the extra beats, instead of doing a design that makes sense for showing the bars in a way that makes sense on their own".
+  - **The owner chose the plates from three pictures**, on 2026-10-07. `SPEC.md` was written from that choice. It and the picture, `chosen.png`, are in `wt/bars-xhigh` and `wt/bars-high`, not in git.
+  - **The same spec was built twice**, at high on the branch `bars-high` and at xhigh on `bars-xhigh`, by sessions that did not read each other's folder. The owner could not tell the two pages apart. Both were accepted, and he preferred the xhigh one, which is the one merged.
+  - **What it is.** A bar is one thing on the song: a plate with the count of its first beat. The first bar of an ocho has a solid plate and the second a quiet grey one. A row holds eight ochos from about 1200 wide, four under that. The bar that holds the beat that is sounding is lit whole. A count 1 set by hand has a lid over its plate. A drag marks whole bars. The large view above is as it was.
+  - **Its checks were seen to fail.** 116 breaks, one at a time: 98 caught as the tests stood, and after nine tests were made stronger and one added, 115. Which numeral is on a plate stays for the eye.
+- **The critique of the page**, by the design plugin, on 2026-10-08: **23 of 40, "Acceptable"**, with five issues. The owner asked for all five.
+  - **Done: the Space key.** After a press with the pointer on a control of the bar under the song, Space plays and pauses. Before, it pressed the control again, and after "Count 1 here" it took the count back on the server. A control the keyboard went to by itself keeps the key.
+  - **Done: the lit bar is yellow on both grounds**, with black type, and in light with a black edge 3 wide inside it. **This departs from `SPEC.md` and from `chosen.png`, by the owner's choice** of 2026-10-08, "Yellow on both grounds": there the lit bar is a black block with a yellow count in light. `bars-high` still has it black.
+  - **Done: the bar under the song.** The position control has 20rem at least and is drawn by the page, with a square handle and the marked range on it. Under 1600 wide the bar is two lines on purpose. "Clear" shows only while something is marked. The bar says the length of the song, and the position is on the band alone. The click switch stays in the bar: the owner's answers.
+  - **Done in part: the wait for an analysis.** The row says for how long an analysis has run, when this page saw it start, and what to do when it failed. A song that becomes ready while another sounds does not open: the page says it is ready. A reason for a failure and "Try again" need the server, and are not built.
+  - **Open: the two canvases cannot be reached with the keyboard or read by a screen reader**, and the count is said at every beat. It is the third of the issues the critique calls major.
+  - **Not run: two commands of the critique, `audit` and `polish`.** See "Left open by the critique" below.
+- **For the owner to look at**, none of it confirmed: the black edge of the lit bar in light and its width; the look of the drawn position control; that the bar is two lines from 1600 down; the nine points `SPEC.md` lists under "Not in the picture"; and the numeral on every plate. Pictures are in `wt/bars-xhigh/shots/`.
+- **The work folders and the branches are all kept**, as the owner asked: see "Housekeeping".
+
+Before that, in session 10:
 
 Slice 2 is built, in the shape the owner gave it in session 6, and the owner has used it. Since session 9 the analysis also says which of two bars starts an ocho, and since session 10 the fills decide where what comes in is not clear: the owner accepted that on 2026-10-07 and it is on `master`. Every check a program can run passes. What is open is the owner's: to listen to the new count, the checks of slice 1, one by-ear item of slice 2, and the proposals listed below.
 
@@ -63,8 +83,8 @@ Slice 2 is built, in the shape the owner gave it in session 6, and the owner has
 
 - Session 6 asked the owner five questions, ran an experiment on the three mixes and on 96 songs without labels, and the owner set the shape of the slice from its result. `LOG.md`, session 6, has the figures and the decisions, and `ACCEPTANCE.md` the items.
 - **The analysis** now keeps the place of every beat in its bar, and a count from 1 to 8 that runs in eights from the first bar that is not silence. It was version 2 then. *Since session 9 the count may start a bar later, and since session 10 it is version 5: see the top of this file.* The five songs in `data/` have been analysed again: that happened by itself when the owner started the program.
-- **The page** shows the count as the largest figure, with the tempo small beside the time. The large view is the ocho that is sounding, standing still, each beat at the place of its count. The song is in rows of four ochos, with the count under every mark. Count 1 is an upright bar.
-- **"Count 1 here"**, in the transport bar, makes the beat at the playing position count 1. From there the count runs in eights. On a beat set this way the control reads "Not count 1" and takes it back. A beat set by hand has a cap across its bar.
+- **The page** shows the count as the largest figure, with the tempo small beside the time. The large view is the ocho that is sounding, standing still, each beat at the place of its count. The song is in rows of four ochos, with the count under every mark. Count 1 is an upright bar. *Since session 11 the song is in plates, one for each bar, in rows of eight ochos: see the top of this file. The large view is as this says.*
+- **"Count 1 here"**, in the transport bar, makes the beat at the playing position count 1. From there the count runs in eights. On a beat set this way the control reads "Not count 1" and takes it back. A beat set by hand has a cap across its bar. *Since session 11 that is the large view: on the song it has a lid over its plate.*
 - The arrows with Shift move the position by an ocho.
 - The server has two new requests, `PUT` and `DELETE /api/songs/<id>/ones?at=<seconds>`.
 - **The count is right only where no half phrase has passed.** On Me Emborrachare the Intro starts with one: the count is four off from the fifth beat of the song, at 0:02, to the end of the Breakdown, at 2:31. "Count 1 here" on those two beats puts all 396 right: that is what the control is for. *Since session 9 this is turned round on the mix: the count is right from the fifth beat to the end of the Breakdown, and four off on the first four beats and after 2:31. One beat set by hand, at 2:31, should put the part after it right, and the first four beats would still read 5 to 8 where the labels have 1 to 4; that was worked out and not run.* *Corrected in session 8. This said "from 0:17, the end of the Intro", by a reference that had the short bar last.*
@@ -83,7 +103,7 @@ The redesigned page is built, with what slice 1 has. The owner chose its design,
 - It has a light and a dark ground and takes the one the system is set to. It has no control for that.
 - The program is a Python one. The Node program is gone.
 - **To run it:** `uv run python -m bachata`, then http://127.0.0.1:8080. `PORT` changes the port and `BACHATA_DATA` the folder of the library. Sessions 3 and 5 used port 8081 for everything they started, as the owner asked in session 3.
-- **To test it:** `uv run pytest`. It runs the unit tests, the song checks and the flows through the page: 242 tests in about 11 and a half minutes since session 10, where session 9 ran 215 in 5 and a half. Since session 9 the entry check is one of them: `uv run pytest bachata/entry_test.py -s` prints a line per song, in about a minute. It needs the owner's 13 songs in the library and `fixtures/audio/by-ear.json`, and skips without the second. Since session 10 the six-song check is one too: `uv run pytest bachata/entry_pairs_test.py -s` prints a line per song, in about 4 minutes. It needs `fixtures/audio/entry-pairs.json` and the six songs in `fixtures/audio/entries/`, and skips without the first.
+- **To test it:** `uv run pytest`. It runs the unit tests, the song checks and the flows through the page: 266 tests in about 15 and a half minutes since session 11, on the branch that was merged; 242 in about 11 and a half in session 10, and 215 in 5 and a half in session 9. Which tests the time went to was not measured. Since session 9 the entry check is one of them: `uv run pytest bachata/entry_test.py -s` prints a line per song, in about a minute. It needs the owner's 13 songs in the library and `fixtures/audio/by-ear.json`, and skips without the second. Since session 10 the six-song check is one too: `uv run pytest bachata/entry_pairs_test.py -s` prints a line per song, in about 4 minutes. It needs `fixtures/audio/entry-pairs.json` and the six songs in `fixtures/audio/entries/`, and skips without the first.
 - **A program that is running shows the page it started with.** After a change to the page or to the server, stop it and start it again.
 - **On a new machine, once:**
   - `uv sync`
@@ -102,6 +122,17 @@ The redesigned page is built, with what slice 1 has. The owner chose its design,
   | original | 3:35 | El Perdedor |
 
 ## Next: the owner's checks, then slice 3
+
+### Left open by the critique
+
+The critique of 2026-10-08 is kept in `wt/bars-xhigh/.impeccable/critique/`, which git does not see. Its commands are the design plugin's, run as `/impeccable` and the name.
+
+- **`audit`, not run.** For the one major issue that is open: the two canvases, `#now` and `#map`, have no role and cannot take the keyboard, and their labels tell the user to press what a keyboard cannot press. The count, an `<output>`, is said by a screen reader at every beat. The position control gives its value as raw seconds. What the critique proposes: labels that describe, the count said once an ocho or not at all, the time in words on the position control, and the song as one stop of Tab where the arrows move by a bar and Shift marks a range. A ring on a canvas has to be black: the yellow of the focus ring is 1.0 to 1 on the band and 1.1 on the light ground.
+- **`polish`, not run.** The last pass. What the critique left for it: weight 600 is asked for in five places of `web/style.css` and only 500 and 700 are served; in dark the band and the lit bar are `#f2c500` while Play, "Add a song" and the focus ring stay `#ffd200`; "Add a song to see its beats." speaks of beats; and the end of a song has no state of its own.
+- **Needs the server, so not built in a branch for the page:** why an analysis failed, and a way to try it again without deleting the song.
+- **Not tried:** "Add a song" pressed with the pointer still leaves the keyboard on the file control, so Space opens the file window again. Where Tab starts from after a press with the pointer on the bar. The two lines of the message beside "Add a song", in a browser.
+- **The rest of what the critique found**, not asked for: no key for the loop, its ends, "Clear" or count 1; no search in the list; a song's name in the list does not open it; Tab goes through three controls a song before it reaches Play; nothing says the count may be wrong and that "Count 1 here" puts it right; and from three metres nothing says whether the loop is on.
+- **`BRIEF.md`**, under "The interface", says "A beat is a small square, and the one that is sounding gets the large square a sign keeps for its pictogram". That is the large view now. On the song a bar is a plate, and the one that is sounding a yellow block. The brief was not changed: it is the owner's to word.
 
 ### Left open by the redesign
 
@@ -124,14 +155,14 @@ This is the brief the owner confirmed on 2026-10-05, in session 4, with the deci
 
 - From three metres: say where the song is now, the section and the count, 1 to 8.
 - Second, what comes next and in how many ochos. Third, the shape of the whole song.
-- Up close: every beat is its own mark. Count 1 and the start of each ocho stand apart, so a click can be checked against its mark.
+- Up close: every beat is its own mark. Count 1 and the start of each ocho stand apart, so a click can be checked against its mark. *Since session 11 that is the large view alone. On the song a bar is one plate, and nothing keeps a place for the beats inside it.*
 - Nothing is drawn that an analysis has not produced.
 
 **Direction**
 
 - Three worlds were built as real pages on one layout, with a temporary switch between them. The owner chose **Terminal signs** in session 5. The other two and the switch are deleted.
 - The page has a light and a dark ground. The owner's decision of session 5.
-- A world supplies four things: typeface, colours, density and one signature move. The layout and the controls are the same in all three, and the controls are ordinary web controls.
+- A world supplies four things: typeface, colours, density and one signature move. The layout and the controls are the same in all three, and the controls are ordinary web controls. *Since session 11 the position control is drawn by the page.*
   - **Terminal signs, the one that stays.** Yellow panels and black type, after airport sign systems. Where the song is hangs as a sign band: the section's mark in a black square, its name, the count. A second band says what is ahead and how far. Rhythms differ by their mark, not by colour.
   - The two that went were Dominó, a green table with bone tiles and black pips, and The counts sheet, quadrille paper with four pen colours.
 - The layout's own idea: the song is wrapped into rows instead of stretched on one line, so a beat gets about 30 pixels instead of 2.
@@ -141,8 +172,8 @@ This is the brief the owner confirmed on 2026-10-05, in session 4, with the deci
 - **Top bar:** the application's name, the open song's name, Add a song.
 - **Left rail:** the library. Each row shows name, length, state, and which song is open. A message appears where its cause is.
 - **Now band**, pinned above the song: the count as the largest thing on the screen, the section name second, BPM and time small. Beside the count, the ocho that is sounding, drawn large, its beats lighting on the beat.
-- **The song:** every beat, in rows of four ochos, with each row's start time and the section brackets in the margin. It scrolls under the pinned band. It does not have to be whole on screen: the owner's change of session 5.
-- **Transport bar** at the bottom: play and pause, position, loop, the click switch.
+- **The song:** every beat, in rows of four ochos, with each row's start time and the section brackets in the margin. *Since session 11 every bar, as a plate, in rows of eight ochos: the owner's note of 2026-10-06 and his choice of 2026-10-07.* It scrolls under the pinned band. It does not have to be whole on screen: the owner's change of session 5.
+- **Transport bar** at the bottom: play and pause, position, loop, the click switch. *The owner kept the click switch there on 2026-10-08.*
 - Pressing a beat moves the position there. Pressing a section plays from its first beat. A loop is a range marked on the song that repeats without a gap, the click staying on the beat.
 - A replay is of one section by itself, without the change into the next one. Until sections exist, the range is marked by hand. The owner's decision of session 5.
 - A song is renamed in place, in the top bar or in its row.
@@ -235,7 +266,17 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **The count is put together on the page**, in `countsWith` of `web/song.js`, from the analysis's count and the beats set by hand. The server keeps those as times, with the song and not with the result, so a new version of the analysis leaves them alone.
 - **A bar is four beats.** The DBN is given bars of four only.
 - **Every file of the page is named in `PAGE_FILES`**, in `bachata/server.py`, and read once when the program starts. A new file needs an entry, and a changed file needs the program started again.
-- **The tests find a beat through what the canvases say about themselves**: `data-lit` and `data-ocho` on the large beats, and on the song `data-marks`, the middle of every mark, `data-counts` and `data-by-hand`. A change to how the song is laid out keeps those attributes true. One test reads the canvas of the large view without them, `LARGE` in `e2e/page_test.py`: it takes an eighth of the width for the place of each count.
+- **The tests find a bar through what the song says about itself**: `data-bars`, the first beat of every bar, `data-plates`, the box of its plate, and `data-lit`, the bar that is lit, beside `data-counts` and `data-by-hand`. `data-marks` is gone. They reach a beat with a press on the plate of its bar and the right arrow, once for each beat after the bar's first. A change to how the song is laid out keeps those attributes true. `data-lit` and `data-ocho` on the large view are as they were, and `LARGE` in `e2e/page_test.py` still takes an eighth of its width for the place of each count.
+- **In light, the marks, the ink and the brackets are all `#121212`.** A test that reads a pixel in light cannot say which of them the page used. Whatever is told by its colour is looked at in dark as well. Since 2026-10-08 the lit block is not one of them: in light it is the yellow, and its edge the black.
+- **The tests of the song carry their own list of the colours.** Read from the page, a colour that went wrong there would go wrong in the test with it. The list came from `SPEC.md`; the lit bar in it is the owner's of 2026-10-08.
+- **A press that should do nothing is tried from a bar that a wrong press would not reach.** From the first bar of a row, a press left of the row that went to the nearest bar changed nothing.
+- **A halo cannot be seen on a first bar's plate in light**, nor a band: they are checked on a second bar's plate, which they would darken.
+- **A test does not wait for the value it is about to check.** Two breaks of the layout were caught only by a time-out, which names no claim. After a new width the test waits for the song to be drawn again, and then looks.
+- **The pixels of a thin figure do not tell two greys apart, or one weight from another.** For those the tests read the colour and the typeface the page asked for. They do not replace the pixels: `data-lit` alone, or a colour that was asked for, does not show what was drawn.
+- **A song of the tests that fills one row cannot show what a second row does.** The tests of the rows use a song of 44 seconds, or a window 1100 wide.
+- **Space on a switch stays the switch's.** A checkbox does not answer to Enter, so Space for play everywhere would leave the loop and the click with no key. The page takes the keyboard off a control of the bar after a press with the pointer instead.
+- **The position control is drawn by the page so that its two ends are known**: the handle is 1rem wide and its middle goes from 0.5rem inside one end to 0.5rem inside the other. The range drawn on it, and the yellow of its line, are placed by that. A handle of another width moves both.
+- **The page sets a place or a size through the style of an element, never through a `style` attribute.** The content security policy lets the first through and blocks the second.
 - **The colours of the page are plain six-digit values on `:root`** in `web/style.css`, light first and dark after. `web/contrast.test.js` reads them from there. A colour or a strength that is set in `web/draw.js` is one that test cannot see: the large beats that have sounded were drawn at 28% there until session 7, at 1.8 to 1.
 - **A loop is played by the sound itself**, through the loop points of the audio source, and its clicks come from `clicksUntil` in `web/song.js`. A loop made by stopping and starting the sound would have a gap, and its clicks would drift.
 - **Product facts go in `BRIEF.md`, never in `PRODUCT.md`.** `PRODUCT.md` only points at the brief. The design plugin's `init` command offers to fill it in; a new fact goes into the brief instead.
@@ -253,6 +294,9 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
   - The whole run needs a command outside the sandbox, which the owner allows one at a time: `TMPDIR=/tmp/claude-1000/e2e BACHATA_TEST_PORT=8081 .venv/bin/python -m pytest`. `TMPDIR` must be a short path, or Chrome dies with "Socket path too long".
   - When the owner's own program is on 8081, every test of the page fails at once with "Address already in use". Session 6 then used `BACHATA_TEST_PORT=8083` and left the owner's program alone. On 2026-10-06 one was on 8081, started that morning, and another on 8082, started the day before.
   - A program started inside the sandbox listens on a loopback of its own, which the owner's browser does not reach. For a review it is started outside the sandbox, as the whole test run is. On 2026-10-07 one was started that way on 8083, from `wt/d4-patch`.
+  - A command inside the sandbox does not reach a program another command started, either. A picture of the page is taken by one command that starts the program and the browser both.
+  - A command in the background is stopped after ten minutes unless it is given longer. The whole run takes fifteen.
+  - A work folder has a port of its own for the whole run: `wt/bars-xhigh` used 8086, with `TMPDIR=/tmp/claude-1000/e2e-x`.
 
 ## Open
 
@@ -275,9 +319,12 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 
 **For slice 2**
 
-- **At 1280 wide the transport bar takes two lines**: the click switch goes under the other controls.
-- **A song longer than about 3 minutes no longer shows whole at 1920 by 1080.** A row is 50 pixels high, for the count under each mark.
-- **Nothing checks by a test which number is drawn under a mark.** In the large view a test finds something written under every beat, and the empty places of a short ocho, since session 7. The numbers on the song were looked at in pictures.
+- **Under 1600 wide the transport bar takes two lines, on purpose since session 11**: Play, the position and the length of the song, and under them the loop, count 1 and the click. At 1280 that costs a row of plates, as the two lines did before.
+- **A song of 3:15 shows whole at 1920 by 1080 since the plates**, 398 beats in 7 rows, and scrolls at 1280 by 720. A row of plates is 62 from the one before.
+- **Nothing checks by a test which numeral is on a plate.** In the large view a test finds something written under every beat, and the empty places of a short ocho, since session 7. The numerals on the song were looked at in pictures.
+- **After a drag, the bar before the range is lit until the song plays.** A loop starts 20 ms before its first beat, and a position outside the range moves to that start. Before the plates it was one small mark; now it is a whole block beside the range. Whether a loop should start on its first beat when the song is paused is the owner's to say.
+- **The nine points of `SPEC.md` under "Not in the picture"** are built as the spec has them and are not confirmed: every colour in dark, the halo under the pointer, which bar a point between two plates belongs to, that a drag cannot mark one bar alone, a range drawn over whole bars, the lid over the lit block, four ochos a row under about 1200, the text "Drag across bars", and the faint plate of a second bar counted as a ground for text.
+- **One break of the plates was not tried**, the one that needs sound: the lit bar a beat early while the song plays. `LOG.md`, session 11, says how to run it.
 - **A change of count 1 in another browser arrives with the list**, so up to two seconds later.
 - **The count starts on the first bar that is not silence**, 40 dB under the level of the song. A song that fades in over several bars may start its count late; none of the 101 songs analysed in session 6 does.
 - **Sure by 2 is weaker than it reads**, for the fills and, by how it is built, for the bass too: 24% of made-up songs with no fills read 2 or more, where 4.6% would if the uncertainty were right. The owner kept the limits on 2026-10-07. The bass was not measured the same way.
@@ -289,7 +336,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 
 - **Back does not go from song to song.** Opening a song rewrites the address in place and adds nothing to the browser's history. The owner asked for reloading and sharing; whether Back should step through the songs is the owner's to say.
 - **An address that names a song still being analysed** shows the page as with no song, and opens the song when it is ready.
-- **"Clear" is one more control in the transport bar.** Its name and its place are the session's choice.
+- **"Clear" is one more control in the transport bar.** Its name and its place are the session's choice. *Since session 11 it shows only while something is marked: the owner's choice of 2026-10-08.*
 - **Opus is decoded by the browser**, as mp3 and m4a are. Checked in Chrome and in Playwright's Firefox, with files made by `ffmpeg`, and the type and tags of the 106 files of the owner's folder were read by the page's own code. None of those 106 was uploaded.
 
 **For later slices**
@@ -298,7 +345,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
   - Extra bars are not detected, so 1 and 5 swap. They frequently come after 4 phrases, and beat information alone is not enough: the energy of the instruments has to be correlated.
   - In intros and endings a section can start on an unexpected count or be an isolated bar. That is a way to make sense of the intro or ending, not an extra bar.
   - The count 1 the owner sets by hand should later serve as feedback: reference data to measure and improve the analysis.
-  - The lower view could show bars instead of every beat. Not critical.
+  - The lower view could show bars instead of every beat. Not critical. *Built in session 11: the plates.*
   - The beats in the silence before the music are shown with counts 5 to 8. They could be shown without a count.
 - **What those notes touch, as the session reads them:**
   - The second note is about the reference count. It bears on four sections: the Intro of 36 beats and the Ending of 4 on Me Emborrachare, the Intro of 20 and the Outro of 9 on Eso Es Amor. Since session 8 the site's blocks say how each is counted, not a rule of ours, and the Intro of Me Emborrachare is settled: the owner heard its short bar first. How the other three are counted is to be settled with check 7, before slice 4 makes the count strict.
@@ -332,4 +379,8 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 
 - **`.claude/` and `.impeccable/` are ignored by git**, on the owner's instruction in session 4. The first holds Claude Code's settings, with paths from the owner's machine. The second is where the design plugin keeps its working files: since session 5, the direction it was given for the page, the screenshots of the three designs under `review/`, which are the only pictures left of the two that went, and in `config.json` one exception for its hook, which is explained in `LOG.md`.
 - **Not in git, and each rebuilt by one command:** `.venv/`, `models/`, `.playwright/`. `data/` is the library and is not rebuilt by anything.
-- **`wt/` holds work folders, one for each task that runs beside another**, each on a branch of its own. `.git/info/exclude` keeps `wt/` out of git's listing, with the three files a task keeps in its folder: `TASK.md`, `incoming.patch` and `NOTES-for-records.md`. `git worktree list` names them. `wt/d4-patch` is merged, and the owner asked for it and its branch to be kept. The others are other tasks': `wt/d4-bars`, which is not merged, and `wt/bars-high` and `wt/bars-xhigh`, which were made on 2026-10-07 from `e5dde4b` while these records were written. Session 10 touched none of the three.
+- **`wt/` holds work folders, one for each task that runs beside another**, each on a branch of its own. `.git/info/exclude` keeps `wt/` out of git's listing, with the three files a task keeps in its folder: `TASK.md`, `incoming.patch` and `NOTES-for-records.md`. `git worktree list` names them. The owner asked on 2026-10-08 that no work folder and no branch be removed. As they stand:
+  - `wt/d4-patch`, branch `d4-patch`: the fills, merged in session 10.
+  - `wt/d4-bars`, branch `d4-bars`, at `11d19ef`: the first attempt at bars, rejected by the owner, not merged.
+  - `wt/bars-high`, branch `bars-high`, at `9a7c8bf`: the plates built at high, accepted, not merged. Its notes were not read, and its lit bar is black in light.
+  - `wt/bars-xhigh`, branch `bars-xhigh`, at `cbd2241`: the plates built at xhigh, with the three changes after the critique, merged in session 11. It holds `SPEC.md`, `chosen.png`, the pictures in `shots/`, the notes these records were written from, and the critique.

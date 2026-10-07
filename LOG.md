@@ -2,6 +2,346 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-07 and 08, session 11: the song in plates, built twice, a critique of the page, and the merge
+
+The lower view of the page shows a plate for each bar now, and no longer a mark for each beat. It is on `master` since 2026-10-08, merged from the branch `bars-xhigh` at `cbd2241`, with three changes a critique of the page led to. The records were not touched in the work folder: they are written here, at the merge, from the notes kept there, `wt/bars-xhigh/NOTES-for-records.md`.
+
+**How it came to this, in the owner's words and choices.**
+
+- **The first attempt was rejected.** It is on the branch `d4-bars`, in `wt/d4-bars`, at `11d19ef`. The owner: "It was like it just removed the extra beats, instead of doing a design that makes sense for showing the bars in a way that makes sense on their own".
+- **The owner then chose the plates from three pictures**, "design 1, plates", on 2026-10-07. `SPEC.md` was written from that choice. The spec and the picture, `chosen.png`, are in the work folders and not in git.
+- **The same spec was built twice**, each time by a session that got the spec and the picture and nothing else, and did not read the other's folder: at high on the branch `bars-high`, in `wt/bars-high`, at `9a7c8bf`, and at xhigh on the branch `bars-xhigh`, in `wt/bars-xhigh`.
+- **The owner could not tell the two pages apart.** Both were accepted, and he preferred the xhigh one. That one is merged. `bars-high` is not.
+- **A critique of the xhigh page**, by the design plugin, on 2026-10-08: 23 of 40, "Acceptable". Three of its five issues are dealt with in whole or in part, one is open, and two of its commands were not run. See "The critique of the page" below.
+- **The lit bar departs from `SPEC.md` and from `chosen.png`, by the owner's choice** of 2026-10-08: "Yellow on both grounds". In the spec and in the picture the bar that is sounding is a black block with a yellow count in light.
+
+Nothing under `bachata/`, `fixtures/` or `scripts/` changed. The analysis is version 5, as it was.
+
+The parts from "Runs" to "Cost" are the notes of the session that built the plates in `wt/bars-xhigh`, on 2026-10-07, as it wrote them: "this session" in them is that one. Its three commits are `b0440b5`, `2c07dd5` and `f9cd374`. Nothing of the build in `wt/bars-high` is in this log: its notes were not read.
+
+### Runs
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| `git -C wt/bars-xhigh status`, and which `bachata` the folder imports | Clean on `bars-xhigh`; `wt/bars-xhigh/bachata/__init__.py` | under 1 s |
+| The contrast of the three new pairs, worked out from the values of the spec | The count on a first bar's plate 14.59 in light and 16.59 in dark; on a second bar's 11.42 and 11.35; on the lit block 12.91 and 11.38. The plate of a second bar against the ground 1.28 and 1.46. The spec's figures hold | under 1 s |
+| `node --test web/` | 35 passed. It was 31: the four tests of the bars are new | under 1 s |
+| The tests of the page in Firefox, inside the sandbox, as first built: `pytest e2e -k firefox` | 24 passed, 7 skipped for want of sound | 209 s |
+| The same after the repairs to the tests, on the code as committed | 25 passed, 7 skipped for want of sound | 206 s |
+| The breaks: 13 against `node --test web/`, 103 against the test of the page that should catch each, in Firefox | See "Breaking the code on purpose" | under 1 s each; 15 to 34 s each, about 31 min |
+| 21 breaks again from their kept patches, after the repairs | 20 caught by the test that claims them, with a message about the claim. One by nothing, which the spec leaves to the eye | about 8 min |
+| The whole run, outside the sandbox, which the owner allowed once: `TMPDIR=/tmp/claude-1000/e2e-x BACHATA_TEST_PORT=8086 .venv/bin/python -m pytest -rs`, from inside `wt/bars-xhigh` | 256 passed, none skipped: the 64 tests of the page in Chrome and in Firefox, with sound. Nothing was left listening on 8086, and 8081 to 8085 were not used | 1113 s |
+| Whether Playwright's Firefox can run an audio clock inside the sandbox with another output set: `media.cubeb.force_null_context`, `media.cubeb.backend` null, `media.cubeb.sandbox` off, `media.cubeb.force_mock_context`, with autoplay allowed | No: the clock stays `suspended` at 0 with each of them. A test that needs sound cannot be tried inside the sandbox | 20 s |
+| Pictures, with Playwright's Firefox inside the sandbox, of the Me Emborrachare mix (398 beats) from a scratch copy of the library with one count 1 set by hand, at 2:31, as in `chosen.png` | In `shots/`: before and after at 1920 by 1080 in light and at 1280 by 720 in dark, in the state of `chosen.png`. Three more of the page with plates, of what `chosen.png` does not show: dark with a halo, the lid over the lit block and the dashed rules; the same in light at 1920; and four ochos a row at 1100 wide. No error of the page in any | about 1 min each run |
+
+**The mix was analysed again for the pictures.** The copy of the library in this folder has results of version 2 of the analysis, and the program is at version 5. The scratch copy holds that one song. `data/` in this folder was read and not changed.
+
+### Breaking the code on purpose
+
+One break at a time, on the committed build (`2c07dd5`): the files are changed, the checks run through the skill's `one_break.sh`, and the files are written back as they were. The two lists were written whole before the first run, each break with the test that should catch it. 117 breaks were written and 116 run: 84 from the claims under "What must be tested" in `SPEC.md`, and 33 from what no claim there speaks of. **98 were caught by the test that claims them as the tests stood.** 18 were caught by nothing, and 3 of the 98 were caught without a message about the claim. After the repairs, 115 of the 116 are caught by the test that claims them, with a message about the claim. One is left to the eye by the spec, and one was not tried: its test needs sound.
+
+Every break of the page was run in Firefox. Chrome does not start inside the sandbox.
+
+| Break | Caught by |
+| --- | --- |
+| **The bars**, `web/song.test.js` | |
+| No bar starts at a count 5 | `a bar starts with every ocho and at its count 5`, and the three other tests of the bars |
+| A song that starts on the last beat of a bar has no short first bar: its second beat joins it | `a song that starts inside a bar has a short first bar, and a song may end on one` |
+| A song does not end on a short bar: its last beats join the bar before | The same test, and the three other tests of the bars |
+| A beat set by hand on a count 5 starts no bar: it joins the bar before it | `a beat set by hand starts a bar wherever it is` |
+| A beat set by hand inside a bar does not cut it | The same test |
+| Of two beats set by hand side by side, the second starts no bar | The same test |
+| The last beat of a song is in no bar | `every beat is in exactly one bar, and a song with no beat has none` |
+| A song with no beat has a bar | The same test |
+| **The plates**, `test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_and_in_dark` | |
+| One bar has no plate drawn | The test: 152 pixels of the rim of that box are not the fill |
+| There is ink in the 2 pixels between the two plates of an ocho | The test: 660 pixels of ink outside the boxes, the first at 128, 28 |
+| There is a tick in the 14 pixels between two ochos | The test: 80 pixels outside the boxes |
+| There is a dot under every plate, between two rows | The test: 92 pixels outside the boxes |
+| Every beat of a bar has a mark inside its plate | The test, on the plate of a second bar: the middle of what is written is 3.5 off |
+| Every beat of a first bar has a mark inside its plate. Run after the one above, which was caught on second bars only | **Nothing.** A mark of the soft ink on a solid plate is nearer to the fill than to the count, so it was neither. The test now measures how far from the middle of a plate anything is that is not the fill: 19.5, where a count reaches 5.5 and 8 is the most |
+| `data-bars` has the last beat of every bar | The test: `[3, 7, 11, …] == [0, 4, 8, …]` |
+| `data-bars` is not made again when the count changes | `test_count_1_inside_a_bar_cuts_it_and_the_rest_of_its_row_stands_further_left`: 20 where 19 is |
+| `data-plates` lacks the box of one bar | The test: 22 boxes for 23 bars |
+| The plate of a first bar has the colour of the lit block, which is another colour in dark | The test, in dark |
+| In dark the plate of a second bar keeps the grey of light | The test, in dark. `web/contrast.test.js` was not in this run |
+| The plate of a second bar is solid, like a first bar's | The test |
+| The plate of a second bar has no count | The test: 0 pixels written, 12 needed |
+| The count on a first bar's plate is written in the colour of the plate | The test: 0 pixels written |
+| The count on a second bar's plate is written in the soft ink, not in the ink | **Nothing.** The pixels of a thin grey figure on a grey plate do not tell two inks apart: the test counts what is nearer to the ink than to the fill. The tests now note the colour and the typeface the page asked for at each writing, as the page set them: `#4b4a45` where `#121212` is expected |
+| A plate is 28 high | The test: 28 is not 30 |
+| One whole plate is wider than the others | The test: `{48, 52} == {48}` |
+| The plate of a short bar is as wide as a whole one | The test, on the last bar of its song, which has one beat: 48 where 12 is. And the test of a bar cut by hand: 48 where 36 is |
+| **The rows**, the same test and the test of a bar cut by hand | |
+| A row takes a ninth ocho | The test of the plates |
+| A row starts on the second bar of an ocho: the first stays at the end of the row before | **The test that claims it, on another claim:** it failed on the nine ochos of the first row, and never looked at where the second row starts. It now looks at the start of every row first: the row at beat 68 starts inside an ocho |
+| The two plates of an ocho are 3 apart | The test of the plates: 3 is not 2 |
+| Two ochos are 12 apart | The test of the plates: 12 is not 14 |
+| A short ocho takes the room of a whole one: the rest of its row does not stand further left | The test of a bar cut by hand: the next ocho at 416, not at 354 |
+| The row after a short ocho does not start in line: it starts further left by what the short bars saved | The test of a bar cut by hand: 68 is not 80 |
+| **The position**, `test_the_bar_that_holds_the_beat_that_is_sounding_is_lit_whole_in_light_and_in_dark` | |
+| Before the first beat the first bar is lit | The test: `data-lit` is 0 where nothing is expected |
+| The lit bar is drawn as a plain plate: only `data-lit` says it is lit | The test: 188 pixels of the rim of the block are not its colour |
+| The block of the lit bar does not reach beyond the box of its plate | The test, the same way |
+| The count on the lit block has the colour of the ground, not of `--lit-ink` | **Nothing.** In light the ground is nearer to the yellow than to the block, and in dark the two are one value apart. Now the colour the page asked for: `#e5e3dc` where `#ffd200` is expected |
+| The bar after the lit one is drawn as a block as well | The test: 750 pixels of ink outside the plates and the one block |
+| The lit bar is the bar of the beat after the one that sounds: it moves on a beat early | The test, at the third press of the arrow: bar 3 is lit, not 2 |
+| The song is not drawn again when the arrow reaches the next bar | The test: `data-lit` stays 2 |
+| The song is drawn again at every beat | The test: drawn 8 times where 7 |
+| While the song plays the lit bar is the bar of the beat after the one the large view lights | **Not tried.** `test_while_the_song_plays_the_lit_bar_is_the_bar_of_the_beat_the_large_view_lights` needs sound, and is skipped inside the sandbox. The test passed in Chrome and in Firefox in the whole run, and has not been seen to fail. See under "Decisions" for the run that would try it |
+| **A press**, `test_a_press_on_a_bar_moves_the_position_to_its_first_beat_and_the_bar_under_the_pointer_has_a_halo` | |
+| A press on a plate reaches the second beat of its bar | The test: beat 1, not 0 |
+| A plate answers a press only in its middle half | The test, at the press 2 inside the left edge: the position does not move |
+| Between two plates a press reaches no bar | The test |
+| Between two plates a press reaches the left bar, also where the right one is nearer | The test, 10 into the 14 pixels: beat 12, not 16 |
+| Where two plates are as near, a press reaches the right bar | The test: beat 16, not 12 |
+| In the band of a row, above its plates or under them, a press reaches no bar | The test |
+| Left of a row, on its time, a press reaches the first bar of the row | **Nothing.** The position was on the first bar of the row before that press, so a press that went there by mistake changed nothing. It is now on a bar in the middle of the row: beat 0 where 12 is expected |
+| Right of the last plate of a row a press reaches its last bar | The test: beat 48, not 0 |
+| A press with the right button moves the position | The test |
+| Above the band of the first row a press reaches a bar of that row | The test |
+| The plate under the pointer has no halo | The test: no ink above the plate |
+| The halo stays when the pointer leaves the song | The test |
+| A bar has its halo while a press is held | The test |
+| The halo is drawn over the plate, not behind it | **Nothing.** The test looked at a first bar's plate in light, where the halo and the plate are one colour. It now looks at a second bar's plate too: 152 pixels of its rim are not its fill |
+| The halo is 6 larger than the plate | The test |
+| **A drag**, `test_a_drag_marks_whole_bars_whichever_way_it_goes_and_a_band_with_brackets_covers_them`, `test_a_marked_range_can_be_cleared` and `test_a_range_set_inside_bars_is_kept_in_beats_and_drawn_over_the_whole_bars` | |
+| A drag to an earlier bar marks its ends in the order of the drag | The test of a drag: "36 27" where "24 39" is expected |
+| A drag marks up to the first beat of the later bar, not to its last | The test of a drag: "4 8" where "4 11" |
+| A press let go on the bar it started on marks that bar | The test of a drag: "16 19" where nothing |
+| A range that is played round has no band | The test of a drag |
+| The band reaches 8 beyond a plate inside an ocho too, past the bar | The test of a drag: ink in the second of the 2 pixels |
+| The band covers one bar after the range | The test of a drag |
+| There is no bracket where the range ends | The test of a drag |
+| There is no bracket where the range starts | The test of a drag |
+| A range that runs over the end of a row has a run in its first row only | The test of a drag |
+| Every run of a range has a bracket at both ends, also at the end of a row | The test of a drag: the colour of a bracket where the band is expected |
+| The feet of the opening bracket are 9 long, as they were | The test of a drag |
+| The band is drawn after the plates, over them | **Nothing.** No test looked at a plate inside a range. The test of a drag now does: 188 pixels of the rim of a plate are not its fill |
+| "Clear" leaves the band and its brackets on the canvas | The test of clearing, on the pixels: `data-range` was empty as it should |
+| With the loop switched off the range has no dashed rules | The test of clearing |
+| With the loop switched off the band stays | The test of clearing |
+| Switching the loop off takes the range away | The test of clearing |
+| `data-range` has the beats of the whole bars, not the beats that were set | The test of a range set inside bars: "8 23" where "9 22" |
+| The band covers only the bars that are wholly in the range | The test of a range set inside bars |
+| **"Count 1 here"**, `test_count_1_is_set_by_hand_shown_in_every_browser_and_taken_back` | |
+| A count 1 set by hand has no lid over its plate | The test |
+| Every count 1 has a lid: the plate before the one set by hand has one | The test |
+| The plate of a bar set by hand stays the plate of a second bar | The test: 152 pixels of its rim are not the colour of the marks |
+| The lid does not show while its bar is lit | The test |
+| While its bar is lit the lid stays where it is over the plate, inside the block | The test |
+| "Not count 1" does not make the bars and the plates again | The test: `data-by-hand` keeps the beat |
+| A count 1 set in another browser does not show | The test |
+| **The colours**, `web/contrast.test.js` | |
+| The count on a second bar's plate is under 4.5 to 1 in dark | `dark: text has a contrast of 4.5 to 1 or more`: `--ink` on `--plate` is 2.94 |
+| The count on a first bar's plate is under 4.5 to 1 in light, and its plate still a mark of 3 to 1 | `light: text has a contrast of 4.5 to 1 or more`: `--ground` on `--mark` is 3.49. The test of the marks passes, as it should |
+| The count on the lit block is under 4.5 to 1 in light | The same test: `--lit-ink` on `--lit` is 3.52 |
+| **What no claim under "What must be tested" speaks of** | |
+| Where the count jumps to something other than 1 or 5, no bar starts | **Nothing.** No count in the tests jumped that way. `a bar starts with every ocho and at its count 5` has one now |
+| The bar of the first beat of a bar is the bar before | `every beat is in exactly one bar, and a song with no beat has none` |
+| A whole plate may be wider than 96 | **A time-out, not the claim:** the test waited for a plate of 96 to appear. It now waits for the song to be drawn again, whatever it is drawn to: 118 where 96 |
+| A row holds eight ochos down to plates of 40, not 44 | **Nothing.** No window in the tests was between 1140 and 1200 wide. The test of the plates now has one of 1190 and one of 1210: 8 a row where 4 |
+| A row never holds four ochos: under eight it holds two | **A time-out, not the claim**, as above. Now: 2 a row where 4 |
+| A row starts 70 from the left | The test of the plates |
+| The canvas ends 10 under the plates of the last row | The test of the plates |
+| A drag that leaves the rows stays on the last bar it was over, not on the nearest | The test of a drag: "32 47" where "32 48". The pointer now leaves in one move, over no bar on its way |
+| The bands of the rows are 2 higher than they should: two rows do not meet half way | **Nothing.** No press was nearer than 4 to where two rows meet. The test of a drag now presses 15 and 17 under the plates of the upper row |
+| A row has no time | The test of the plates |
+| The time of a row ends 4 left of its first plate | The test of the plates: ink right of where the times end |
+| A plate shows the count of the last beat of its bar | **Nothing, and none now.** The spec leaves which numeral is written to the owner's eye, in pictures |
+| A plate narrower than 14 has a count | The test of the plates and the test of a bar cut by hand |
+| The count of a second bar is as heavy as a first bar's | **Nothing.** Now the typeface the page asked for: 700 where 500 |
+| The block of the lit bar has square corners | The test of the lit bar |
+| The block of the lit bar is drawn before the plates, under the edges of its neighbours | The test of the lit bar |
+| The lid is 2 high | The test of count 1 by hand |
+| The lid is as wide as what it is over, not 3 wider on each side | The test of count 1 by hand |
+| The lid has the colour of the lit block, which is another colour in dark | **Nothing.** The test looked at the lid in light only, where the two are one colour. It now looks in dark as well |
+| The halo has the colour of the band of a range | The test of a press |
+| The brackets have the colour of the marks, which is another colour in dark | **Nothing**, for the same reason. The test of a drag now looks at the band and a bracket in dark |
+| The rules of a range that is not played round are not dashed | The test of clearing |
+| The dashed rules are 4 thick | **Nothing.** The test of clearing now finds no ink in the lines beside each rule |
+| The feet of the opening bracket are 2 thick | The test of a drag |
+| The upright of the opening bracket is 2 wide | **Nothing.** The test of a range set inside bars now looks at its fourth pixel and at the one after |
+| The band is 10 higher than the plates on each side | The test of a drag |
+| What the pointer was on is kept when the bars are made again | **Nothing.** Every test moved the pointer to the control. The test of a bar cut by hand now leaves it on a plate and presses the control from the keyboard: 628 pixels of a halo on a bar that is not under the pointer |
+| The song does not scroll to the row of the playing position | **Nothing**, in all 24 tests that ran. No test looked at it, on `master` either. Now `test_the_song_scrolls_so_that_the_row_of_the_playing_position_is_on_screen` |
+| With nothing marked the transport bar reads "Drag across beats" | The test of clearing |
+| The label of the song is the one it had, about every beat | **Nothing.** The test of the plates now reads the label |
+| The song still says where a mark of every beat is | The test of the plates |
+| The quiet grey of light is another grey | The test of the plates, which carries the colours of the spec |
+| `data-lit` on the song says the beat that is lit, not the bar | The test of the lit bar |
+
+### Decisions
+
+**Where the spec left a choice, and what was built.** None of these is confirmed by the owner.
+
+- **A lit bar always has its count on its block**, also where its plate is narrower than 14 and has none. The spec says a plate that narrow has no count, and that the block of a lit bar has its count in the middle. In light the block is told from a plate by the colour of its count, so it keeps one.
+- **Which bar a point belongs to is measured from the point the browser reports.** At whole pixels both of the 2 pixels between the plates of an ocho are then the left plate's: the first is nearer to it, and the second is as near to both, which the spec gives to the left.
+- **While a press is held on one bar, that bar shows as a range of one bar with dashed rules**, as one beat did. Let go there it is a press, and the range is gone.
+- **The halo is drawn over the band of a range and behind the plates.** The dashed rules run on the top and the bottom edge of the band, half on each side of it, as they did.
+- **A count, and the time of a row, are put by what the figure covers**, not by the line of the typeface: the middle of the figure is the middle of the plate, both ways.
+- **`--beat` and `--row` are gone from `web/style.css`.** They were the distance of two beats and the height of a row, and nothing reads them now. The sizes of the plates are numbers in `web/draw.js`, as the spec gives them. This is beyond the letter of the spec.
+- **A drag, a halo and a press that is held are forgotten when the bars are made again**, which happens when a count 1 is set, here or in another browser. They are kept as places among the bars, and the bars may be others afterwards.
+- **A song with no beat and a range set on it does not stop the drawing.** On `master` it drew nothing either.
+
+**What was found and not changed.**
+
+- **After a drag the bar before the range is lit until the song plays.** A loop starts 20 ms before its first beat, as on `master`, and a position outside the range moves to that start. On `master` the beat before the range was lit the same way, one small mark. Now it is a whole block beside the range. The spec says "as today" of this, so it stays.
+- **The owner's own library has a count 1 set at 2.28 s on the mix**, where the analysis now counts 1 by itself. It has a lid there. `chosen.png` has none, so the pictures were taken with the one at 2:31 alone.
+
+**What the tests of the page note that they did not, and why.** Since the repairs the tests' spy notes, at every writing on a canvas, where it is and the colour and the typeface the page asked for, as the page set them. It does not note the text. The pixels are still what says that something was written, where, and that nothing else is on a plate.
+
+**What the checks still do not look at.**
+
+- Which numeral is on a plate, and which time on a row: the spec leaves the numeral to the owner's eye.
+- How long the dashes of a rule and the gaps between them are: 6 and 5. A rule with ink and with gaps passes.
+- Rows of two ochos and of one. The page is never narrower than 1024, where a row holds four.
+- A press that the browser cancels, and a drag that goes on outside the canvas. Neither was checked on `master`.
+- A drag that is held while the bars are made again: it needs a pointer and a second hand.
+- Every break of the page was tried in Firefox only.
+- **The one break that needs sound was not tried.** The owner allowed one command outside the sandbox, and it was the whole run. To try it: in `web/app.js`, `const litBar = barOf(bars, lit)` becomes `const litBar = lit < 0 ? -1 : barOf(bars, lit + (player.playing ? 1 : 0))`, and then, outside the sandbox, from inside the folder of the work: `bash .claude/skills/break-on-purpose/scripts/one_break.sh L4 web/app.js -- env TMPDIR=/tmp/claude-1000/e2e-x BACHATA_TEST_PORT=8086 .venv/bin/python -m pytest e2e -k while_the_song_plays`. Both tests, Chrome and Firefox, should fail, and the script writes the file back.
+- The colour of a halo in dark.
+
+### Cost
+
+Nothing was downloaded, and nothing went over the network. One song of the copied library was analysed again, in a scratch folder.
+
+### The critique of the page
+
+On 2026-10-08, from the main folder, on `wt/bars-xhigh/web/index.html` at `f9cd374`. The design plugin's `critique` command gives the page to two readers that do not see each other's work: one reads the page as a designer would, the other runs the plugin's detector.
+
+| What was run | Result |
+| --- | --- |
+| The designer's reading: the four files of the page, `BRIEF.md`, `SPEC.md`, `NEXT.md`, `chosen.png` and the pictures in `shots/` | 23 of 40 on Nielsen's ten heuristics. Three issues it calls major and two minor. Three of eight checks of how much the page asks of its user fail: the choices at once, what is shown before it is needed, and what has to be remembered |
+| The detector, on `web/index.html` | 2 findings, both false: `cramped-padding` on the band, whose child is the canvas and keeps its own margin, and `flat-type-hierarchy`, which does not see the count because the player is hidden until a song is open |
+| `node --test web/contrast.test.js` | 5 passed |
+| The page in the owner's Chrome, after the report | With the song paused, a press with the pointer on "Start here" and then Space left the song paused, the keyboard on the control. A script from another address did not load, so the detector's marks could not be shown on the page |
+
+**Neither reader had a browser.** The extension of Chrome was not connected until the report was written. The readings rest on the code and on the pictures; the one point above was seen in Chrome afterwards. The light ground was not seen in a browser at all.
+
+**The score**, each from 0 to 4:
+
+| | | |
+| --- | --- | --- |
+| 1 | What the page says of its state | 3 |
+| 2 | The words and order of the user | 3 |
+| 3 | Ways out | 3 |
+| 4 | One thing means one thing | 2 |
+| 5 | Mistakes kept from happening | 2 |
+| 6 | Seen, not remembered | 2 |
+| 7 | Quicker ways for who knows the page | 2 |
+| 8 | Nothing more than is needed | 3 |
+| 9 | Getting out of a mistake | 2 |
+| 10 | Help | 1 |
+| | **Total** | **23 of 40** |
+
+**The five issues, and what was done about each.** The owner asked on 2026-10-08 for all five in this branch, the Space key first.
+
+| Issue | As the critique ranks it | What was done |
+| --- | --- | --- |
+| In light the lit bar cannot be found from a distance: it is the black of every first bar | Major | **Done**: yellow on both grounds, the owner's choice. See below |
+| Space after a press with the pointer presses the control again, and takes back a count 1 on the server | Major | **Done.** See below |
+| The two canvases cannot be reached with the keyboard or read by a screen reader, and the count is said at every beat | Major | **Open.** It is the plugin's `audit` command, which was not run |
+| The bar under the song is overfull, wraps, and leaves the position control 150 wide at 1280 | Minor | **Done**, with what the owner chose to cut. See below |
+| The wait for an analysis: no progress, no reason for a failure, no way to try again, and a ready song takes over | Minor | **In part.** The time it has run, what to do after a failure, and a ready song no longer cuts off the one that sounds. A reason and "Try again" need the server |
+
+The plugin's `polish` command, its last pass, was not run either. The critique is kept in `wt/bars-xhigh/.impeccable/critique/`, which git does not see.
+
+**What the three passes ran**, each from inside `wt/bars-xhigh`, the whole run outside the sandbox on port 8086:
+
+| Pass, and its commit on `bars-xhigh` | `node --test web/` | The whole run | Breaks by hand |
+| --- | --- | --- | --- |
+| The Space key and the wait for an analysis, `6e4977a` | 35 passed | 264 passed in 906 s | 4, each caught in Chrome and in Firefox |
+| The lit bar in yellow, `3bf2103` | 35 passed | 264 passed in 914 s | 3, each caught in both |
+| The bar under the song, `cbd2241` | 35 passed | 266 passed in 928 s | 4, each caught in both |
+
+The three passes were made in one working tree and committed afterwards, one commit each. The whole runs above are of the tree as it was after each pass. At the two earlier commits as git has them, only `node --test web/` was run again: 35 passed at each. A first whole run was stopped by the session's limit of ten minutes and left nothing on the port.
+
+#### The Space key after a press with the pointer, and the wait for an analysis
+
+**What was found.** With the song paused, a press with the pointer on "Start here" and then Space left the song paused: Space pressed the control again. Seen in Chrome on 2026-10-08, on the page as it was. After "Count 1 here" the same Space takes the count back on the server. After "Clear" the page itself put the keyboard on "Start here".
+
+**What was built.**
+
+- **A press with the pointer on a control of the bar under the song does not leave the keyboard on it.** Space then plays and pauses. A control the keyboard went to by itself keeps the key, so Space still switches the loop from the keyboard, as `ACCEPTANCE.md` has it. The other way, Space for play everywhere, would have left the two switches with no key: a checkbox does not answer to Enter.
+- **A song that becomes ready while another one is sounding does not open.** The page says "<name> is ready. Open it from the list." A song that is paused, or no song, is replaced as before. After an upload while a song sounds the page says "It is ready when it has been analysed" in place of "It opens".
+- **The row of a song says for how long its analysis has run**, "being analysed for 0:12", when this page saw it start. For an analysis that was running when the page was loaded it says "being analysed" only: the page does not know when it started.
+- **The row of a song whose analysis failed says what to do**: "The analysis failed. To try again, delete the song and add the file again."
+- **A song that does not reach the server is said so**: "The song did not reach the server. It was not added." Before, it was "Something went wrong."
+- **The message beside "Add a song" takes two lines** before it is cut. A refusal with its reason is longer than one.
+
+**Runs.** `node --test web/`: 35 pass. The whole run outside the sandbox, on port 8086: 264 passed in 906 s. A first whole run was stopped by the session's limit of ten minutes and left nothing on the port.
+
+**Breaking the code on purpose.** Four breaks by hand, one at a time, not with the skill and not kept as patches. Each made its test fail in Chrome and in Firefox: the pointer keeps the keyboard on the control; a ready song opens while another sounds; no time is counted for an analysis; a time is counted for an analysis that was already running. The message for a song that did not reach the server, and the two lines of the message, were not broken.
+
+**Not built, and why.**
+
+- **No reason for a failed analysis and no "Try again".** The server keeps only the name of the error and has no way to analyse a song again. Both are under `bachata/`, which this task may not change.
+- **"Add a song" pressed with the pointer still leaves the keyboard on the file control**, so Space opens the file window again. Not changed: no test here can drive the file window.
+- **The two lines of the message were not looked at in a browser.**
+
+**The design detector.** Run once by hand after these changes, on `web/index.html`: the same two findings as before them, `cramped-padding` on the band and `flat-type-hierarchy`. The critique took both for false ones: the band's child is the canvas, which keeps its own margin, and the detector does not see the count, which is hidden until a song is open. Left alone.
+
+**Not confirmed by the owner.** After a press with the pointer the keyboard is on no control of the bar. Where the next Tab starts from was not tried.
+
+#### The bar that is sounding is yellow on both grounds
+
+`SPEC.md` was not edited: it is not in git, and it says what the owner chose on 2026-10-07.
+
+**What was built.** In light the block of the bar that is sounding is `#ffd200` with its count in `#121212`, like the band above it. The yellow is as light as the ground there, 1.1 to 1, so the block has a black edge 3 wide, inside it: its size, and the lid over it, are as they were. In dark nothing changes to the eye: the edge has the colour of the block. The edge is a new colour on `:root`, `--lit-edge`.
+
+| | Light | Dark |
+|---|---|---|
+| `--lit` | `#ffd200` (was `#121212`) | `#f2c500` |
+| `--lit-ink` | `#121212` (was `#ffd200`) | `#121212` |
+| `--lit-edge`, new | `#121212` | `#f2c500` |
+
+**Contrast, as WCAG counts it.** The count on the block: 12.9 to 1 in light, 11.4 in dark. The edge against the ground in light: 14.6. `web/contrast.test.js` gets the block against the ground by its own colour or by its edge's, no longer by its count's.
+
+**Runs.** `node --test web/`: 35 pass. The whole run outside the sandbox, port 8086: 264 passed in 914 s.
+
+**Breaking the code on purpose.** Three breaks by hand, not kept as patches, each caught in Chrome and in Firefox by the test of the lit bar: the block black in light again (also caught by the contrast test), no edge in light (also caught by the contrast test), an edge 2 wide.
+
+**Pictures**, with Playwright's Firefox inside the sandbox, from a scratch copy of the library with the mix alone: `shots/lit-yellow-1920x1080-light.png`, `shots/lit-yellow-1280x720-light-inside-a-range.png`, `shots/lit-yellow-1280x720-dark.png`.
+
+**Not confirmed by the owner.** The edge, and its width of 3. The owner chose the yellow from a sentence that named a black edge, and has not seen it.
+
+#### The bar under the song, with less in it
+
+The owner chose on 2026-10-08: the click switch stays in the bar; "Clear" is hidden until something is marked; the bar no longer says the position; the marked range is drawn on the position control.
+
+**What was built.**
+
+- **The position control has 20rem at least**, and is drawn by the page: a line 4 high, yellow as far as the song has got, and a square handle 16 wide. At 1920 the bar is one line. Under 1600 wide it is two on purpose: Play, the position and the length of the song, and under them the loop, count 1 and the click. Before, at 1280 the click switch went to a second line alone, and at 1100 count 1 as well.
+- **The marked range is on the position control**: an end at each side, and filled while the playing goes round it. One end alone shows nothing there.
+- **Clear is not shown while nothing is marked.** Its room is kept. The text of the range keeps one width, so the controls after it no longer move by 9 pixels when it changes.
+- **The bar says the length of the song and not the position.** The position is on the band, once. `#where` is gone: the time on the band is `#position` now, and a screen reader gets it.
+- **The two rules between the groups of the bar are gone**: room in their place. A rule was left at the start of a line when its group wrapped.
+- **A new colour on `:root`, `--seek-line`, `#6b6a64`**: the line of the position control and the fill of a range on it. 3.4 to 1 on the panel in light, 3.9 in dark. `web/contrast.test.js` has it.
+
+**Kept on purpose.** "Start here" and "End here" are always shown: they are how a loop is marked from the keyboard. The click switch stays in the bar, the owner's answer.
+
+**Runs.** `node --test web/`: 35 pass. The whole run outside the sandbox, port 8086: 266 passed in 928 s.
+
+**Breaking the code on purpose.** Four breaks by hand, not kept as patches, each caught in Chrome and in Firefox by the new test of the bar: Clear always shown; no lines on purpose under 1600; a range that ends in the wrong place on the control; a range that is always filled.
+
+**Pictures**, Playwright's Firefox inside the sandbox, the mix alone in a scratch library: `shots/bar-1920x1080-light.png`, `shots/bar-1280x720-dark.png`, `shots/bar-1100x800-light.png`.
+
+**Not confirmed by the owner.** The look of the drawn control: its square handle, the grey of its line, and the two ends of a range as white strokes. That the bar is two lines from 1600 down, and which controls stand in which.
+
+### The merge
+
+| What was run | Result |
+| --- | --- |
+| Three commits on `bars-xhigh`, from one working tree, no trailer | `6e4977a`, `3bf2103`, `cbd2241`. The tree was clean after them |
+| From the main folder: `git merge --no-ff bars-xhigh` | `a1983b2`, by the `ort` strategy, no conflict. `master` was at `1c441ab`, two commits of records after `e5dde4b`, where the branch started |
+| What `master` has that the branch has not | `LOG.md`, `NEXT.md` and `ACCEPTANCE.md` alone. The code of `master` is the code of `cbd2241` |
+| For the owner to try the page: `PORT=8089 .venv/bin/python -B -m bachata` from `wt/bars-xhigh`, outside the sandbox, on the copy of the library there | It answered with 18 songs, all ready. Stopped when the records were written. The owner's own program on 8087, from the same folder, was left alone |
+
+**Not run on `master` after the merge:** no test. The whole run of 266 is of `cbd2241`, in the work folder.
+
+**Kept, as the owner asked:** every work folder and every branch. `wt/bars-xhigh` and `bars-xhigh`, `wt/bars-high` and `bars-high`, `wt/d4-bars` and `d4-bars`, `wt/d4-patch` and `d4-patch`.
+
 ## 2026-10-07, session 10: the fills rule, brought in, reviewed, broken on purpose and merged
 
 The owner handed over one commit written outside this repository, `incoming.patch`, and asked for it to be applied, read as a reviewer, checked and broken on purpose. The patch adds a third way to say which bar starts an ocho: where what comes in during the first minute is not clear, the fills decide. The work was done in a folder of its own, `wt/d4-patch`, on the branch `d4-patch`, while another task ran in `wt/d4-bars`. The records were not touched there: they are written here, at the merge, from the notes that session kept. **On the six songs the owner heard on 7 October, count 1 is where he heard it on 6 of 6, where version 4 had 0 of 6. The entry check still reads 5 of 5, and no song of the reference by ear or of the three mixes is worse than it was: each has the same beats and the same count.** The review found four faults, and all four are repaired: two in the code of the patch, one in how the program starts, and one in a check of the project that the patch did not touch. The cost is time: a song whose fills are asked takes 30 to 50 seconds to analyse, where it took 3 to 5. The owner then had a program started to review it, accepted it, and had `d4-patch` merged into `master` with a fast-forward. His verdict is under "Decisions".
