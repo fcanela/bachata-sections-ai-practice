@@ -1,0 +1,118 @@
+{
+  "about": "The example of CONTRACT.md: songs as the library stores them, and what the server says of each. The server's tests build a library from `song` and `result` and compare its answers with `listed` and `again`. The page's tests answer the list with `listed` and read the rows. Neither side changes this file.",
+  "version": 5,
+  "songs": [
+    {
+      "case": "ready",
+      "song": { "id": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0", "name": "Lista", "seconds": 20.0, "ones": [] },
+      "result": {
+        "version": 5,
+        "beats": [1.0, 1.5, 2.0],
+        "bpm": [120.0, 120.0, 120.0],
+        "bar": [1, 2, 3],
+        "count": [1, 2, 3],
+        "seconds": 3.2
+      },
+      "listed": { "id": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0", "name": "Lista", "state": "ready", "seconds": 20.0, "ones": [] },
+      "again": 409
+    },
+    {
+      "case": "failed, out of memory, with a count 1 set by hand",
+      "song": { "id": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1", "name": "Sin memoria", "seconds": 200.0, "ones": [12.34] },
+      "result": { "version": 5, "error": "MemoryError", "reason": "memory", "seconds": 41.7 },
+      "listed": {
+        "id": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "name": "Sin memoria",
+        "state": "failed",
+        "seconds": 200.0,
+        "ones": [12.34],
+        "failure": { "reason": "memory", "seconds": 41.7 }
+      },
+      "again": 204
+    },
+    {
+      "case": "failed, a checkpoint missing or changed",
+      "song": { "id": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2", "name": "Sin modelo", "seconds": 21.5, "ones": [] },
+      "result": { "version": 5, "error": "RuntimeError", "reason": "model", "seconds": 0.4 },
+      "listed": {
+        "id": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+        "name": "Sin modelo",
+        "state": "failed",
+        "seconds": 21.5,
+        "ones": [],
+        "failure": { "reason": "model", "seconds": 0.4 }
+      },
+      "again": 204
+    },
+    {
+      "case": "failed, the stored sound cannot be read",
+      "song": { "id": "a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3", "name": "Sin sonido", "seconds": 20.0, "ones": [] },
+      "result": { "version": 5, "error": "ValueError", "reason": "sound", "seconds": 0.0 },
+      "listed": {
+        "id": "a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3",
+        "name": "Sin sonido",
+        "state": "failed",
+        "seconds": 20.0,
+        "ones": [],
+        "failure": { "reason": "sound", "seconds": 0.0 }
+      },
+      "again": 204
+    },
+    {
+      "case": "failed, anything else",
+      "song": { "id": "a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4", "name": "Otra cosa", "seconds": 20.0, "ones": [] },
+      "result": { "version": 5, "error": "IndexError", "reason": "other", "seconds": 62.0 },
+      "listed": {
+        "id": "a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+        "name": "Otra cosa",
+        "state": "failed",
+        "seconds": 20.0,
+        "ones": [],
+        "failure": { "reason": "other", "seconds": 62.0 }
+      },
+      "again": 204
+    },
+    {
+      "case": "failed before this contract: no reason and no seconds were kept",
+      "song": { "id": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5", "name": "De antes", "seconds": 20.0, "ones": [] },
+      "result": { "version": 5, "error": "MemoryError" },
+      "listed": {
+        "id": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+        "name": "De antes",
+        "state": "failed",
+        "seconds": 20.0,
+        "ones": [],
+        "failure": { "reason": "other", "seconds": null }
+      },
+      "again": 204
+    },
+    {
+      "case": "failed, with a reason that is not one of the four",
+      "song": { "id": "a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6", "name": "Sin nombre", "seconds": 20.0, "ones": [] },
+      "result": { "version": 5, "error": "OSError", "reason": "disk", "seconds": 1.5 },
+      "listed": {
+        "id": "a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6",
+        "name": "Sin nombre",
+        "state": "failed",
+        "seconds": 20.0,
+        "ones": [],
+        "failure": { "reason": "other", "seconds": 1.5 }
+      },
+      "again": 204
+    },
+    {
+      "case": "failed by an older version of the analysis: it waits, as it does today",
+      "song": { "id": "a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7", "name": "Version vieja", "seconds": 20.0, "ones": [] },
+      "result": { "version": 4, "error": "MemoryError", "reason": "memory", "seconds": 41.7 },
+      "listed": { "id": "a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7", "name": "Version vieja", "state": "waiting", "seconds": 20.0, "ones": [] },
+      "again": 409
+    },
+    {
+      "case": "waiting: never analysed",
+      "song": { "id": "a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8", "name": "En cola", "seconds": 20.0, "ones": [] },
+      "result": null,
+      "listed": { "id": "a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8", "name": "En cola", "state": "waiting", "seconds": 20.0, "ones": [] },
+      "again": 409
+    }
+  ]
+}
