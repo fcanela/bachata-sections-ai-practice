@@ -9,6 +9,8 @@
     PATCH  /api/songs/<id>          a new name: ?name=...
     PUT    /api/songs/<id>/ones     the beat at ?at=<seconds> is count 1
     DELETE /api/songs/<id>/ones     it no longer is
+    DELETE /api/songs/<id>/result   try again: the result of an analysis that failed is thrown
+                                    away, and the song waits. 409 unless the song has failed
     DELETE /api/songs/<id>          a deletion
 
 An upload is plain samples: 16 bits, little-endian, left and right in turn, at 44.1 kHz,
@@ -32,7 +34,7 @@ from starlette.responses import FileResponse, PlainTextResponse, Response
 from starlette.routing import Route
 
 from bachata.analysis import ANALYSIS_VERSION
-from bachata.queue import Queue
+from bachata.queue import Queue, failure_of
 from bachata.store import (
     BYTES_PER_FRAME,
     LIBRARY_LIMIT_BYTES,
@@ -185,15 +187,20 @@ def create_app(data, analyse=None, version=ANALYSIS_VERSION, limit=LIBRARY_LIMIT
     queue = Queue(store, analyse, version)
 
     def shown(song):
-        return {
+        state = queue.state(song)
+        listed = {
             "id": song["id"],
             "name": song["name"],
-            "state": queue.state(song),
+            "state": state,
             "seconds": round(song["frames"] / RATE, 1),
             # The beats the user said are count 1, as times. The list is asked for every
             # two seconds, so every browser learns of a change.
             "ones": song["ones"],
         }
+        if state == "failed":
+            # Why, and after how long. The name of the exception stays in the library.
+            listed["failure"] = failure_of(song["result"])
+        return listed
 
     def song_id_of(request):
         song_id = request.path_params["id"]
@@ -299,6 +306,19 @@ def create_app(data, analyse=None, version=ANALYSIS_VERSION, limit=LIBRARY_LIMIT
             raise Refused(404, "No such song")
         return Response(status_code=204)
 
+    async def try_again(request):
+        if not from_own_page(request):
+            raise Refused(403, "Not from the application's own page")
+        song = song_of(request)
+        # The store looks again before it removes: of two browsers that ask at once, one
+        # finds nothing to throw away, and a song that is ready by then keeps its result.
+        if queue.state(song) != "failed" or not store.discard_failure(song["id"]):
+            if store.song(song["id"]) is None:
+                raise Refused(404, "No such song")
+            raise Refused(409, "The song has not failed")
+        queue.wake()
+        return Response(status_code=204)
+
     @contextlib.asynccontextmanager
     async def lifespan(app):
         queue.start()
@@ -314,6 +334,7 @@ def create_app(data, analyse=None, version=ANALYSIS_VERSION, limit=LIBRARY_LIMIT
         Route("/api/songs/{id}/ones", set_one, methods=["PUT", "DELETE"]),
         Route("/api/songs/{id}/sound", sound),
         Route("/api/songs/{id}/result", result),
+        Route("/api/songs/{id}/result", try_again, methods=["DELETE"]),
     ]
     app = Starlette(
         routes=routes, exception_handlers={Refused: refused, 404: not_found, 405: not_found}, lifespan=lifespan

@@ -1,10 +1,12 @@
 import http.client
+import json
 import os
 import re
 import socket
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -16,6 +18,9 @@ from bachata.store import RATE
 
 ID_A, ID_B = "a" * 32, "b" * 32
 OWN_PAGE = {"Origin": "http://127.0.0.1", "Sec-Fetch-Site": "same-origin"}
+
+# The example the server and the page are both tested against.
+EXAMPLE = json.loads((Path(__file__).parent.parent / "fixtures" / "failed_songs.json").read_text())
 
 # Written out here, and not read from the program: a header taken out of the program
 # must make these tests fail.
@@ -59,6 +64,9 @@ class Program:
 
     def delete(self, song_id=ID_A, headers=OWN_PAGE):
         return self.client.delete(f"/api/songs/{song_id}", headers=headers)
+
+    def again(self, song_id=ID_A, headers=OWN_PAGE):
+        return self.client.delete(f"/api/songs/{song_id}/result", headers=headers)
 
     def set_one(self, at, song_id=ID_A, on=True, headers=OWN_PAGE):
         send = self.client.put if on else self.client.delete
@@ -145,6 +153,10 @@ def test_everything_else_is_a_404(program):
         ("GET", "/fonts/"),
         ("GET", "/fonts/hind-500.woff2/x"),
         ("GET", f"/api/songs/{ID_A}/sound/more"),
+        ("DELETE", f"/api/songs/{ID_A}/result/more"),
+        ("DELETE", f"/api/songs/{ID_A}/sound"),
+        ("POST", f"/api/songs/{ID_A}/result"),
+        ("PUT", f"/api/songs/{ID_A}/result"),
     ]:
         answer = program.client.request(method, path)
         assert (answer.status_code, answer.text) == (404, "Not found\n"), (method, path)
@@ -388,6 +400,280 @@ def test_the_queue_runs_by_itself_when_the_program_runs(tmp_path):
         assert client.get(f"/api/songs/{ID_A}/result").json()["beats"] == [1.0, 1.5, 1.0]
 
 
+# Why an analysis failed, and trying again
+
+
+def a_library(data, songs):
+    """The songs of the example on disk, as the library stores them, in the order given."""
+    for place, each in enumerate(songs):
+        song, folder = each["song"], data / "songs" / each["song"]["id"]
+        folder.mkdir(parents=True)
+        frames = song["seconds"] * RATE
+        assert frames == int(frames), each["case"]
+        kept = {"id": song["id"], "name": song["name"], "frames": int(frames), "added": place + 1, "ones": song["ones"]}
+        (folder / "song.json").write_text(json.dumps(kept))
+        with open(folder / "sound.raw", "wb") as sound:
+            sound.truncate(int(frames) * 4)
+        if each["result"] is not None:
+            (folder / "result.json").write_text(json.dumps(each["result"]))
+
+
+def test_the_songs_of_the_example_are_listed_and_tried_again_as_it_says(tmp_path):
+    songs = EXAMPLE["songs"]
+    assert [each["again"] for each in songs] == [409, 204, 204, 204, 204, 204, 204, 409, 409]
+    data = tmp_path / "data"
+    a_library(data, songs)
+    program = Program(data, version=EXAMPLE["version"])
+    expected = [each["listed"] for each in songs]
+    assert program.get("/api/songs").json() == expected
+    for each in songs:
+        assert program.get(f"/api/songs/{each['song']['id']}").json() == each["listed"], each["case"]
+
+    def on_disk():
+        return {str(path.relative_to(data)): path.read_bytes() for path in data.rglob("*") if path.is_file()}
+
+    for place, each in enumerate(songs):
+        song_id, before = each["song"]["id"], on_disk()
+        answer = program.again(song_id)
+        assert answer.status_code == each["again"], each["case"]
+        if each["again"] == 204:
+            assert answer.content == b""
+            # It waits, with no failure, and nothing else of it changed.
+            assert "failure" in expected[place]
+            expected[place] = {key: value for key, value in each["listed"].items() if key != "failure"} | {"state": "waiting"}
+            # Only its result is gone from the disk.
+            del before[f"songs/{song_id}/result.json"]
+        else:
+            assert answer.text == "The song has not failed\n"
+        assert program.get("/api/songs").json() == expected, each["case"]
+        assert program.get(f"/api/songs/{song_id}").json() == expected[place], each["case"]
+        assert on_disk() == before, each["case"]
+        # And it is so after a restart.
+        assert Program(data, version=EXAMPLE["version"]).get("/api/songs").json() == expected, each["case"]
+
+    assert [(song["state"], "failure" in song) for song in expected] == [("ready", False)] + [("waiting", False)] * 8
+    # Asked a second time, none of them has failed.
+    for each in songs:
+        assert program.again(each["song"]["id"]).status_code == 409, each["case"]
+    assert program.get(f"/api/songs/{songs[0]['song']['id']}/result").json()["beats"] == [1.0, 1.5, 2.0]
+
+
+def test_a_song_of_the_example_is_listed_alone_as_among_the_others(tmp_path):
+    # Whether a song has `failure` comes from that song and not from its neighbours.
+    for place, each in enumerate(EXAMPLE["songs"]):
+        data = tmp_path / str(place)
+        a_library(data, [each])
+        program = Program(data, version=EXAMPLE["version"])
+        assert program.get("/api/songs").json() == [each["listed"]], each["case"]
+        assert ("failure" in each["listed"]) is (each["listed"]["state"] == "failed")
+        assert program.again(each["song"]["id"]).status_code == each["again"], each["case"]
+
+
+def test_a_failed_song_says_why_and_after_how_long_and_no_other_song_does(tmp_path, capsys):
+    def fails(samples, rate):
+        if samples[0, 0] == 13:
+            raise MemoryError("the text of the exception")
+        return analyse(samples, rate)
+
+    program = Program(tmp_path / "data", analyse=fails)
+    program.put(ID_A, name="Ready")
+    program.put(ID_B, a_song(first=13), name="Failed")
+    program.put("c" * 32, a_song(first=3), name="Waiting")
+    program.analyse_one(), program.analyse_one()
+    failed = {"id": ID_B, "name": "Failed", "state": "failed", "seconds": 20.0, "ones": [], "failure": {"reason": "memory", "seconds": 0.0}}
+    assert program.get(f"/api/songs/{ID_B}").json() == failed
+    assert program.get("/api/songs").json() == [
+        {"id": ID_A, "name": "Ready", "state": "ready", "seconds": 20.0, "ones": []},
+        failed,
+        {"id": "c" * 32, "name": "Waiting", "state": "waiting", "seconds": 20.0, "ones": []},
+    ]
+    # What the exception was called and what it said stay in the library and in the log.
+    assert json.loads((tmp_path / "data" / "songs" / ID_B / "result.json").read_text())["error"] == "MemoryError"
+    assert "the text of the exception" in capsys.readouterr().err
+    for path in ("/api/songs", f"/api/songs/{ID_B}", f"/api/songs/{ID_B}/result"):
+        assert "MemoryError" not in program.get(path).text and "the text" not in program.get(path).text
+
+
+def test_a_failed_song_is_tried_again_and_keeps_everything_but_its_failure(tmp_path, capsys):
+    tries = []
+
+    def fails_once(samples, rate):
+        tries.append(int(samples[0, 0]))
+        if tries.count(13) == 1 and samples[0, 0] == 13:
+            raise RuntimeError("this song cannot be analysed")
+        return {"beats": [1.0, 1.5, float(samples[0, 0])], "bpm": [120.0, 120.0, 120.0], "bar": [1, 2, 3], "count": [1, 2, 3]}
+
+    program = Program(tmp_path / "data", analyse=fails_once)
+    program.put(ID_A, name="First")
+    program.put(ID_B, a_song(first=13), name="Failed")
+    program.analyse_one(), program.analyse_one()
+    program.put("c" * 32, a_song(first=3), name="Arrived later")
+    assert program.set_one("12.34", ID_B).status_code == 204
+    assert program.listed() == [("First", "ready"), ("Failed", "failed"), ("Arrived later", "waiting")]
+    song_file = tmp_path / "data" / "songs" / ID_B / "song.json"
+    before = song_file.read_bytes()
+
+    done = program.again(ID_B)
+    assert (done.status_code, done.content) == (204, b"")
+    waiting = {"id": ID_B, "name": "Failed", "state": "waiting", "seconds": 20.0, "ones": [12.34]}
+    assert program.get(f"/api/songs/{ID_B}").json() == waiting
+    assert program.listed() == [("First", "ready"), ("Failed", "waiting"), ("Arrived later", "waiting")]
+    assert program.get(f"/api/songs/{ID_B}/sound").content == a_song(first=13).tobytes()
+    assert song_file.read_bytes() == before
+    assert files_under(tmp_path / "data" / "songs" / ID_B) == ["song.json", "sound.raw"]
+    # Nothing was analysed by the request itself, and after a restart the song still waits.
+    assert tries == [1, 13]
+    assert Program(tmp_path / "data").get(f"/api/songs/{ID_B}").json() == waiting
+
+    # It is analysed before the song that arrived after it.
+    assert program.analyse_one() is True
+    assert tries == [1, 13, 13]
+    assert program.get(f"/api/songs/{ID_B}").json() == waiting | {"state": "ready"}
+    assert program.listed() == [("First", "ready"), ("Failed", "ready"), ("Arrived later", "waiting")]
+    assert program.get(f"/api/songs/{ID_B}/result").json()["beats"] == [1.0, 1.5, 13.0]
+
+
+def test_only_a_song_that_has_failed_is_tried_again(tmp_path, capsys):
+    seen = []
+
+    def asks_meanwhile(samples, rate):
+        # The song that is being analysed, asked for by a page.
+        current = ID_A if samples[0, 0] == 1 else ID_B
+        seen.append((program.get(f"/api/songs/{current}").json(), program.again(current)))
+        return analyse(samples, rate)
+
+    program = Program(tmp_path / "data", analyse=asks_meanwhile)
+    missing = program.again(ID_A)
+    assert (missing.status_code, missing.text) == (404, "No such song\n")
+
+    program.put(ID_A)
+    program.put(ID_B, a_song(first=13))
+    refusal = (409, "The song has not failed\n")
+    waiting = program.again(ID_A)
+    assert (waiting.status_code, waiting.text) == refusal
+    assert program.listed() == [("A song", "waiting"), ("A song", "waiting")]
+
+    program.analyse_one()
+    ready = program.again(ID_A)
+    assert (ready.status_code, ready.text) == refusal
+    # A song that is ready keeps its result.
+    assert program.listed() == [("A song", "ready"), ("A song", "waiting")]
+    assert program.get(f"/api/songs/{ID_A}/result").json()["beats"] == [1.0, 1.5, 1.0]
+    assert Program(tmp_path / "data").get(f"/api/songs/{ID_A}/result").status_code == 200
+
+    program.analyse_one()
+    assert program.listed() == [("A song", "ready"), ("A song", "failed")]
+    assert program.again(ID_B).status_code == 204
+    program.analyse_one()
+    # While each was analysed it had no failure, and could not be tried again.
+    assert len(seen) == 3
+    for song, answer in seen:
+        assert (song["state"], "failure" in song) == ("analysing", False)
+        assert (answer.status_code, answer.text) == refusal
+
+
+def test_a_song_tried_again_twice_waits_once_and_fails_again_as_before(tmp_path, capsys):
+    analysed = []
+    program = Program(tmp_path / "data", analyse=lambda samples, rate: analysed.append(1) or analyse(samples, rate))
+    program.put(ID_A, a_song(first=13))
+    program.analyse_one()
+    assert program.again().status_code == 204
+    second = program.again()
+    assert (second.status_code, second.text) == (409, "The song has not failed\n")
+    assert program.analyse_one() is True
+    # One analysis for the two requests.
+    assert program.analyse_one() is False
+    assert analysed == [1, 1]
+    # It failed again in between: now it may be tried again.
+    assert program.get(f"/api/songs/{ID_A}").json()["failure"] == {"reason": "other", "seconds": 0.0}
+    assert program.again().status_code == 204
+    assert program.listed() == [("A song", "waiting")]
+
+
+def test_two_browsers_that_try_again_at_once_start_one_analysis(tmp_path, capsys):
+    program = Program(tmp_path / "data")
+    program.put(ID_A, a_song(first=13))
+    program.analyse_one()
+    discard = program.app.store.discard_failure
+
+    def the_other_was_faster(song_id):
+        # Both saw the song failed. The other one threw the failure away first.
+        assert discard(song_id) is True
+        return discard(song_id)
+
+    program.app.store.discard_failure = the_other_was_faster
+    late = program.again()
+    assert (late.status_code, late.text) == (409, "The song has not failed\n")
+    assert program.listed() == [("A song", "waiting")]
+
+
+def test_a_song_deleted_while_it_is_tried_again_is_no_such_song(tmp_path, capsys):
+    program = Program(tmp_path / "data")
+    program.put(ID_A, a_song(first=13))
+    program.analyse_one()
+    discard = program.app.store.discard_failure
+
+    def deleted_meanwhile(song_id):
+        assert program.app.store.delete(song_id) is True
+        return discard(song_id)
+
+    program.app.store.discard_failure = deleted_meanwhile
+    gone = program.again()
+    assert (gone.status_code, gone.text) == (404, "No such song\n")
+    assert files_under(tmp_path) == []
+
+
+def test_a_failed_song_is_not_analysed_again_by_itself(tmp_path, capsys):
+    analysed = []
+    settings = {"analyse": lambda samples, rate: analysed.append(1) or analyse(samples, rate)}
+    program = Program(tmp_path / "data", **settings)
+    program.put(ID_A, a_song(first=13))
+    program.analyse_one()
+    failed = program.get(f"/api/songs/{ID_A}").json()
+    assert failed["state"] == "failed"
+    # Not a second time right after the failure, and not at a restart.
+    assert program.analyse_one() is False
+    program = Program(tmp_path / "data", **settings)
+    assert program.analyse_one() is False
+    assert program.get(f"/api/songs/{ID_A}").json() == failed
+    assert analysed == [1]
+    # With a new version of the analysis it is, as before.
+    program = Program(tmp_path / "data", version=ANALYSIS_VERSION + 1, **settings)
+    assert program.get(f"/api/songs/{ID_A}").json() == {key: value for key, value in failed.items() if key != "failure"} | {"state": "waiting"}
+    assert program.analyse_one() is True
+
+
+def test_the_running_queue_is_woken_by_a_song_that_is_tried_again(tmp_path, capsys):
+    tries = []
+
+    def fails_once(samples, rate):
+        tries.append(1)
+        if len(tries) == 1:
+            raise RuntimeError("this song cannot be analysed")
+        return analyse(samples, rate)
+
+    app = create_app(tmp_path / "data", analyse=fails_once)
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+
+        def state_becomes(state):
+            for _ in range(100):
+                if client.get(f"/api/songs/{ID_A}").json()["state"] == state:
+                    return True
+                time.sleep(0.05)
+            return False
+
+        body = a_song().tobytes()
+        query = {"name": "A song", "rate": RATE, "frames": len(body) // 4}
+        assert client.put(f"/api/songs/{ID_A}", params=query, content=body, headers=OWN_PAGE).status_code == 201
+        assert state_becomes("failed")
+        # The queue sleeps now: nothing waits.
+        time.sleep(0.2)
+        assert tries == [1]
+        assert client.delete(f"/api/songs/{ID_A}/result", headers=OWN_PAGE).status_code == 204
+        assert state_becomes("ready")
+        assert tries == [1, 1]
+
+
 # What is refused
 
 
@@ -443,6 +729,18 @@ def test_a_renaming_that_is_not_from_the_own_page_is_refused(program, headers):
 
 
 @pytest.mark.parametrize("headers", NOT_THE_OWN_PAGE)
+def test_trying_again_that_is_not_from_the_own_page_is_refused(program, capsys, headers):
+    program.put(ID_A, a_song(first=13))
+    program.analyse_one()
+    # Refused before anything else is looked at: the id, the song, its state.
+    for song_id in (ID_A, ID_B, "not-an-id"):
+        answer = program.again(song_id, headers=headers)
+        assert (answer.status_code, answer.text) == (403, "Not from the application's own page\n")
+    assert program.listed() == [("A song", "failed")]
+    assert program.analyse_one() is False
+
+
+@pytest.mark.parametrize("headers", NOT_THE_OWN_PAGE)
 def test_a_count_1_that_is_not_from_the_own_page_is_refused(program, headers):
     program.put(ID_A)
     assert program.set_one("2.5").status_code == 204
@@ -456,6 +754,7 @@ def test_the_own_page_may_use_either_name_of_the_program(program):
     localhost = {"Host": "localhost:8080", "Origin": "http://localhost:8080", "Sec-Fetch-Site": "same-origin"}
     assert program.put(ID_A, headers=localhost).status_code == 201
     assert program.rename(ID_A, headers=localhost).status_code == 204
+    assert program.again(ID_A, headers=localhost).status_code == 409
     assert program.delete(ID_A, headers=localhost).status_code == 204
     # Firefox sends no Sec-Fetch-Site to a page that is not served securely.
     assert program.put(ID_A, headers={"Origin": "http://127.0.0.1"}).status_code == 201
@@ -545,6 +844,8 @@ def test_a_song_id_that_is_not_well_formed_is_refused(program, tmp_path, song_id
     assert (rename.status_code, rename.text) == refused
     delete = program.delete(song_id)
     assert (delete.status_code, delete.text) == refused
+    again = program.again(song_id)
+    assert (again.status_code, again.text) == refused
     assert files_under(tmp_path) == []
 
 
@@ -614,7 +915,14 @@ def test_stored_sound_is_sent_as_sound_data_and_never_as_a_page(program):
 
 def test_every_answer_has_the_security_headers(program):
     program.put(ID_A)
+    program.put("d" * 32, a_song(first=13))
+    program.analyse_one(), program.analyse_one()
     answers = [
+        program.again("d" * 32, headers={}),
+        program.again("d" * 32),
+        program.again("d" * 32),
+        program.again("c" * 32),
+        program.again("not-an-id"),
         program.get("/"),
         program.get("/app.js"),
         program.get("/nothing"),
