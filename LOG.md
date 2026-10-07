@@ -2,6 +2,72 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-08, session 12: why an analysis failed, and "Try again", built by two workers and joined
+
+A failed song now says why it failed and for how long the analysis ran, and "Try again" in its row has it analysed again without deleting it. It was built from `CONTRACT.md` by two workers that did not speak to each other, each in a work folder and on a branch of its own, and joined on `master` by an integrator. The base of both branches is `4390edf`.
+
+**Not accepted yet.** The whole run had one failure, in a test of another part, and the checks of this part were not seen to fail: the `break-on-purpose` skill was not run, because the owner asks for it himself after the workflow. `CONTRACT.md` therefore stays.
+
+**The integrator ran twice.** The owner stopped the first one on purpose, as an exercise of his course, and had the workflow launched again. What the first one left is on the branch `integrator-stopped`, at `4db1e67`: its two merges and its test of the flow. `master` was put back to `4390edf` before the second one started. The second one checked the join again, merged again, and took the test of the flow from `4db1e67` with `git cherry-pick`, after reading it: it was not written a second time. The two workers were not run again. What the first integrator had changed and not committed was kept by the owner's session outside the repository and was not read here.
+
+### The six decisions of `CONTRACT.md`, by the owner on 2026-10-08
+
+1. **Why.** The server sorts every failure into one of four reasons, `memory`, `model`, `sound` and `other`. The page has a sentence of its own for each. The text of the exception and its traceback stay in the server's log and are not sent.
+2. **The request.** `DELETE /api/songs/<id>/result`, for a failed song only.
+3. **By itself, never.** A failed song is analysed again only when the page asks, or when the version of the analysis changes. Not at a restart, and not a second time right after the failure.
+4. **Also kept: how long the analysis ran** before it failed. No count of tries and no date.
+5. **A contract file**, with the example in `fixtures/failed_songs.json`, until the work is built.
+6. **A work folder and a branch for each worker**, `wt/server` on `server` and `wt/page` on `page`, both from the same commit. The course the owner follows requires it.
+
+`ANALYSIS_VERSION` stays 5: no stored song is analysed again because of this work.
+
+### Runs
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| The join, from git: `git merge-base master server`, `git merge-base master page`, `git rev-parse master` | All three `4390edf` | under 1 s |
+| `git diff --name-only 4390edf server` and the same for `page` | Seven paths under `bachata/` and four under `web/` and `e2e/`, none in both, every one in its worker's box of the contract. `git status --short` empty in both folders | under 1 s |
+| `git diff 4390edf server -- CONTRACT.md fixtures/failed_songs.json`, and for `page` | Nothing printed | under 1 s |
+| In `wt/server`, inside the sandbox, at `79ca61d`: `BACHATA_TEST_PORT=8087 .venv/bin/python -m pytest -q -p no:cacheprovider bachata/queue_test.py bachata/store_test.py bachata/server_test.py` | 148 passed. The server's test of the example is among them | 3.9 s |
+| In `wt/page`, inside the sandbox, at `1e2227e`: `node --test web/` | 38 passed | under 1 s |
+| In `wt/page`, inside the sandbox: `TMPDIR=/tmp/claude-1000/e2e-b BACHATA_TEST_PORT=8088 .venv/bin/python -m pytest -q -p no:cacheprovider e2e/page_test.py -k "test_every_song_of_the_example or test_try_again_says_nothing"` | 2 passed in Firefox, 2 skipped: Chrome does not start inside the sandbox | 13 s |
+| From the main folder: `git merge --no-ff server`, then `git merge --no-ff page` | `0f28ebb` and `b7db610`, no conflict | under 1 s |
+| `git cherry-pick 4db1e67`, the first integrator's test of the flow | `6eb63a8`, in `e2e/page_test.py` alone. The tree is then the tree of `integrator-stopped` | under 1 s |
+| `grep -n "ANALYSIS_VERSION = " bachata/*.py` | `bachata/analysis.py:41:ANALYSIS_VERSION = 5` | under 1 s |
+| A search for "delete the song and add the file again" in every file of the main folder | In `CONTRACT.md`, where it names what the reason replaces, in this log, and in the workflow's script under `.claude/workflows/`, which git does not see. In no file of `bachata/`, `web/`, `e2e/` or `fixtures/` | under 1 s |
+| `torch.OutOfMemoryError` in the installed torch, 2.14.1+cpu | It is there, a subclass of `RuntimeError` | 2 s |
+| The whole run, on `master` at `6eb63a8`, outside the sandbox, which the owner's session allowed: `TMPDIR=/tmp/claude-1000/e2e-i BACHATA_TEST_PORT=8089 .venv/bin/python -m pytest` | **1 failed, 315 passed, none skipped**, of 316. Failed: `test_an_opus_file_is_taken_like_an_mp3_or_an_m4a` in Chrome. A second visitor picks the same opus file, and the page still said "Reading track02.opus…" and then nothing after 5 s, where "This song is already in the library." was expected. The same test passed in Firefox. The test of the flow passed in Chrome and in Firefox, and so did every other test of this work | 1251 s |
+| That one test again, alone, outside the sandbox, three times: `... -m pytest -q -p no:cacheprovider e2e/page_test.py -k "test_an_opus_file_is_taken_like_an_mp3_or_an_m4a and chrome"` | 1 passed each time. The changes of this work to `web/app.js` do not touch the message beside "Add a song". Not repaired: the fault is not where the two sides meet. Whether it is the 5 s the test gives Chrome to read the file again, late in a run of 20 minutes, was not measured | 13 s each |
+| The whole run a second time | **Not run**: the integrator's 40 minutes did not leave the 20 it takes | |
+| The checks seen to fail: the `break-on-purpose` skill on this part | **Not run.** The owner asks for it after the workflow | |
+
+**What the workers said they ran**, not run again here beyond the rows above. Worker A, 7 minutes: 21 breaks of its own by hand in `queue.py`, `store.py`, `server.py` and `model.py`, each made a test fail. Worker B, 9 minutes: its three tests of the page outside the sandbox, 6 passed in Chrome and Firefox, and five breaks of `web/app.js` by hand, each made a Firefox test fail. Neither is the `break-on-purpose` skill.
+
+### The test of the flow
+
+`test_a_song_that_failed_before_the_program_started_is_tried_again_and_keeps_its_id_its_place_and_its_count_1`, in `e2e/page_test.py`, in Chrome and in Firefox. Nothing in it is answered by the test. A library of three songs is written to disk before the program starts: one ready, one that failed for memory after 41.7 s with a count 1 set by hand at 9.25 s, and one that failed after it. The program starts on it and tries none by itself. The row says `0:24, failed after 0:42` and "The analysis ran out of memory.". "Try again" is pressed, one `DELETE` goes out, the real analysis runs, and the song is ready: the same id, the same place between the other two, `ones` still `[9.25]`, `song.json` of all three byte for byte as before, and a `result.json` of version 5 with 44 to 50 beats and no `error`. It does not open by itself. Opened, the beat at 9.25 s is still set by hand. The song after it is still failed.
+
+The version is written in the test as the number 5: with another `ANALYSIS_VERSION` the program would analyse the failed songs by itself and the test would fail at its first look at the list.
+
+### Decisions
+
+**Settled by the contract or by the code**, of what the workers left open:
+
+- **A model failure is stored with `"error": "Checkpoint"`** from now on: `bachata.model.Checkpoint`, a subclass of `RuntimeError` that `bachata/model.py` raises. Song `a2` of the example has `"RuntimeError"`, and is still read as it says: `error` is never sent.
+- **`memory` is told without importing torch**: Python's `MemoryError`, a class named `OutOfMemoryError` among the exception's classes, or a `RuntimeError` whose text has "allocate memory", "out of memory" or "not enough memory". The installed torch has the class. No real failure for memory was provoked.
+- **`sound` is told by where it failed**: any exception while the queue reads the samples, a `MemoryError` there included. The contract: "reading `sound.raw` failed, before the analysis was called".
+- **A checkpoint that passes the check of `bachata/model.py` and then fails to load is `other`.** The contract: "what `bachata/model.py` raises".
+- **`seconds` of a failure is measured from before the sound is read**, as for a success. A `sound` failure has about 0.0.
+- **After the state check, a song that is gone answers 404 and one that has no failure 409.** The 403 is checked before the id. Both as the contract's table.
+- **The page reads a failed song with no `failure`, and a `seconds` that is not a finite number, as "not known".** The server sends `seconds` as stored, so a string written by hand in `result.json` reaches the page and is read so.
+- **On 204, 409 and 404 the page asks for the list again and says nothing.** A second press while the first is out gets 409 and is silent.
+
+**Left to the owner**: the list is in `NEXT.md`, under "Why an analysis failed, and Try again".
+
+### Cost
+
+Nothing was downloaded, and nothing went over the network. The owner's library, `data/`, was not read or written by any check.
+
 ## 2026-10-07 and 08, session 11: the song in plates, built twice, a critique of the page, and the merge
 
 The lower view of the page shows a plate for each bar now, and no longer a mark for each beat. It is on `master` since 2026-10-08, merged from the branch `bars-xhigh` at `cbd2241`, with three changes a critique of the page led to. The records were not touched in the work folder: they are written here, at the merge, from the notes kept there, `wt/bars-xhigh/NOTES-for-records.md`.

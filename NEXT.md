@@ -2,7 +2,41 @@
 
 Rewritten at the end of every session.
 
-## Where things stand (2026-10-08, session 11)
+## Where things stand (2026-10-08, session 12)
+
+A failed song says why it failed and for how long the analysis ran, and "Try again" in its row has it analysed again without deleting it. It is on `master` since 2026-10-08, merged from the branches `server` and `page`. **It is built and not accepted yet**: the whole run had one failure, in a test of another part, and its checks were not seen to fail. `LOG.md`, session 12, has the figures, and `ACCEPTANCE.md` the items, under slice 5.
+
+- **How it was built.** From `CONTRACT.md`, which has the owner's six decisions and an example both sides test against, `fixtures/failed_songs.json`. Worker A built the server and the queue in `wt/server`, worker B the page in `wt/page`, at the same time and with no word between them. An integrator checked the join from git, merged both with a merge commit each, `0f28ebb` and `b7db610`, and added one test through the real program, the real page and the real analysis.
+- **What it is.**
+  - The queue stores a failure with a reason, `memory`, `model`, `sound` or `other`, and the seconds the analysis ran.
+  - The list sends them as `failure`, for a failed song only.
+  - `DELETE /api/songs/<id>/result` throws a failed result away, and the song waits again with its id, its name, its place and its count 1s.
+  - The row says `3:20, failed after 0:42`, a sentence for the reason, and has "Try again".
+  - A failed song is never tried again by itself.
+  - `ANALYSIS_VERSION` is still 5.
+- **The whole run on `master` after the merge:** 316 tests, 315 passed, 1 failed, none skipped, in 1251 s, where it took 1113 s for 256 in session 11. The one failure is `test_an_opus_file_is_taken_like_an_mp3_or_an_m4a` in Chrome: a file picked a second time was still being read after 5 s. It is a test of adding a song, which this work does not change, and it passed three times of three when run alone afterwards. Every test of this work passed, the flow through the real program in Chrome and in Firefox among them.
+- **Left before `CONTRACT.md` can be deleted and the work is accepted:**
+  1. **The checks seen to fail**: the `break-on-purpose` skill on this part. Not run: the owner asks for it after the workflow. It writes files back from the last commit, so it starts from a clean tree.
+  2. **A whole run with no failure**, outside the sandbox: `TMPDIR=/tmp/claude-1000/e2e-i BACHATA_TEST_PORT=8089 .venv/bin/python -m pytest`, about 21 minutes now. If the opus test in Chrome fails again, it is a fault of its own to look into: the 5 s it waits for the message.
+  3. Then `CONTRACT.md` is deleted, and with it the last place outside the records where "delete the song and add the file again" is written. The example, `fixtures/failed_songs.json`, stays: tests read it.
+- **The integrator ran twice.** The owner stopped the first on purpose, as an exercise of his course. What it left is on the branch `integrator-stopped`, at `4db1e67`: `master` has the same files, by merges of its own and by that branch's test of the flow, taken with `git cherry-pick`.
+
+#### Why an analysis failed, and "Try again": for the owner
+
+- **The four sentences are yours to word.** As built: "The analysis ran out of memory.", "A file the analysis needs is missing or was changed.", "The stored sound could not be read.", "The analysis failed.".
+- **Should the sentence for `sound` say to delete the song and add the file?** A sound that cannot be read fails again, and the button is there all the same.
+- **Is the nearest second right for "failed after"?** 41.7 s reads `0:42`. The rest of the page cuts to the second below, so the two are not one rule.
+- **What should a failure of under half a second say?** It reads `failed after 0:00` now: a sound that cannot be read, a missing checkpoint.
+- **Is "<name> could not be tried again." the line you want** when the server answers something else, or is not reached? It stays under the reason until the next press of Try again, Rename or Delete.
+- **On 404 the page says nothing**: the row goes at the next list, as for a deletion from another browser. Is that enough?
+- **When "Try again" had the keyboard and goes with the failure, the keyboard is put on Rename of the same row.** Is that the place?
+- **"Try again" is not shown while the row asks "Delete this song?" or while its name is typed**, as Open, Rename and Delete are not.
+- **A `RuntimeError` of any origin that says "out of memory" is sorted as `memory`.** Is that acceptable? No real failure for memory was provoked: the tests use Python's `MemoryError`, torch's text and a stand-in class.
+- **A process the system kills for memory writes no failure.** The song waits again at the next start and is tried again by itself. Only a failure Python gets to see becomes `memory`.
+- **Song `a2` of the example has `"error": "RuntimeError"`**, and the queue now writes `"Checkpoint"` for that case. It is read the same. Should the example say what is written today?
+- **Three branches beside `master` from this task**, `server`, `page` and `integrator-stopped`, kept with the two folders.
+
+Before that, in session 11:
 
 The lower view of the page is in plates, one for each bar, and it is on `master` since 2026-10-08. The owner accepted it. A critique of the page followed the same day, and three changes it led to are merged with it. Every check a program can run passed on the branch that was merged: 266 tests, none skipped. No test was run on `master` after the merge. What is open of this work is two commands of the critique that were not run, and what the owner has not yet seen. `LOG.md`, session 11, has the figures.
 
@@ -16,7 +50,7 @@ The lower view of the page is in plates, one for each bar, and it is on `master`
   - **Done: the Space key.** After a press with the pointer on a control of the bar under the song, Space plays and pauses. Before, it pressed the control again, and after "Count 1 here" it took the count back on the server. A control the keyboard went to by itself keeps the key.
   - **Done: the lit bar is yellow on both grounds**, with black type, and in light with a black edge 3 wide inside it. **This departs from `SPEC.md` and from `chosen.png`, by the owner's choice** of 2026-10-08, "Yellow on both grounds": there the lit bar is a black block with a yellow count in light. `bars-high` still has it black.
   - **Done: the bar under the song.** The position control has 20rem at least and is drawn by the page, with a square handle and the marked range on it. Under 1600 wide the bar is two lines on purpose. "Clear" shows only while something is marked. The bar says the length of the song, and the position is on the band alone. The click switch stays in the bar: the owner's answers.
-  - **Done in part: the wait for an analysis.** The row says for how long an analysis has run, when this page saw it start, and what to do when it failed. A song that becomes ready while another sounds does not open: the page says it is ready. A reason for a failure and "Try again" need the server, and are not built.
+  - **Done in part: the wait for an analysis.** The row says for how long an analysis has run, when this page saw it start, and what to do when it failed. A song that becomes ready while another sounds does not open: the page says it is ready. A reason for a failure and "Try again" need the server, and are not built. *Built in session 12: see the top of this file.*
   - **Open: the two canvases cannot be reached with the keyboard or read by a screen reader**, and the count is said at every beat. It is the third of the issues the critique calls major.
   - **Not run: two commands of the critique, `audit` and `polish`.** See "Left open by the critique" below.
 - **For the owner to look at**, none of it confirmed: the black edge of the lit bar in light and its width; the look of the drawn position control; that the bar is two lines from 1600 down; the nine points `SPEC.md` lists under "Not in the picture"; and the numeral on every plate. Pictures are in `wt/bars-xhigh/shots/`.
@@ -129,7 +163,7 @@ The critique of 2026-10-08 is kept in `wt/bars-xhigh/.impeccable/critique/`, whi
 
 - **`audit`, not run.** For the one major issue that is open: the two canvases, `#now` and `#map`, have no role and cannot take the keyboard, and their labels tell the user to press what a keyboard cannot press. The count, an `<output>`, is said by a screen reader at every beat. The position control gives its value as raw seconds. What the critique proposes: labels that describe, the count said once an ocho or not at all, the time in words on the position control, and the song as one stop of Tab where the arrows move by a bar and Shift marks a range. A ring on a canvas has to be black: the yellow of the focus ring is 1.0 to 1 on the band and 1.1 on the light ground.
 - **`polish`, not run.** The last pass. What the critique left for it: weight 600 is asked for in five places of `web/style.css` and only 500 and 700 are served; in dark the band and the lit bar are `#f2c500` while Play, "Add a song" and the focus ring stay `#ffd200`; "Add a song to see its beats." speaks of beats; and the end of a song has no state of its own.
-- **Needs the server, so not built in a branch for the page:** why an analysis failed, and a way to try it again without deleting the song. *Since 2026-10-08 it has a contract between the server and the page, `CONTRACT.md`, with the owner's five answers, an example both sides test against, `fixtures/failed_songs.json`, and how the work is split. Nothing of it is built.*
+- **Needs the server, so not built in a branch for the page:** why an analysis failed, and a way to try it again without deleting the song. *Built in session 12, from `CONTRACT.md`, and not accepted yet: see the top of this file.*
 - **Not tried:** "Add a song" pressed with the pointer still leaves the keyboard on the file control, so Space opens the file window again. Where Tab starts from after a press with the pointer on the bar. The two lines of the message beside "Add a song", in a browser.
 - **The rest of what the critique found**, not asked for: no key for the loop, its ends, "Clear" or count 1; no search in the list; a song's name in the list does not open it; Tab goes through three controls a song before it reaches Play; nothing says the count may be wrong and that "Count 1 here" puts it right; and from three metres nothing says whether the loop is on.
 - **`BRIEF.md`**, under "The interface", says "A beat is a small square, and the one that is sounding gets the large square a sign keeps for its pictogram". That is the large view now. On the song a bar is a plate, and the one that is sounding a yellow block. The brief was not changed: it is the owner's to word.
@@ -286,7 +320,12 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **`split()` never makes a piece for the end of a song alone.** The model refuses a piece under 18 ms, and a piece that only repeats the end of the one before counts twice.
 - **The program checks every checkpoint before it starts.** A file that only some songs need would otherwise fail only those songs.
 - **The watch on what the analysis opens looks at a path as it was asked for and as it is on disk.** In a work folder whose reference is links to the main folder, the second alone sees nothing.
-- **A work folder under `wt/` shares `.venv`, `models`, `.playwright` and the items under `fixtures/audio/` with the main folder through links, and has a copy of `data/`.** Its checks are started from inside it: started from the main folder, a check tests `master`.
+- **A failed song is never analysed again by itself.** Only "Try again" does it, or a new version of the analysis. A test that writes a failure to disk writes the version as a number: with another one the program takes it for an old result and analyses the song.
+- **`failure` is in the list for a failed song and for no other, with `reason` and `seconds` alone.** The name of the exception stays in `result.json` and its text in the server's log. `bachata/server_test.py` compares a whole song with `==`.
+- **`DELETE /api/songs/<id>/result` touches `result.json` and nothing else.** The count 1s set by hand are in `song.json`.
+- **The page's test of the example carries its own list of what each row says**, `EXAMPLE_ROWS` in `e2e/page_test.py`. A change to `fixtures/failed_songs.json` needs that list changed with it.
+- **`memory` is told without importing torch**, by the class's name and by the text. A new wording in torch would be sorted as `other`.
+- **A work folder under `wt/` shares `.venv`, `models`, `.playwright` and the items under `fixtures/audio/` with the main folder through links, and has a copy of `data/`.** `wt/server` and `wt/page` have no copy: no check of theirs reads the library. Its checks are started from inside it: started from the main folder, a check tests `master`.
 - **In the session's sandbox:**
   - `uv` needs `UV_CACHE_DIR` set to a writable folder, and each network host has to be allowed for the command that needs it.
   - Chrome does not start. Playwright's Firefox starts but plays nothing. `uv run pytest` then skips those tests and says so.
@@ -296,7 +335,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
   - A program started inside the sandbox listens on a loopback of its own, which the owner's browser does not reach. For a review it is started outside the sandbox, as the whole test run is. On 2026-10-07 one was started that way on 8083, from `wt/d4-patch`.
   - A command inside the sandbox does not reach a program another command started, either. A picture of the page is taken by one command that starts the program and the browser both.
   - A command in the background is stopped after ten minutes unless it is given longer. The whole run takes fifteen.
-  - A work folder has a port of its own for the whole run: `wt/bars-xhigh` used 8086, with `TMPDIR=/tmp/claude-1000/e2e-x`.
+  - A work folder has a port of its own for the whole run: `wt/bars-xhigh` used 8086, with `TMPDIR=/tmp/claude-1000/e2e-x`. In session 12 `wt/server` used 8087, `wt/page` 8088 with `e2e-b`, and the main folder 8089 with `e2e-i`.
 
 ## Open
 
@@ -384,3 +423,8 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
   - `wt/d4-bars`, branch `d4-bars`, at `11d19ef`: the first attempt at bars, rejected by the owner, not merged.
   - `wt/bars-high`, branch `bars-high`, at `9a7c8bf`: the plates built at high, accepted, not merged. Its notes were not read, and its lit bar is black in light.
   - `wt/bars-xhigh`, branch `bars-xhigh`, at `cbd2241`: the plates built at xhigh, with the three changes after the critique, merged in session 11. It holds `SPEC.md`, `chosen.png`, the pictures in `shots/`, the notes these records were written from, and the critique.
+  - `wt/server`, branch `server`, at `79ca61d`: the server's side of why an analysis failed and "Try again", merged in session 12 at `0f28ebb`. No copy of `data/`.
+  - `wt/page`, branch `page`, at `1e2227e`: the page's side of the same, merged in session 12 at `b7db610`. No copy of `data/`.
+  - No folder, branch `integrator-stopped`, at `4db1e67`: what the first integrator of session 12 left when the owner stopped it. `master` has the same files.
+- **`CONTRACT.md` is for one task and is deleted when that task is accepted.** What is left before that is at the top of this file.
+- **`.claude/workflows/` is not in git**: the script of the workflow of session 12. It was left as it is.
