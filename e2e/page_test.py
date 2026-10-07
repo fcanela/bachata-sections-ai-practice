@@ -901,14 +901,17 @@ def test_a_row_holds_eight_ochos_and_a_short_ocho_moves_the_rest_of_its_row_left
     # plates are 44 wide or wider. The page is never so narrow that four do not fit.
     for width, most in ((1202, 8), (1201, 4), (1100, 4), (480, 4)):
         page.set_viewport_size({"width": width, "height": 900})
-        expect(song).to_have_attribute("data-per-row", str(most))
-        rows_as_laid_out(most)
         canvas = page.evaluate("document.getElementById('map').clientWidth")
         fits = {ochos: (canvas - 80 - 16 - (ochos - 1) * 14 - ochos * 2) // (2 * ochos) for ochos in (8, 4, 2)}
         assert most == next(ochos for ochos in (8, 4, 2) if fits[ochos] >= 44), (width, canvas, fits)
+        # The song is laid out again a moment after the window changes.
+        expect(song).to_have_attribute("data-plates", re.compile(rf"^\[\[80,28,{fits[most]},30\]"))
+        expect(song).to_have_attribute("data-per-row", str(most))
+        rows_as_laid_out(most)
         assert max(wide for x, y, wide, high in visitor.plates()) == fits[most], (width, canvas, fits)
     # In a very wide one a plate is 96 wide and no wider.
     page.set_viewport_size({"width": 2300, "height": 900})
+    expect(song).to_have_attribute("data-plates", re.compile(r"^\[\[80,28,96,30\]"))
     expect(song).to_have_attribute("data-per-row", "8")
     assert max(wide for x, y, wide, high in visitor.plates()) == 96
     rows_as_laid_out(8)
