@@ -312,7 +312,7 @@ function rowFor(song) {
     )
   }
   if (actions.childElementCount) row.append(actions)
-  if (song.state === 'failed') row.append(element('p', 'note refused why', failureOf(song).why))
+  if (song.state === 'failed') row.append(element('p', 'note refused', failureOf(song).why))
   const note = noteOf(song.id)
   if (note) row.append(note)
   return row
