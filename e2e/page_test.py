@@ -1024,6 +1024,7 @@ def test_while_the_song_plays_the_lit_bar_is_the_bar_of_the_beat_the_large_view_
         if beat == "":
             assert bar == ""
             continue
+        assert bar != "", f"beat {beat} is lit in the large view and no bar is lit on the song"
         assert bars[int(bar)][0] <= int(beat) <= bars[int(bar)][1], (beat, bar)
         lit.add(int(bar))
     assert len(lit) >= 2, lit
