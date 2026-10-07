@@ -87,12 +87,14 @@ def split(samples, rate):
             found = _model(wave[None, :, start:end])[0]
         weight = torch.ones(end - start)
         if start > 0:
-            # The last piece can be shorter than the fade.
-            head = min(fade, end - start)
-            weight[:head] = torch.linspace(0, 1, fade)[:head]
+            weight[:fade] = torch.linspace(0, 1, fade)
         if end < length:
             weight[-fade:] = torch.linspace(1, 0, fade)
         parts[:, :, start:end] += found * weight
+        if end == length:
+            # This piece holds the end of the song. No piece is made for what is left of
+            # the fade alone: the model refuses a piece under 18 ms, and it would count twice.
+            break
     parts = parts * spread + mean
     return {name: parts[PARTS.index(name)].mean(0).numpy() for name in HEARD}
 

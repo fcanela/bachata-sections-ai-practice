@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from bachata import fills
 from bachata.fills import (
     CUT,
     MEL_BANDS,
@@ -173,3 +174,25 @@ def test_the_split_puts_a_low_tone_in_the_bass_and_short_noises_in_the_drums():
     assert level(one["bass"] - parts["bass"]) < level(parts["bass"]) - 30
     slow = split(as_samples((tone + hits)[::2]), rate // 2)
     assert len(slow["bass"]) == len(moments) and level(slow["bass"]) > level(slow["drums"])
+
+
+def test_the_pieces_of_a_split_add_up_to_the_song_whatever_its_length(monkeypatch):
+    # In place of the model, every part is the sound it was given: the parts must then come back as the song.
+    pieces = []
+
+    def the_sound_itself(wave):
+        pieces.append(wave.shape[-1] / PARTS_RATE)
+        return wave[:, None].repeat(1, 4, 1, 1)
+
+    monkeypatch.setattr(fills, "_model", the_sound_itself)
+    sound = 0.2 + 0.1 * np.random.default_rng(6).uniform(-1, 1, 62 * PARTS_RATE)
+    # A song that ends within a second after 30 s, or after 60 s, gets no piece for that end alone:
+    # the model refuses a piece under 18 ms, and the piece before already holds it.
+    lengths = ((20, [20]), (30.01, [30.01]), (30.5, [30.5]), (31, [31]), (31.5, [31, 1.5]), (60.4, [31, 30.4]), (61.7, [31, 31, 1.7]))
+    for seconds, expected in lengths:
+        samples = (sound[: round(seconds * PARTS_RATE), None] * 32767).astype(np.int16).repeat(2, axis=1)
+        pieces.clear()
+        parts = split(samples, PARTS_RATE)
+        assert pieces == pytest.approx(expected), f"the pieces of a song of {seconds} s"
+        for part in parts.values():
+            assert np.abs(part - samples[:, 0] / 32768).max() < 1e-4, f"a song of {seconds} s"
