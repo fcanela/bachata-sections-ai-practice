@@ -16,7 +16,9 @@ percussion comes in say which kind of bar has more. Before the percussion comes 
 is nothing to hear this on.
 
 The analysis asks the fills only where what comes in during the first minute does not
-say clearly which bar starts an ocho: the split takes some 30 seconds a song.
+say clearly which bar starts an ocho, because the split is slow: about 10 seconds for
+every minute of the song, so some 40 for a song of 4 minutes, where the rest of the
+analysis takes 4. It also takes some 3 GB of memory, and 5 for a song of 15 minutes.
 """
 
 import numpy as np

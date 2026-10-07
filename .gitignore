@@ -3,7 +3,7 @@ __pycache__/
 .pytest_cache/
 # The library of uploaded songs.
 data/
-# The Beat This checkpoints. scripts/fetch_model.py downloads them.
+# The checkpoints of Beat This and of Hybrid Demucs. scripts/fetch_model.py downloads them.
 models/
 # The browser the end-to-end tests fetch: see e2e/page_test.py.
 .playwright/

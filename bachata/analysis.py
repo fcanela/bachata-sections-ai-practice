@@ -250,7 +250,7 @@ def entry_vote(first, beats, found):
 
 
 def vote_is_clear(for_first, for_next):
-    """Whether one bar has at least three times what the other has. A vote of nothing is not asked here."""
+    """Whether one bar has at least three times what the other has. Nothing on either is clear too: the bass is asked there."""
     return min(for_first, for_next) * VOTE_CLEAR <= max(for_first, for_next)
 
 
