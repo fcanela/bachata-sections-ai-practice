@@ -359,3 +359,28 @@ export function clock(seconds) {
   const whole = Math.max(0, Math.floor(seconds))
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`
 }
+
+// Why an analysis failed, as the page says it: a sentence for each reason the server sorts
+// a failure into.
+const WHY = {
+  memory: 'The analysis ran out of memory.',
+  model: 'A file the analysis needs is missing or was changed.',
+  sound: 'The stored sound could not be read.',
+  other: 'The analysis failed.',
+}
+
+// What the list says of a song that failed: `said`, for how long the analysis ran, when
+// that was kept, and `why`, the sentence for the reason. A reason the page does not know
+// is read as `other`. 41.7 seconds is said as 0:42: the nearest second, not the last one.
+export function failureOf(song) {
+  const { reason, seconds } = song.failure ?? {}
+  const known = typeof seconds === 'number' && Number.isFinite(seconds)
+  return {
+    said: known ? `failed after ${clock(Math.round(seconds))}` : 'failed',
+    why: Object.hasOwn(WHY, reason) ? WHY[reason] : WHY.other,
+  }
+}
+
+// Whether an answer to "Try again" leaves nothing to say. 204: the song waits again.
+// 409: another browser was faster. 404: the song was deleted. The next list shows each.
+export const triedAgain = (status) => status === 204 || status === 409 || status === 404
