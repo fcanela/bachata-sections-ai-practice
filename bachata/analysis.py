@@ -24,8 +24,9 @@ Which of two bars starts an ocho is ours too, and is read from the sound: an ins
 that comes in, comes in on count 1. The count is set once, for the whole song, by the
 places where the sound rises in its first minute, over music that is already playing.
 Where nothing rises, the bass decides: it is louder in the first bar of an ocho than in
-the second. Nothing here hears a bar that is extra later in the song (LOG.md, sessions
-6 and 9).
+the second. Where the rises do not agree, the fills decide: the percussion and the bass
+mark the beats in the first bar and fill between them in the second (bachata/fills.py).
+Nothing here hears a bar that is extra later in the song (LOG.md, sessions 6 and 9).
 """
 
 import numpy as np
@@ -37,7 +38,7 @@ from bachata.model import checked_model_path
 
 # Stored with every result. A result with another number is made again from the stored
 # sound. Raise it whenever the same song could give different beats or tempo.
-ANALYSIS_VERSION = 4
+ANALYSIS_VERSION = 5
 
 # The tempos a dancer may be counting, in BPM.
 MIN_BPM = 90
@@ -85,6 +86,13 @@ BASS_WINDOW_S = 90
 # The bass is sure when the mean difference between the two kinds of bar is this many
 # times its own uncertainty.
 BASS_SURE = 2.0
+
+# What comes in says clearly which bar starts an ocho when one of the two has at least
+# this many times the rise of the other. Under that, the fills are asked.
+VOTE_CLEAR = 3
+# The fills are sure when the mean difference between the two kinds of bar is this many
+# times its own uncertainty.
+FILLS_SURE = 2.0
 
 # The shown tempo at a beat is measured from 4 beats before it to 4 beats after it: one
 # ocho. Beat times come in steps of 20 ms, so a single interval is only good to about 4%.
@@ -225,14 +233,11 @@ def bass_cycle(levels, beats, first):
     return float(np.mean(more) / (np.std(more) / np.sqrt(len(more)) + 1e-9))
 
 
-def first_ocho(first, beats, found, bass=0.0):
-    """The beat that starts the first ocho: `first`, a beat that starts a bar, or the bar after it.
+def entry_vote(first, beats, found):
+    """How much comes in on each of the two bars during the first minute: for `first`, and for the bar after it.
 
-    Each thing that comes in during the first minute says which of the two it is, by the
-    bar it starts, with the weight of its rise. The first bar that is heard stays unless
-    the other has more, and a rise out of silence says nothing for the other.
-
-    Where nothing comes in, `bass`, from bass_cycle(), decides, when it is sure.
+    Each thing that comes in counts for the bar it starts, with the weight of its rise.
+    A rise out of silence says nothing for the other bar.
     """
     for_first = for_next = 0.0
     for bar, rise, music in found:
@@ -241,8 +246,28 @@ def first_ocho(first, beats, found, bass=0.0):
                 for_first += rise
             elif music:
                 for_next += rise
+    return for_first, for_next
+
+
+def vote_is_clear(for_first, for_next):
+    """Whether one bar has at least three times what the other has. A vote of nothing is not asked here."""
+    return min(for_first, for_next) * VOTE_CLEAR <= max(for_first, for_next)
+
+
+def first_ocho(first, beats, found, bass=0.0, fills=0.0):
+    """The beat that starts the first ocho: `first`, a beat that starts a bar, or the bar after it.
+
+    What comes in during the first minute says which of the two it is: entry_vote().
+    The first bar that is heard stays unless the other has more.
+
+    Where nothing comes in, `bass`, from bass_cycle(), decides, when it is sure.
+    Where the vote is not clear, `fills`, from fills.fills_cycle(), decides, when it is sure.
+    """
+    for_first, for_next = entry_vote(first, beats, found)
     if for_first == for_next == 0:
         return first + BEATS_PER_BAR if bass <= -BASS_SURE else first
+    if not vote_is_clear(for_first, for_next) and abs(fills) >= FILLS_SURE:
+        return first + BEATS_PER_BAR if fills < 0 else first
     return first + BEATS_PER_BAR if for_next > for_first else first
 
 
@@ -264,17 +289,25 @@ def bpm_at_beats(beats):
     return shown
 
 
-def analyse(samples, rate):
+def analyse(samples, rate, fills_of=None):
     """The beats of a song, with the tempo, the place in the bar and the count at each.
 
     `samples` is what the page sends and the store keeps: 16-bit samples, one row per
-    moment, one column per channel.
+    moment, one column per channel. `fills_of` is fills.second_bar_fills unless a check
+    gives another.
     """
     mono = samples.astype(np.float32).mean(axis=1) / 32768.0
     beats, bars = beats_from_activations(*beat_activations(mono, rate))
     first = first_heard_bar(mono, rate, beats, bars)
     levels = band_levels(mono, rate, beats)
-    first = first_ocho(first, beats, entries(rises(levels), bars, over_music(levels)), bass_cycle(levels, beats, first))
+    found = entries(rises(levels), bars, over_music(levels))
+    fills = 0.0
+    if not vote_is_clear(*entry_vote(first, beats, found)):
+        # Only here, because it takes the split of the song: bachata/fills.py.
+        if fills_of is None:
+            from bachata.fills import second_bar_fills as fills_of
+        fills = fills_of(samples, rate, beats, bars, first)
+    first = first_ocho(first, beats, found, bass_cycle(levels, beats, first), fills)
     return {
         "beats": [round(time, 3) for time in beats],
         "bpm": [round(bpm, 1) for bpm in bpm_at_beats(beats)],

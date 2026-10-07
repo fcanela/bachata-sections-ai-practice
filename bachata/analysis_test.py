@@ -11,10 +11,12 @@ from bachata.analysis import (
     bpm_at_beats,
     count_from_bars,
     entries,
+    entry_vote,
     first_heard_bar,
     first_ocho,
     over_music,
     rises,
+    vote_is_clear,
 )
 
 
@@ -316,7 +318,47 @@ def test_where_something_comes_in_the_bass_is_not_asked():
     assert first_ocho(4, beats, [(16, 6.0, True)], 9.0) == 8
 
 
-def analysed_with_a_beat_every_half_second(monkeypatch, sound, rate):
+def test_a_vote_is_clear_when_one_bar_has_three_times_the_other():
+    assert vote_is_clear(9.0, 3.0) and vote_is_clear(3.0, 9.0)
+    assert not vote_is_clear(9.0, 3.1) and not vote_is_clear(3.1, 9.0)
+    assert not vote_is_clear(8.0, 8.0)
+    # One side alone is clear, and so is nothing at all: there the bass is asked.
+    assert vote_is_clear(5.0, 0.0) and vote_is_clear(0.0, 5.0) and vote_is_clear(0.0, 0.0)
+
+
+def test_what_comes_in_is_weighed_for_each_of_the_two_bars():
+    beats = [0.5 * n for n in range(200)]
+    assert entry_vote(4, beats, [(12, 8.0, True), (16, 6.0, True), (28, 2.0, True), (40, 5.0, True)]) == (10.0, 11.0)
+    # Out of silence it counts for the first bar only, and after the first minute for neither.
+    assert entry_vote(4, beats, [(12, 8.0, False), (16, 6.0, False), (128, 9.0, True)]) == (8.0, 0.0)
+
+
+def test_where_the_vote_is_not_clear_sure_fills_set_the_count():
+    beats = [0.5 * n for n in range(200)]
+    close = [(12, 8.0, True), (16, 6.0, True)]
+    assert first_ocho(4, beats, close) == 4
+    assert first_ocho(4, beats, close, fills=-2.0) == 8
+    assert first_ocho(4, beats, close, fills=-1.9) == 4
+    # The fills can also keep the bar that has less of what comes in.
+    other = [(12, 6.0, True), (16, 8.0, True)]
+    assert first_ocho(4, beats, other) == 8
+    assert first_ocho(4, beats, other, fills=2.0) == 4
+    assert first_ocho(4, beats, other, fills=1.9) == 8
+    # Even is not clear.
+    assert first_ocho(4, beats, [(12, 8.0, True), (16, 8.0, True)], fills=-3.0) == 8
+
+
+def test_where_the_vote_is_clear_the_fills_are_not_asked():
+    beats = [0.5 * n for n in range(200)]
+    assert first_ocho(4, beats, [(12, 9.0, True), (16, 3.0, True)], fills=-9.0) == 4
+    assert first_ocho(4, beats, [(12, 3.0, True), (16, 9.0, True)], fills=9.0) == 8
+    assert first_ocho(4, beats, [(12, 6.0, True)], fills=-9.0) == 4
+    # Where nothing comes in the bass is asked, and the fills are not.
+    assert first_ocho(4, beats, [], 0.0, -9.0) == 4
+    assert first_ocho(4, beats, [], -3.0, 9.0) == 8
+
+
+def analysed_with_a_beat_every_half_second(monkeypatch, sound, rate, fills_of=None):
     """The analysis of a made-up sound, with made-up beats in place of the tracker's."""
     from bachata import analysis
 
@@ -325,7 +367,7 @@ def analysed_with_a_beat_every_half_second(monkeypatch, sound, rate):
     monkeypatch.setattr(
         analysis, "beats_from_activations", lambda beat, downbeat: (beats, [n % 4 + 1 for n in range(len(beats))])
     )
-    return analysis.analyse((sound[:, None] * 32767).astype(np.int16).repeat(2, axis=1), rate)
+    return analysis.analyse((sound[:, None] * 32767).astype(np.int16).repeat(2, axis=1), rate, fills_of)
 
 
 def test_what_comes_in_between_two_ochos_moves_the_count_of_the_whole_song(monkeypatch):
@@ -337,6 +379,35 @@ def test_what_comes_in_between_two_ochos_moves_the_count_of_the_whole_song(monke
     sound[10 * rate // 2 :] *= 4
     result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate)
     assert result["count"][:13] == [5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1]
+
+
+def test_the_fills_of_a_song_are_asked_only_where_what_comes_in_is_not_clear(monkeypatch):
+    # 30 s of noise at 8 kHz that gets 7 dB louder at the eleventh beat, which starts the
+    # fourth bar, and 5.5 dB louder again at the twenty-third, which starts the seventh.
+    rate = 8000
+    asked = []
+
+    def fills_of(samples, rate, beats, bars, first):
+        asked.append((len(samples), rate, len(beats), bars[:5], first))
+        return said
+
+    sound = 0.02 * np.random.default_rng(2).uniform(-1, 1, 30 * rate)
+    sound[10 * rate // 2 :] *= 2.2
+    said = 9.0
+    result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate, fills_of)
+    assert result["count"][:13] == [5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1] and asked == []
+    # Two things come in, on bars of the two kinds: the fills are asked, with the song and its beats.
+    sound[22 * rate // 2 :] *= 1.9
+    result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate, fills_of)
+    assert asked == [(30 * rate, rate, 60, [1, 2, 3, 4, 1], 0)]
+    assert result["count"][:9] == [1, 2, 3, 4, 5, 6, 7, 8, 1]
+    said = -9.0
+    result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate, fills_of)
+    assert result["count"][:9] == [5, 6, 7, 8, 1, 2, 3, 4, 5]
+    # Fills that are not sure leave the count to what comes in: the larger rise.
+    said = 1.0
+    result = analysed_with_a_beat_every_half_second(monkeypatch, sound, rate, fills_of)
+    assert result["count"][:9] == [5, 6, 7, 8, 1, 2, 3, 4, 5]
 
 
 def test_a_song_that_starts_quietly_keeps_its_count_on_the_first_bar_that_is_heard(monkeypatch):

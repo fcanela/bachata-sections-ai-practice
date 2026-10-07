@@ -1,6 +1,8 @@
 """The owner's ear as a reference: the counts he checked by listening, and the count as it was.
 
     fixtures/audio/by-ear.json    his marks and notes, never committed
+    fixtures/audio/entry-pairs.json   six songs he heard in pairs of clips, with the songs
+                                  in fixtures/audio/entries/, never committed
     fixtures/by_ear_before.json   the beats and the count of the songs that must not get
                                   worse, as version 2 of the analysis gave them
 
@@ -22,6 +24,7 @@ from fixtures.validate import SAME_BEAT_S
 
 BY_EAR = Path(__file__).parent / "audio" / "by-ear.json"
 BEFORE = Path(__file__).parent / "by_ear_before.json"
+ENTRY_PAIRS = Path(__file__).parent / "audio" / "entry-pairs.json"
 
 
 def read_by_ear():
@@ -29,6 +32,13 @@ def read_by_ear():
     if not BY_EAR.exists():
         return {}
     return {song["id"]: song for song in json.loads(BY_EAR.read_text())["songs"]}
+
+
+def read_entry_pairs():
+    """The songs he heard in pairs of clips, or nothing when they are not on the machine."""
+    if not ENTRY_PAIRS.exists():
+        return []
+    return json.loads(ENTRY_PAIRS.read_text())["songs"]
 
 
 def read_before():
