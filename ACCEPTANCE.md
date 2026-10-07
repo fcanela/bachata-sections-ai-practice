@@ -107,7 +107,7 @@ What the server never does:
 **Not verified in slice 1**
 
 - Following a tempo change. No acceptance check covers it. Session 3 measured it on two mixes whose second half was sped up or slowed with `ffmpeg`: a change of 8% is followed with every beat found, a jump of 20% on one mix of two. The intro of the full Me Emborracharé reads about 102 BPM before the song settles at 124, which the owner can hear with the click on. If the owner hears a shift in El Perdedor, that moment becomes a test spot.
-- Analysis time. It is measured and logged, with no limit to pass: about 4 seconds for a song of 4 minutes, and 6 to 8 seconds from picking a file to seeing its beats.
+- Analysis time. It is measured and logged, with no limit to pass: about 4 seconds for a song of 4 minutes, and 6 to 8 seconds from picking a file to seeing its beats. *Since session 10 that is for a song whose fills are not asked. Where they are asked, on 3 of the 18 songs of the library, the analysis takes 30 to 50 seconds, and 3 GB of memory in place of 0.8.*
 
 ### 2. The grid of ochos
 
@@ -153,10 +153,19 @@ One control, "Count 1 here". The owner added it on 2026-10-06, in session 6, wit
 
 The owner listened to 13 songs in full on 2026-10-06 and set this target the same day, in session 9: on five of them the count was four off from the start, so where the main part enters the page showed 5 and he heard 1. His marks and notes are in `fixtures/audio/by-ear.json`, which git ignores. They are for checks only: the analysis never reads them, the label files or the marks in the library.
 
-- [x] With no mark used, count 1 falls on the owner's mark on at least 4 of these 5: Bachata Que Duele, Escalofríos, No vuelvo a caer (17.04 s and 32.16 s are equally right), the Me Emborrachare mix (count 1 at 2.28 s; the four beats before it are not judged), Sus Huellas. `bachata/entry_test.py`: 5 of 5. Four by what comes in during the first minute; the Me Emborrachare mix, where nothing comes in, by its bass.
+- [x] With no mark used, count 1 falls on the owner's mark on at least 4 of these 5: Bachata Que Duele, Escalofríos, No vuelvo a caer (17.04 s and 32.16 s are equally right), the Me Emborrachare mix (count 1 at 2.28 s; the four beats before it are not judged), Sus Huellas. `bachata/entry_test.py`: 5 of 5. Four by what comes in during the first minute; the Me Emborrachare mix, where nothing comes in, by its bass. *Since session 10 one of the four, Sus Huellas, is decided by its fills: what comes in on it is under 3 to 1, and the fills say the same.*
 - [x] No other song gets worse. The six songs he found right throughout keep their count; Herrera and Sin Fin keep it up to their first mark; Old Town Road stays 416 of 416 and Eso Es Amor does not go below 257 of 505. `bachata/entry_test.py`, against the count version 2 of the analysis gave, kept in `fixtures/by_ear_before.json`. *Mine: with no mark to say where a song enters, a song is judged from the first count 1 it had, which is stricter than "from the entry on".*
 - [x] The analysis opens no file of the reference or of the library. `bachata/songs_test.py` and `bachata/entry_test.py` refuse an analysis that does.
 - What the count shows inside an intro without percussion is not judged. Half phrases in the middle of a song are not part of this.
+
+**The count once the percussion is in, by the owner's ear**
+
+The owner heard six songs on 2026-10-07 in pairs of clips, one with the loud click on each count 1 that version 4 showed and one with it four beats from there, and heard his 1 on the second clip of all six. They are in `fixtures/audio/entry-pairs.json`, with the songs in `fixtures/audio/entries/`, which git ignores. Like his marks, they are for checks only.
+
+- [x] With no mark used, count 1 falls where he heard it on at least 5 of these 6: Ay, Ay, Ay; Casualidades; Feeling Something; Better Late Than Never; Nómada; Decídete. `bachata/entry_pairs_test.py`: 6 of 6, where version 4 has 0 of 6. On each, what comes in during the first minute is under 3 to 1, and the fills decide: the drums and the bass mark the beats in the first bar of an ocho and fill between them in the second. The owner kept "at least 5 of 6" on 2026-10-07, in session 10.
+- [x] No song of the reference by ear or of the three mixes is worse than before the fills. `bachata/entry_test.py` still reads 5 of 5 and 0 other songs worse, and each of those songs has the beats and the count it had: `LOG.md`, session 10, has them side by side.
+- The limits are the patch's, and the owner kept them on 2026-10-07: what comes in is clear from 3 to 1; the fills are sure by 2; they are heard over the 60 seconds from where the percussion comes in; and the percussion is in when it is within 12 dB of its loudest for 4 bars in a row.
+- The owner's verdict, on 2026-10-07: "Overall, I think the first beat detection is better, I have not tested everything but I did the tests review of the algo and it was better. I will accept it".
 
 **What is refused, part of G7**
 
@@ -170,11 +179,13 @@ The owner listened to 13 songs in full on 2026-10-06 and set this target the sam
 - Two tests of slice 1 are reworded, because what they checked is no longer true: the one that found the marks of a row all the same distance apart and no text but the tempo and the time, and the one that found the tempo to be the largest figure.
 - The checks were seen to fail. Session 6 broke the code on purpose in 25 ways, in the bar, in count 1 by hand and in the server's part of it. Two breaks were caught by nothing and one not by the test that claimed it; three tests were added or changed, and all 25 are now caught. `LOG.md` has the table.
 - Session 7 took four findings of a review of that commit. Two were faults of the page and two of its checks: an assertion that could not fail, and no test that failed when the large view drew nothing. Each has a check that was seen to fail. `LOG.md`, session 7.
+- The fills: unit tests beside the code, in `bachata/fills_test.py`, with a stand-in for the model wherever the model itself is not what is tested, and the six songs in `bachata/entry_pairs_test.py`.
+- The checks of the fills were seen to fail. Session 10 broke `bachata/fills.py` and the rule in `bachata/analysis.py` on purpose in 63 ways. 38 were caught as the tests stood. Nine tests of the fills were added and six made stronger, with one more for the watch on what the analysis opens, and 62 are caught now. One alters nothing. `LOG.md` has the table.
 
 **Not in slice 2**
 
 - Finding a half phrase from the sound. Session 6 tried the two-bar cycle of the harmony: it found two of three on Me Emborrachare, four of eight at most on Eso Es Amor, and one to four that are not there on Old Town Road.
-- Telling the first bar of an ocho from the second. *Since session 9 the analysis does tell them, once for the whole song, by what comes in during the first minute: see "The entry, by the owner's ear" above. What follows is how the first bar is found before that.* The analysis starts the count on the first bar it hears and goes on in eights. The first bar it hears is the first whose first beat is not more than 40 dB under the level of the whole song: the tracker carries the pulse back over the silence before a song. *Proposed: the 40.* On Old Town Road and Eso Es Amor, the two mixes that start with such a bar, the owner's ear agrees with where the count then starts. The beats it puts before that bar are counted as the end of an ocho, up to 8.
+- Telling the first bar of an ocho from the second. *Since session 9 the analysis does tell them, once for the whole song, by what comes in during the first minute, and since session 10 by the fills where that is not clear: see "The entry, by the owner's ear" and "The count once the percussion is in, by the owner's ear" above. What follows is how the first bar is found before that.* The analysis starts the count on the first bar it hears and goes on in eights. The first bar it hears is the first whose first beat is not more than 40 dB under the level of the whole song: the tracker carries the pulse back over the silence before a song. *Proposed: the 40.* On Old Town Road and Eso Es Amor, the two mixes that start with such a bar, the owner's ear agrees with where the count then starts. The beats it puts before that bar are counted as the end of an ocho, up to 8.
 - Any mark of doubt on a count.
 
 ### 3. Derecho or majao for each ocho

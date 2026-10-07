@@ -2,6 +2,281 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-07, session 10: the fills rule, brought in, reviewed, broken on purpose and merged
+
+The owner handed over one commit written outside this repository, `incoming.patch`, and asked for it to be applied, read as a reviewer, checked and broken on purpose. The patch adds a third way to say which bar starts an ocho: where what comes in during the first minute is not clear, the fills decide. The work was done in a folder of its own, `wt/d4-patch`, on the branch `d4-patch`, while another task ran in `wt/d4-bars`. The records were not touched there: they are written here, at the merge, from the notes that session kept. **On the six songs the owner heard on 7 October, count 1 is where he heard it on 6 of 6, where version 4 had 0 of 6. The entry check still reads 5 of 5, and no song of the reference by ear or of the three mixes is worse than it was: each has the same beats and the same count.** The review found four faults, and all four are repaired: two in the code of the patch, one in how the program starts, and one in a check of the project that the patch did not touch. The cost is time: a song whose fills are asked takes 30 to 50 seconds to analyse, where it took 3 to 5. The owner then had a program started to review it, accepted it, and had `d4-patch` merged into `master` with a fast-forward. His verdict is under "Decisions".
+
+### Runs
+
+Everything ran from `wt/d4-patch`. In this entry `master` is `master` as it was before the merge, `0c34455`, with version 4 of the analysis. "As applied" is the patch alone, `6e8bd2b`. "At the end" is `e5dde4b`, the last commit of the branch, where `master` is since the merge.
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| On the code of `master`, `0c34455`, before the patch: `pytest bachata/entry_test.py bachata/songs_test.py -s` | 17 passed, none skipped. 5 of 5, 0 other songs worse. 308 of 396, 257 of 505, 416 of 416 | 71 s |
+| The analysis of `master` on the six songs of `fixtures/audio/entry-pairs.json` | Count 5 at `one_at_s` and count 1 at `five_at_s` on all six: 0 of 6, as the patch says of version 4 | 26 s |
+| `sha256sum models/hdemucs_high_trained.pt` against `PARTS_SHA256` of the patch | The same, `a004b279…`. 334,697,255 bytes. torchaudio 2.11.0 has `hdemucs_high` and names the same file | under 1 s |
+| `git am incoming.patch` | Applied clean, as `6e8bd2b`. No trailer | under 1 s |
+| `pytest bachata/fills_test.py bachata/analysis_test.py`, as applied | 38 passed, none skipped | 8 s |
+| Every song of the reference, analysed on `master` and as applied, with the vote, the bass and the fills of each. The fills were also worked out for the songs where the analysis does not ask them | 29 analyses each. See "Master and the branch, song by song" | 2 min and 18 min |
+| The time of one song, three songs, each in a process of its own, on `master` and as applied | See "The time one song takes" | 1 min and 7 min |
+| `split()` of 15 minutes of sound, the longest the server takes | 181 s, 5,363 MB at its peak | 3 min |
+| 1,000 made-up songs with no fills through `beat_scores()` and `fills_cycle()` | 24.0% read 2 or more either way. See "How sure sure is" | 20 s |
+| The files opened while the analysis runs with the fills asked, on Decídete | 1,248, none under `fixtures/` or `data/` of the work folder or of the main one. Outside Python itself: the two checkpoints in `models/` | 50 s |
+| `python scripts/fetch_model.py`, both files already there | "already there, sha256 matches" twice. The download itself was not run: no network | under 1 s |
+| `split()` with a stand-in for the model that gives back the sound, on songs of 12 lengths, as applied | The parts are the song at 6 lengths. At the other 6, 30.5, 31, 60.02, 60.9, 61 and 90.4 s, the end of the song is too loud, up to twice | under 10 s |
+| The model itself on pieces of 1 to 44,100 samples | It refuses every piece of 1 to 768 samples, 17.4 ms: `ValueError`. From 769 it takes them | 20 s |
+| `split()` of 30.01 s of sound with the real model, as applied | `ValueError: Spectrogram's last dimension must be 4 + input size divided by stride` | 8 s |
+| A new test of that, as applied | Failed: `the pieces of a song of 30.01 s`, `[30.01, 0.01]` where `[30.01]` is expected | 2 s |
+| The same after the fix, `a8564a2`, and `split()` of 30.01 s and of 30.5 s with the real model | Passed. Parts of 30.01 s and of 30.5 s | 15 s |
+| A new test that the program does not start without one of its two checkpoints, before the fix | 1 of 2 failed: without the checkpoint of the parts `the program went on to start` | under 1 s |
+| The same after the fix, `945c373`, with `pytest bachata/server_test.py` | 80 passed. The check of the second file takes 0.21 s at the start | 2 s |
+| The checks of the part on the code as it was, before the first break, `945c373`: `pytest bachata/fills_test.py bachata/analysis_test.py` | 39 passed, none skipped | 10 s |
+| 62 breaks, one at a time | 38 caught as the tests stood, 24 by nothing. The table is below | 728 s |
+| The 24 again, after the repairs | 23 caught, each by a test that states what was broken. 1 alters nothing | 264 s |
+| The break that takes the rule out, against `pytest bachata/entry_pairs_test.py` | Failed: `the count is on 1 where he heard it on 0 of 6 songs` | 237 s |
+| The analysis opens `fixtures/audio/by-ear.json`, against `pytest bachata/songs_test.py -k "detected and meemborrachare"` | Passed: caught by nothing in the work folder. After the repair of `fixtures/by_ear.py`: failed, `the analysis read what only a check may read`, with the path | 6 s each |
+| At the end: `BACHATA_TEST_PORT=8083 .venv/bin/python -m pytest -s -rs`, inside the sandbox | 211 passed, 31 skipped: Chrome does not start there, 25 tests, and Firefox plays no sound, 6. The six songs 6 of 6; the entry check 5 of 5, 0 other songs worse; 308 of 396, 257 of 505, 416 of 416 | 540 s |
+| At the end: every song of the reference analysed once more, against `master` and against the patch as applied | The same beats, bars, tempo and count as applied on 29 of 29, and the same fills on the 9 songs that are asked. Against `master`: as in the table below | 9 min |
+| At the end: the time of two songs once more, and `master`'s code timed again from a copy | See "The time one song takes" | 4 min |
+| At the end: `TMPDIR=/tmp/claude-1000/e2e-a BACHATA_TEST_PORT=8083 .venv/bin/python -m pytest`, outside the sandbox | 242 passed, none skipped, Chrome and the tests with sound among them. Nothing was left listening on 8083 | 695 s |
+| For the owner's review: `PORT=8083 .venv/bin/python -m bachata` from `wt/d4-patch`, outside the sandbox, on the copy of the library | It answered on `http://127.0.0.1:8083` with 18 songs: 3 ready, 1 being analysed and 14 waiting, version 5 making each again. Inside the sandbox the only network is a loopback of its own, which a browser outside does not reach | not timed |
+| `git merge --ff-only d4-patch`, from the main folder | `master` went from `0c34455` to `e5dde4b`: 12 files, 820 lines added and 49 taken away | under 1 s |
+
+**The six songs, as the check reads at the end.**
+
+```
+ok    David Bisbal - Ay, Ay, Ay: count 1 at 47.18 s, where he hears 1
+ok    Marco Puma, Jensen, sP Polanco - Casualidades: count 1 at 29.34 s, where he hears 1
+ok    Pinto Picasso - Feeling Something: count 1 at 37.04 s, where he hears 1
+ok    Romeo Santos, Prince Royce - Better Late Than Never: count 1 at 49.44 s, where he hears 1
+ok    Chris Paradise - Nómada: count 1 at 46.2 s, where he hears 1
+ok    Dani J, Bachata Heightz - Decídete: count 1 at 30.02 s, where he hears 1
+The count is on 1 where he heard it on 6 of 6 songs, at least 5 needed.
+```
+
+**The entry check, as it reads at the end.** The same 15 lines as on `master`.
+
+```
+ok    Bachata Que Duele: count 1 at 17.34 s, where he hears 1
+ok    Escalofríos: count 1 at 3.8 s, where he hears 1
+ok    No vuelvo a caer: count 1 at 17.04 s and count 1 at 32.16 s, where he hears 1
+ok    Me Emborrachare, the mix: count 1 at 2.28 s, where he hears 1
+ok    Sus Huellas: count 1 at 28.76 s, where he hears 1
+ok    Chanel - Clavaito: 364 of 364 beats keep their count from 0.7 s to the end
+ok    Manuel Turizo - La Bachata: 337 of 337 beats keep their count from 0.18 s to the end
+ok    Jalil Lopez - La Culpable: 329 of 329 beats keep their count from 0.06 s to the end
+ok    Antonio José - La Noche Perfecta: 361 of 361 beats keep their count from 1.46 s to the end
+ok    DJ Zarnoti - Fantasías (feat. Johandy): 329 of 329 beats keep their count from 0.2 s to the end
+ok    Romeo Santos - Héroe Favorito: 505 of 505 beats keep their count from 1.16 s to the end
+ok    Herrera: 116 of 116 beats keep their count from 0.66 s to the mark at 53.96 s
+ok    Sin Fin: 228 of 228 beats keep their count from 0.28 s to the mark at 110.94 s
+ok    Old Town Road (Bachata Remix): 416 of 416 labelled beats are shown with the count of the reference, at least 416 needed
+ok    Eso Es Amor: 257 of 505 labelled beats are shown with the count of the reference, at least 257 needed
+The count enters on 1 on 5 of 5 songs, at least 4 needed.
+0 other songs got worse.
+```
+
+**Master and the branch, song by song.** "Vote" is what comes in during the first minute, for the first bar heard and for the next. "Bass" and "fills" are above 0 for the first bar heard and under 0 for the next. "Asked" marks the songs where the analysis asks the fills: the vote is under 3 to 1. For the others the fills were worked out by a scratch script, to see what they would say. The last column compares every beat, bar, tempo and count of the two results.
+
+| Song | Vote | Bass | Fills | Asked | `master` | The branch | The two results |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **The five entries** | | | | | | | |
+| Bachata Que Duele | 0.0 and 6.0 | 0.29 | -5.14 | | 1 at 17.34 s | 1 at 17.34 s | the same |
+| Escalofríos | 0.0 and 26.6 | -2.10 | -5.97 | | 1 at 3.8 s | 1 at 3.8 s | the same |
+| No vuelvo a caer | 0.0 and 56.4 | -4.58 | -2.53 | | 1 at 17.04 s | 1 at 17.04 s | the same |
+| Me Emborrachare, the mix | 0.0 and 0.0 | -2.77 | -2.58 | | 1 at 2.28 s, 308 of 396 | 1 at 2.28 s, 308 of 396 | the same |
+| Sus Huellas | 15.4 and 27.8 | -2.11 | -4.23 | yes | 1 at 28.76 s | 1 at 28.76 s | the same |
+| **Right throughout** | | | | | | | |
+| Clavaito | 44.8 and 0.0 | 4.06 | 4.24 | | 364 of 364 kept | 364 of 364 kept | the same |
+| La Bachata | 21.2 and 9.2 | 0.10 | 3.00 | yes | 337 of 337 kept | 337 of 337 kept | the same |
+| La Culpable | 31.3 and 0.0 | 0.45 | 6.13 | | 329 of 329 kept | 329 of 329 kept | the same |
+| La Noche Perfecta | 53.3 and 0.0 | 2.80 | 3.57 | | 361 of 361 kept | 361 of 361 kept | the same |
+| Fantasías | 15.8 and 0.0 | 3.61 | 5.50 | | 329 of 329 kept | 329 of 329 kept | the same |
+| Héroe Favorito | 16.1 and 13.8 | -0.46 | 4.47 | yes | 505 of 505 kept | 505 of 505 kept | the same |
+| **With a half phrase, or marked in part** | | | | | | | |
+| Herrera | 69.1 and 19.0 | 0.51 | 2.38 | | 116 of 116 kept to 53.96 s | 116 of 116 kept to 53.96 s | the same |
+| Sin Fin | 24.1 and 0.0 | -0.11 | 3.62 | | 228 of 228 kept to 110.94 s | 228 of 228 kept to 110.94 s | the same |
+| Imitadora | 7.8 and 0.0 | 1.84 | 2.22 | | 5 at 113.16 s | 5 at 113.16 s | the same |
+| El Perdedor | 32.0 and 0.0 | 3.13 | 3.26 | | 5 at 99.62 s | 5 at 99.62 s | the same |
+| **The other two mixes, and the full Me Emborracharé** | | | | | | | |
+| Old Town Road | 34.8 and 0.0 | 3.01 | 2.25 | | 416 of 416 | 416 of 416 | the same |
+| Eso Es Amor | 32.7 and 5.4 | 0.00 | 1.53 | | 257 of 505 | 257 of 505 | the same |
+| Me Emborracharé, the full recording | 0.0 and 0.0 | 3.51 | 2.43 | | first 1 at 1.82 s | first 1 at 1.82 s | the same |
+| **The six songs heard on 7 October** | | | | | | | |
+| Ay, Ay, Ay | 20.0 and 12.0 | 1.37 | -6.94 | yes | 5 at 47.18 s | 1 at 47.18 s | the same beats, the count a bar later |
+| Casualidades | 48.5 and 21.2 | 0.10 | -6.71 | yes | 5 at 29.34 s | 1 at 29.34 s | the same beats, the count a bar later |
+| Feeling Something | 23.4 and 8.2 | 1.89 | -5.41 | yes | 5 at 37.04 s | 1 at 37.04 s | the same beats, the count a bar later |
+| Better Late Than Never | 22.6 and 48.2 | 1.29 | 5.12 | yes | 5 at 49.44 s | 1 at 49.44 s | the same beats, the count a bar earlier |
+| Nómada | 17.4 and 15.7 | -1.20 | -4.15 | yes | 5 at 46.2 s | 1 at 46.2 s | the same beats, the count a bar later |
+| Decídete | 9.5 and 15.2 | -1.43 | 4.23 | yes | 5 at 30.02 s | 1 at 30.02 s | the same beats, the count a bar earlier |
+
+- **No song of the reference is worse, and none is better.** The 18 songs of the library, the three mixes and the two commercial recordings have the same beats, bars, tempo and count on both.
+- **Of the 18 songs of the library, the analysis asks the fills on 3**: Sus Huellas, La Bachata and Héroe Favorito. On all three the fills say what the vote said, so nothing moves.
+- **The six songs all have a vote under 3 to 1, and the fills are sure by 4.15 or more on each.** On four the count moves a bar later. On Better Late Than Never and on Decídete the vote had moved it, wrongly, and the fills keep it where it was.
+- **Feeling Something is under 3 to 1 by little**: 23.4 against 8.2 is 2.85 to 1. With the limit at 2.8 its fills would not be asked and it would stay wrong.
+- **The fills alone, on the 17 songs whose count at the start is known**, the 13 he heard in full, the two other mixes, and Imitadora and El Perdedor taken as right before their first mark, as session 9 took them: on the right side on 17 of 17, and by 2 or more on 16. Eso Es Amor reads 1.53. This was not part of the task and no rule uses it. It says the measure hears something real on songs the six were not chosen from, if the settings of the patch were not chosen on these 17 as well, which nothing in the patch says.
+- **Where the percussion comes in**, by `percussion_entry()`, is the `percussion_in_at_s` of `entry-pairs.json` to the hundredth of a second on all six, so the clips were cut by this code. On No vuelvo a caer it reads 32.16 s, where the owner said the percussion enters, and on Bachata Que Duele 17.34 s, his mark.
+
+**The time one song takes.** `analyse()` on the samples, without the decoding. The first run of a process loads the models and is given apart. The machine has 16 threads and was busy with other programs throughout: its load was 6 to 13.
+
+| Song | Length | `master`, version 4 | As applied, version 5 | Of that, the split | Memory at its peak |
+| --- | --- | --- | --- | --- | --- |
+| Me Emborrachare, the mix: the fills are not asked | 3:15 | 3.7, 3.9, 3.8 s. First run 5.1 s | 3.8, 4.5, 4.6 s. First run 5.2 s | none | 716 MB on both |
+| Nómada: asked | 4:05 | 4.6, 4.6, 4.8 s. First run 6.0 s | 51.7, 49.9, 50.6 s. First run 55.2 s | 44.6 to 46.9 s | 777 MB, then 3,055 MB |
+| Ay, Ay, Ay: asked | 3:28 | 4.5, 4.5, 4.4 s. First run 5.7 s | 46.3, 41.2, 43.3 s. First run 47.5 s | 36.9 to 40.6 s | 729 MB, then 2,953 MB |
+
+At the end, `e5dde4b`, with the machine less busy, at a load of 2.5 to 8.5. `master`'s code was timed again just after, from a copy of its two files, at a load of 6 to 7.
+
+| Song | Length | `master`, version 4 | At the end, version 5 | Of that, the split | Memory at its peak |
+| --- | --- | --- | --- | --- | --- |
+| Me Emborrachare, the mix: the fills are not asked | 3:15 | 3.6, 3.8, 3.6 s. First run 4.9 s | 3.6, 3.6, 3.6 s. First run 4.8 s | none | 727 MB |
+| Nómada: asked | 4:05 | 4.5, 4.5, 4.5 s | 41.7, 41.5, 41.9 s. First run 44.5 s | 37.1 to 37.4 s | 3,029 MB |
+
+- **A song whose fills are not asked takes what it took.** The 3.8 to 4.6 s of the first table against 3.7 to 3.9 is the machine being busier, not the patch.
+- **A song whose fills are asked takes about ten times as long**: 42 to 51 s for Nómada, where it took 4.5 to 4.8. Over the nine songs that are asked, 28 to 47 s at the end.
+
+- **The split takes 9.3 to 11.8 seconds for every minute of a song**, over the 26 times it ran in the per-song run: 25.4 s for a song of 2:38, 46.0 s for one of 3:54.
+- **The library of 18 songs, analysed one after another**: 73.5 s on `master`, 181.1 s as applied and 171.0 s at the end. Version 5 makes the program do this once, when it next starts.
+- **A song of 15 minutes**: 181 s for the split alone, and 5.4 GB.
+- The patch said "some 30 seconds a song". Its docstring now says what was measured here.
+
+**How sure sure is.** `FILLS_SURE` is 2, "times its own uncertainty". Two made-up parts whose attacks are noise, with nothing that tells one bar from the next, went through `beat_scores()` and `fills_cycle()` 1,000 times, 32 bars heard in each.
+
+| The fills read, either way | Songs with no fills at all |
+| --- | --- |
+| 2 or more | 24.0% |
+| 3 or more | 7.9% |
+| 4 or more | 1.8% |
+| 5 or more | 0.5% |
+
+- If the uncertainty were right, 2 or more would come up on 4.6% and the figure would spread by 1.00. It spreads by 1.70.
+- The reason is in how a bar is scored: against the two around it. Each bar is then in three comparisons, and the values that are averaged are not independent of each other. `bass_cycle()` on `master` is built the same way; it was not measured.
+- On the songs here it changes nothing: the nine songs whose fills are asked read 3.0 to 6.9. With the limit at 3 or at 4 every count here would come out the same: the lowest of the six songs is Nómada at 4.15, and La Bachata, at 3.0, keeps its count by what comes in as well. That is worked out from the figures above and was not run.
+
+### Breaking the code on purpose
+
+One break at a time, on the committed build, with the skill `break-on-purpose`: the file is changed, the checks run through `one_break.sh`, and the file is written back as it was. The part: `bachata/fills.py`, and in `bachata/analysis.py` the vote, the rule and the lines of `analyse()` that ask the fills. The command: `.venv/bin/python -m pytest bachata/fills_test.py bachata/analysis_test.py`. `ACCEPTANCE.md` had no item on the fills then, so the claims were taken from what the patch says of itself, in its docstrings and beside its settings, and from "Rules that are easy to break" in `NEXT.md`.
+
+63 breaks: 49 from the claims and 14 from what no claim speaks of. 38 were caught as the tests stood and 25 by nothing. After the repairs 62 are caught, and 1 alters nothing.
+
+| Break | Caught by |
+| --- | --- |
+| **The rule that asks the fills** | |
+| A vote of two to one is taken as clear | `test_a_vote_is_clear_when_one_bar_has_three_times_the_other` |
+| Where the vote is not clear the fills decide nothing: the larger rise does, as in version 4 | `test_where_the_vote_is_not_clear_sure_fills_set_the_count`: `4 == 8`. Also the six-song check, `bachata/entry_pairs_test.py`: `the count is on 1 where he heard it on 0 of 6 songs` |
+| Fills that are sure by 1.5 set the count | The same test: `8 == 4` |
+| Sure fills overrule a clear vote | `test_where_the_vote_is_clear_the_fills_are_not_asked`: `8 == 4` |
+| Every song is split and its fills are asked | `test_the_fills_of_a_song_are_asked_only_where_what_comes_in_is_not_clear` |
+| The fills are asked about the ochos counted from the first beat of the song, not from the first bar that is heard | **Nothing.** Every made-up song of the tests starts on its first bar, so the first bar heard is beat 0 either way. Now `test_the_fills_are_asked_about_the_ochos_counted_from_the_first_bar_that_is_heard`, on a song that starts two beats before its first bar: `[([3, 4, 1, 2, 3], 0)] == [([3, 4, 1, 2, 3], 2)]` |
+| The song is split and what its fills say is not used | `test_the_fills_of_a_song_are_asked_only_where_what_comes_in_is_not_clear`: the count starts `5, 6, 7, 8` where `1, 2, 3, 4` is expected |
+| A rise out of silence counts for the other bar | `test_what_comes_in_is_weighed_for_each_of_the_two_bars`: `(8.0, 6.0) == (8.0, 0.0)`, and two tests of session 9 |
+| What comes in after the first minute is weighed too | The same test: `(8.0, 9.0) == (8.0, 0.0)`, and one test of session 9 |
+| **The split** | |
+| The bass is taken for the drums and the drums for the bass | `test_the_split_puts_a_low_tone_in_the_bass_and_short_noises_in_the_drums`: the bass of a low tone is at -52.7 dB where its drums are at -16.5 |
+| The rest of the song is listened to in place of the bass | The same test: `{'drums', 'other'} == {'bass', 'drums'}` |
+| A song at another rate is split as if it were at 44.1 kHz | The same test: `176400 == 352800` |
+| A song of one channel is given to the model as it is | The same test: the model refuses it, `The channel dimension of input Tensor must match audio_channels` |
+| The model gets the song at its own level, not at the level of the songs it was trained on | **Nothing.** The one test that runs the model gives it a tone and short noises, which it tells apart at either level. Now `test_the_model_gets_the_song_at_the_level_it_was_trained_on`, with a stand-in for the model: a mean of 0.2 and a spread of 0.058 where 0 and 1 are expected |
+| The parts come back at the model's level, not at the song's | `test_the_pieces_of_a_split_add_up_to_the_song_whatever_its_length`: `a song of 20 s` |
+| A song is split in pieces of 20 seconds | The same test: `the pieces of a song of 30.01 s` |
+| Two pieces do not fade into each other: one stops and the next starts | **Nothing.** The test of the pieces looks at their sum, and two pieces that do not fade add up to the song as well. Now `test_two_pieces_of_a_split_fade_into_each_other_over_one_second`: the first piece weighs 1 a quarter of the way through the fade, where 0.75 is expected |
+| The pieces fade into each other over half a second | `test_the_pieces_of_a_split_add_up_to_the_song_whatever_its_length`: `the pieces of a song of 31 s` |
+| **The picture of a part** | |
+| A picture has a row every 10 ms | `test_the_picture_of_a_part_has_a_row_every_20_ms_and_a_tone_in_the_band_of_its_pitch`: `(201, 80) == (101, 80)` |
+| A picture has 40 bands | **Nothing.** The test read the number of bands from the program. It now says 80: `(101, 40) == (101, 80)` |
+| The bands start at 100 Hz: the lowest octave and a half of the bass is not in the picture | **Nothing.** The two tones of the test, 200 Hz and 2 kHz, are far inside either range. Now `test_the_bands_of_a_picture_reach_from_the_low_bass_to_15_khz_and_a_row_is_46_ms_of_sound`: a tone at 40 Hz reads -14.0 dB where one at 200 Hz reads 35.9 |
+| The bands end at 8 kHz: the top of the güira is not in the picture | **Nothing**, for the same reason. The same new test: a tone at 15 kHz reads -80.9 dB where one at 2 kHz reads 35.9 |
+| A row is from a window of 23 ms | **Nothing.** A steady tone looks the same through a window of any length. The same new test, with a click: it is in row 50 alone, where rows 49, 50 and 51 are expected |
+| Twice the amplitude is 3 dB more in the picture | `test_the_picture_of_a_part_has_a_row_every_20_ms_and_a_tone_in_the_band_of_its_pitch`: `3.01 == 6.02 ± 0.01` |
+| **The score of a bar** | |
+| The share of the attacks that fall on the beats does not count | `test_an_attack_just_before_a_beat_is_a_fill_and_one_half_way_between_two_beats_is_not`: half way no longer scores under 0 |
+| The sixteenths next to a beat weigh as much as the beat, not half | **Nothing.** The test asked only that a fill scores under an attack half way. It now asks for half as much again: -5.40 where -4.05 is expected |
+| An attack on the sixteenth after a beat is not a fill | **Nothing.** An attack after each beat takes share from the beats, and that alone made the bar score lower. The same test now asks that just after a beat scores as just before one: -2.70 where -4.05 is expected |
+| An attack on the sixteenth before a beat is not a fill | The same test: just before no longer scores under half way |
+| An attack half way between two beats is a fill | The same test, the same line |
+| Only the first of the parts is scored | `test_a_bar_that_marks_the_beats_scores_over_one_that_fills_between_them`: two parts do not say it twice as loud |
+| A bar is compared with the bar before it only | `test_a_bar_is_measured_against_the_two_around_it_and_cut_at_three_times_its_usual_size` |
+| What a bar has over the two around it is cut at five times its usual size | **Nothing.** The test read the cut from the program. It now says 3.0: `5.0 == 3.0` |
+| What a bar has over the two around it is not put in its usual size in the song | The same test: `-3.0 == -1.01` |
+| What a bar has on a sixteenth is not taken as a share of the bar | `test_an_attack_just_before_a_beat_is_a_fill_and_one_half_way_between_two_beats_is_not`, and one more |
+| The sixteenths are placed by the length of the first beat of the song: one tempo for the whole song | **Nothing.** Every made-up song of the tests has one tempo. Now `test_a_song_that_gets_faster_is_scored_by_the_length_of_each_beat`: twelve bars at 94 BPM and twelve at 125, and the bars of the fast half no longer score on their side |
+| **Where the percussion comes in** | |
+| The percussion is in at a bar 20 dB under its loudest | `test_the_percussion_comes_in_at_the_first_of_four_bars_in_a_row_where_it_is_loud`: `0 == 6` |
+| The percussion has come in after three bars in a row | The same test: `3 == 9` |
+| Percussion that never comes in is taken as in from the first bar | The same test: `0 is None` |
+| **What the fills say** | |
+| The fills are heard over 90 seconds | `test_the_fills_are_heard_over_sixty_seconds_from_where_the_percussion_comes_in`: `-2.3 == 36.7` |
+| The fills are heard from the start of the song, before the percussion is in | The same test: `-1.8 == 30.7`, and one more |
+| The bars that mark the beats are taken for the second bar of an ocho | `test_the_fills_say_which_bars_mark_the_beats_from_where_the_percussion_comes_in`: `-12.0 > 5`, and one more |
+| Two bars are enough for an answer | The same test: `2.8 == 0` |
+| With no percussion in the song the fills are heard all the same | The same test: `12.0 == 0` |
+| The answer is the mean difference alone, not divided by its uncertainty | The same test: `0.96 > 5`, and one more |
+| **From the samples to the answer** | |
+| The bass is split off and not listened to | **Nothing.** No test ran `second_bar_fills()`: only the six-song check did, which needs the owner's songs and four minutes. Now `test_the_fills_of_a_song_are_heard_on_its_drums_and_its_bass_from_where_the_drums_come_in`, with a made-up split and the real pictures, scores and answer: `0.0 > 4` |
+| Where the percussion comes in is read from the bass | **Nothing**, for the same reason. The same new test: `-1.9 > 4` |
+| The fills answer for the ochos counted from the first beat of the song, not from the bar they were asked about | **Nothing**, for the same reason. The same new test: `7.8 < -4` |
+| Where the percussion comes in is not used: the fills are heard from the first bar | **Nothing**, for the same reason. The same new test: `-1.9 > 4` |
+| **A rule that is easy to break** | |
+| The analysis opens `fixtures/audio/by-ear.json` | **Nothing, in the work folder.** `bachata/songs_test.py` passed. In `wt/d4-patch` the reference under `fixtures/audio/` is links to the main folder, and `reading()` in `fixtures/by_ear.py` looked only at where an opened file is on disk, which is then outside the watched folder. It now also looks at the path as it was asked for. `test_a_file_reached_through_a_link_under_a_watched_folder_is_listed` failed before that with `[] == ['…/kept/marks.json']`, and the same break now fails with `the analysis read what only a check may read` |
+| **What no claim speaks of** | |
+| A vote of exactly three to one is not clear, and neither is a vote of nothing | `test_a_vote_is_clear_when_one_bar_has_three_times_the_other`, and one more |
+| Fills that are sure by exactly 2 do not set the count | `test_where_the_vote_is_not_clear_sure_fills_set_the_count`: `4 == 8` |
+| A song where nothing comes in is split too, though its bass decides | **Nothing.** No test ran such a song with the fills watched, and the answer of the fills is not used there, so only the time showed it: 32 s for the run in place of 10. `test_the_fills_of_a_song_are_asked_only_where_what_comes_in_is_not_clear` now starts with one: the fills were asked where `[]` is expected |
+| Only the left channel of a part is heard | **Nothing.** Every made-up song has the same sound in both channels. Now `test_a_part_is_heard_in_both_channels` |
+| The checkpoint of the parts is loaded without checking that it is the recorded file | **Nothing.** The file on this machine is the recorded one. Now `test_the_split_refuses_a_checkpoint_that_is_not_the_recorded_file`: `DID NOT RAISE` |
+| The model is not put in the state for use | **Alters nothing.** The parts are the same to the last digit either way: measured on 4 s of noise, the largest difference is 0.0 |
+| Nothing in a picture is under 0 dB | **Nothing, and no test was written for it:** where the floor of a picture is, is written nowhere. It is caught all the same since the repairs, by two tests that need silence to read far under a sound |
+| Only half of each sixteenth is listened to: an attack between two of them is in neither | `test_a_bar_that_marks_the_beats_scores_over_one_that_fills_between_them`, through the rounding to rows and not by anything it says about the width |
+| Where a part gets quieter counts as an attack | **Nothing.** Every made-up attack is one row long, so it gets quieter on the sixteenth it got louder on. Now `test_only_where_a_part_gets_louder_is_an_attack`, with notes that are held |
+| A last bar with no beat after it stops the scoring | `test_a_bar_that_marks_the_beats_scores_over_one_that_fills_between_them`: `IndexError` |
+| The first and the last bar are compared with their one neighbour | `test_a_bar_is_measured_against_the_two_around_it_and_cut_at_three_times_its_usual_size`: `0.54 == 0` |
+| The loudest of the percussion is its single loudest row, not the level 5% of its rows reach | **Nothing, and no test was written for it:** the code says "its loudest", and the 5% is written nowhere. It is caught all the same since the repairs, by the test of the whole chain: its drums are four to eight short hits a bar and are in only by the 5% |
+| A bar is as loud as its first beat | **Nothing.** The made-up percussion is as loud on every beat of a bar. `test_the_percussion_comes_in_at_the_first_of_four_bars_in_a_row_where_it_is_loud` now has percussion that leaves the first beat out: `None == 6` |
+| The bar where the percussion comes in is left out | **Nothing.** No test changed that bar. `test_the_fills_are_heard_over_sixty_seconds_from_where_the_percussion_comes_in` now does |
+
+- The blind spots, in short: numbers read from the program by the test that checks them, made-up songs that all start on their first bar, have one tempo and the same sound in both channels, and a chain of five steps of which each had a test and the chain had none.
+- **Not looked at by any test still:** the real model on a song longer than one piece, which takes more than 30 s of sound and some 10 s of run; the download in `scripts/fetch_model.py`; and the two numbers named above, the floor of a picture and the 5%.
+
+### Downloads
+
+None by this session. `models/hdemucs_high_trained.pt` was already in the main folder, dated 7 October 13:21: 334,697,255 bytes, sha256 `a004b2790d73ffeaa535db458a1a79b539dfdbafbccc31f275d07e632ebd7816`, from `https://download.pytorch.org/torchaudio/models/hdemucs_high_trained.pt`, which is where torchaudio 2.11.0 itself fetches it for `HDEMUCS_HIGH_MUSDB_PLUS`. **Its licence is not in this log and was not looked up: no network.** torchaudio's own text says it was trained on MUSDB-HQ and on 150 more songs made for Meta.
+
+### Cost
+
+- Paid APIs: none. Network: none. Dependencies: none added, `pyproject.toml` and `uv.lock` did not change: torchaudio was already there for Beat This.
+- Commands outside the sandbox: 3. The whole test run, the program started on 8083 for the owner's review, and one request to that program to see that it answered.
+- Time: from about 17:30 to about 19:30 by the machine's clock for the work. The merge and these records: from 20:36.
+- A second model was asked for advice before the patch was applied and before the end. What it used is not visible from inside the session.
+- Cost of the Claude Code session itself: not measured from inside the session.
+
+### Decisions
+
+**The owner's**
+
+- The task: apply the patch in a work folder of its own, read it as a reviewer, run the checks, break the new rule on purpose, and keep what belongs in the records for the merge.
+- **His verdict**, after the work was handed back and a program was started for his review: "Overall, I think the first beat detection is better, I have not tested everything but I did the tests review of the algo and it was better. I will accept it".
+- **The six-song check stays at "at least 5 of 6", and the limits stay as the patch has them.** Both had been put to him: the task says "the six songs" where the check passes at 5, and sure by 2 is weaker than it reads.
+- `d4-patch` was merged into `master` as a fast-forward, from the main folder. The work folder and the branch are kept, and the program on 8083 was left running.
+
+**Mine**
+
+- **The four faults that were repaired**, each in a commit of its own after the patch. None of them is a break: each has a check that was seen to fail on the code as it was, before the fix.
+  - **A song that ends within a second after a piece of 30 s.** `split()` made a piece for that end alone. Up to 768 samples, 17 ms, the model refuses the piece and the analysis of the song fails. Up to a second, that piece and the one before it both count in full, and the parts are up to twice as loud there. No song of the reference has such a length. The split now stops at the piece that holds the end. `a8564a2`.
+  - **The program started without the checkpoint of the parts.** It checked the Beat This file and not the new one, so on a machine with only the first, every song whose fills are asked would have failed, and the others not. It now checks both before it starts. `945c373`.
+  - **What the split costs** was written as "some 30 seconds a song". It is about 10 seconds for every minute of a song on this machine, 25 to 47 on these songs, and 3 GB. The docstring says so now. `3e7e3fa`, which also brings a comment in `.gitignore` and one docstring up to date.
+  - **The watch on what the analysis opens could not see a file behind a link.** This one is not in the patch: it is in `reading()` of `fixtures/by_ear.py`, which `bachata/songs_test.py`, `bachata/entry_test.py` and the six-song check all go through. In the main folder it sees what it should, because nothing there is a link. `e5dde4b`.
+- **Of the 25 breaks that nothing caught**, 21 got a test of their own or a stronger one, in the tests only: `86efb5c`. One was repaired in the watch itself, `e5dde4b`. Two were left without a test of their own, because what is right is written nowhere: the floor of a picture and the 5%. One alters nothing.
+- **Left as the patch has them, and still open:**
+  - **Where the settings come from** is not in the patch: 3 to 1, sure by 2, 60 seconds, 12 dB, 4 bars, the cut at 3, half weight for a fill. The six songs are the ones the rule was built to put right, so 6 of 6 is not a test of it. The 17 of 17 above is the nearest thing to one.
+  - **`analyse()` takes a third argument, `fills_of`, that only a test uses.** The other tests of the file put a made-up function in place of the real one without it.
+  - **The whole song is split, and 60 seconds of it are listened to.** Splitting less would cut most of the time. Not built: where the percussion comes in is found on the split of the whole song.
+- **The fills of every reference song were worked out, also where the analysis does not ask them.** It was not asked for. It took 14 minutes of the machine and shows whether the measure agrees with the songs whose count is known.
+- **The inbox songs were not run.** They are outside the repository and the task did not ask for them. From the table of session 9, 30 of the 104 have a vote under 3 to 1 and would be split: worked out from that table, not measured.
+- **The skill keeps each break as a patch in the git folder of the work folder**, `.git/worktrees/d4-patch/breaks/` of the main folder. During the work nothing else was written outside `wt/d4-patch` but the commits of the branch.
+- **The skill says not to commit; the task said to.** The repairs were committed on `d4-patch`.
+- **This session is numbered 10 here.** Nobody set the number: it is the one after the newest entry.
+- **No item was added under "Setup" in `ACCEPTANCE.md`** for the program not starting without its two checkpoints. The check is there, in `bachata/server_test.py`. Whether it is an acceptance item is the owner's to say.
+
 ## 2026-10-06, session 9, third part: the bass, and 5 of 5
 
 The owner said "resume" after the record below. The step that record names as first was run, it held, and the rule that had been taken out was built. **The entry check reads 5 of 5, with no other song worse.**
