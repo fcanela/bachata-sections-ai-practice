@@ -790,10 +790,20 @@ def test_every_bar_has_one_plate_with_its_count_on_it_and_nothing_else_in_light_
     assert bars == bars_of(counts)
     assert len(plates) == len(bars) and len(rows_of(plates)) >= 2
     assert page.evaluate("document.getElementById('map').width / document.getElementById('map').clientWidth") == 2
+    # The song says what it is and what a press and a drag do on it. It no longer says
+    # where the mark of a beat is: no beat has one.
+    expect(page.locator("#map")).to_have_attribute(
+        "aria-label",
+        "The song in rows of ochos, a plate for each bar with its count on it. "
+        "Press a bar to move the playing position to its first beat. Drag across bars to mark them as a loop.",
+    )
+    assert page.evaluate("Object.keys(document.getElementById('map').dataset).sort()") == ["bars", "byHand", "counts", "lit", "perRow", "plates", "range"]
 
     # Whole plates are all as wide as each other, and a short bar's plate is narrower in
     # the proportion of its beats. Every plate is 30 high.
-    (whole,) = {wide for (x, y, wide, high), (first, last) in zip(plates, bars) if last - first == 3}
+    wholes = {wide for (x, y, wide, high), (first, last) in zip(plates, bars) if last - first == 3}
+    assert len(wholes) == 1, wholes
+    whole = wholes.pop()
     for (x, y, wide, high), (first, last) in zip(plates, bars):
         assert wide == int(whole * (last - first + 1) / 4 + 0.5) and high == HIGH, (first, last, wide, high)
 
@@ -887,10 +897,47 @@ def test_a_row_holds_eight_ochos_and_a_short_ocho_moves_the_rest_of_its_row_left
     # The row has its eight ochos with one plate fewer, so the next row starts a bar earlier.
     assert len(rows[0]) == len(full) - 1 and after[rows[1][0]][:2] == [LEFT, 28 + 62]
 
-    # A narrower window has room for four ochos a row.
-    page.set_viewport_size({"width": 1100, "height": 720})
-    expect(song).to_have_attribute("data-per-row", "4")
-    rows_as_laid_out(4)
+    # A narrower window has room for four ochos a row: the first of 8, 4, 2 and 1 whose
+    # plates are 44 wide or wider. The page is never so narrow that four do not fit.
+    for width, most in ((1202, 8), (1201, 4), (1100, 4), (480, 4)):
+        page.set_viewport_size({"width": width, "height": 900})
+        expect(song).to_have_attribute("data-per-row", str(most))
+        rows_as_laid_out(most)
+        canvas = page.evaluate("document.getElementById('map').clientWidth")
+        fits = {ochos: (canvas - 80 - 16 - (ochos - 1) * 14 - ochos * 2) // (2 * ochos) for ochos in (8, 4, 2)}
+        assert most == next(ochos for ochos in (8, 4, 2) if fits[ochos] >= 44), (width, canvas, fits)
+        assert max(wide for x, y, wide, high in visitor.plates()) == fits[most], (width, canvas, fits)
+    # In a very wide one a plate is 96 wide and no wider.
+    page.set_viewport_size({"width": 2300, "height": 900})
+    expect(song).to_have_attribute("data-per-row", "8")
+    assert max(wide for x, y, wide, high in visitor.plates()) == 96
+    rows_as_laid_out(8)
+
+
+def test_the_song_scrolls_so_that_the_row_of_the_playing_position_is_on_screen(visit, files):
+    # A window so low that the part of the page the song is in shows less than its two rows.
+    visitor = visit(viewport={"width": 1280, "height": 440})
+    page = visitor.page
+    visitor.pick(files["rows"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    bars, plates = visitor.bars(), visitor.plates()
+    rows = rows_of(plates)
+    shown = lambda: page.evaluate("[document.getElementById('song').scrollTop, document.getElementById('song').clientHeight]")
+    top, high = shown()
+    assert top == 0 and 62 <= high < plates[rows[1][0]][1] + HIGH, high
+
+    # The position goes on by ochos, from the first row into the second: the song
+    # scrolls, and the plates of that row are on screen with the lit block of one of them.
+    while visitor.lit() < bars[rows[1][0]][0]:
+        page.keyboard.press("Shift+ArrowRight")
+    assert visitor.lit_bar() in rows[1]
+    top, high = shown()
+    assert top > 0 and top <= plates[rows[1][0]][1] - 6 and plates[rows[1][0]][1] + HIGH + 6 <= top + high, (top, high)
+    # And back in the first row, it scrolls back.
+    while visitor.lit() >= bars[rows[1][0]][0]:
+        page.keyboard.press("Shift+ArrowLeft")
+    top, high = shown()
+    assert top <= plates[0][1] - 6 and plates[0][1] + HIGH + 6 <= top + high, (top, high)
 
 
 def test_the_bar_of_the_beat_that_is_sounding_is_lit_whole_and_no_other(visit, files):
