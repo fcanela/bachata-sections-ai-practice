@@ -3,13 +3,51 @@
 They are analysed one at a time, in the order they arrived. The queue is not kept anywhere
 of its own: it is read from the library, so it survives a restart, and a song whose result
 was made by an older version is in it again.
+
+A song whose analysis failed keeps why and after how long, and is not in the queue again
+until its failure is thrown away, which only the page asks for.
 """
 
 import threading
 import time
 import traceback
 
+from bachata.model import Checkpoint
 from bachata.store import RATE
+
+# Why an analysis failed. Everything that is not one of the first three is the last.
+REASONS = ("memory", "model", "sound", "other")
+
+# What torch says when it cannot get memory. It says so with a RuntimeError, or with a
+# class of that name, and torch is not imported here to ask: that takes seconds.
+NO_MEMORY = ("allocate memory", "out of memory", "not enough memory")
+
+
+class Unreadable(Exception):
+    """The stored sound of a song could not be read as samples."""
+
+
+def reason_of(error):
+    """Which of the four reasons an exception of the analysis is."""
+    if isinstance(error, Unreadable):
+        return "sound"
+    if isinstance(error, Checkpoint):
+        return "model"
+    if isinstance(error, MemoryError) or any(kind.__name__ == "OutOfMemoryError" for kind in type(error).__mro__):
+        return "memory"
+    if isinstance(error, RuntimeError) and any(said in str(error).lower() for said in NO_MEMORY):
+        return "memory"
+    return "other"
+
+
+def failure_of(result):
+    """What is said of a stored failure: the reason, and for how long the analysis ran.
+
+    A failure stored before reasons were kept has neither, and is of no known reason
+    and of no known length.
+    """
+    reason = result.get("reason")
+    return {"reason": reason if reason in REASONS else "other", "seconds": result.get("seconds")}
 
 
 class Queue:
@@ -39,13 +77,20 @@ class Queue:
         started = time.monotonic()
         try:
             try:
-                result = self._analyse(self._store.samples(song_id), RATE)
+                result = self._analyse(self._samples(song_id), RATE)
                 result = {"version": self._version, **result, "seconds": round(time.monotonic() - started, 1)}
             except Exception as error:
                 # One song that cannot be analysed must not stop the ones after it.
                 if self._store.song(song_id) is not None:
                     traceback.print_exc()
-                result = {"version": self._version, "error": type(error).__name__}
+                # The sound was not read by the analysis: the name kept is of what went wrong there.
+                cause = error.__cause__ if isinstance(error, Unreadable) else error
+                result = {
+                    "version": self._version,
+                    "error": type(cause).__name__,
+                    "reason": reason_of(error),
+                    "seconds": round(time.monotonic() - started, 1),
+                }
             # A song deleted while it was analysed is finished and then discarded: the
             # tracker works on a whole song and cannot be stopped half way.
             self._store.write_result(song_id, result)
@@ -53,8 +98,14 @@ class Queue:
             self._current = None
         return True
 
+    def _samples(self, song_id):
+        try:
+            return self._store.samples(song_id)
+        except Exception as error:
+            raise Unreadable(song_id) from error
+
     def wake(self):
-        """Tells the queue that a song arrived."""
+        """Tells the queue that a song arrived, or that one waits again."""
         self._wake.set()
 
     def start(self):
