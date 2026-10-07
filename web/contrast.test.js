@@ -46,6 +46,10 @@ const TEXT = [
   ['--band-ink', '--band'],
   ['--band-soft', '--band'],
   ['--band-mark', '--band'],
+  // The count on the plate of a bar: of a first bar, of a second bar, and of the bar that is lit.
+  ['--ground', '--mark'],
+  ['--ink', '--plate'],
+  ['--lit-ink', '--lit'],
 ]
 
 // A mark, a rule or a focus ring and what it is drawn on.

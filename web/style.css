@@ -28,9 +28,6 @@
   color-scheme: light dark;
   --rail-width: 18rem;
   --font: "Hind", system-ui, sans-serif;
-  /* How far apart the beats of the song are, and its rows. */
-  --beat: 32px;
-  --row: 50px;
 
   --ground: #e5e3dc;
   --ink: #121212;
@@ -58,6 +55,7 @@
   --band-lit: #121212;
   --band-lit-ink: #ffd200;
   --mark: #121212;
+  --plate: #cdcac0;
   --lit: #121212;
   --lit-ink: #ffd200;
   --hover: rgb(18 18 18 / 0.14);
@@ -80,6 +78,7 @@
 
     --band-lit-ink: #f2c500;
     --mark: #f3f1ea;
+  --plate: #33322e;
     --lit: #f2c500;
     --lit-ink: #121212;
     --hover: rgb(243 241 234 / 0.18);
