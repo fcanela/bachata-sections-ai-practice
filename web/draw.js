@@ -18,6 +18,7 @@ const READ = {
   ground: '--ground',
   lit: '--lit',
   litInk: '--lit-ink',
+  litEdge: '--lit-edge',
   hover: '--hover',
   loop: '--loop',
   loopFill: '--loop-fill',
@@ -329,10 +330,14 @@ export function drawMap(canvas, layout, { beats, bars, count, byHand, lit, hover
   if (lit >= 0) {
     const { x, y, wide, high } = plates[lit]
     const start = bars[lit].first
+    // The block has an edge 3 wide inside it. On a light ground the edge is what tells
+    // the yellow from the ground; on a dark one it has the colour of the block.
     pen.beginPath()
     pen.roundRect(x - 5, y - 6, wide + 10, high + 12, 2)
-    pen.fillStyle = colours.lit
+    pen.fillStyle = colours.litEdge
     pen.fill()
+    pen.fillStyle = colours.lit
+    pen.fillRect(x - 2, y - 3, wide + 4, high + 6)
     pen.font = `700 17px ${colours.font}`
     pen.fillStyle = colours.litInk
     figure(pen, String(count[start]), x + wide / 2, y + high / 2)

@@ -56,8 +56,11 @@
   --band-lit-ink: #ffd200;
   --mark: #121212;
   --plate: #cdcac0;
-  --lit: #121212;
-  --lit-ink: #ffd200;
+  /* The bar that is sounding is the sign's yellow with black type, as the band is. By
+     day the yellow is as light as the ground, so the block has a black edge. */
+  --lit: #ffd200;
+  --lit-ink: #121212;
+  --lit-edge: #121212;
   --hover: rgb(18 18 18 / 0.14);
   --loop: #121212;
   --loop-fill: rgb(255 210 0 / 0.6);
@@ -80,7 +83,7 @@
     --mark: #f3f1ea;
     --plate: #33322e;
     --lit: #f2c500;
-    --lit-ink: #121212;
+    --lit-edge: #f2c500;
     --hover: rgb(243 241 234 / 0.18);
     --loop: #f2c500;
     --loop-fill: rgb(242 197 0 / 0.2);

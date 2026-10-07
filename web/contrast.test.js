@@ -65,11 +65,12 @@ const MARKS = [
   ['--band-lit-ink', '--band-lit'],
 ]
 
-// The mark of the beat that is sounding, and the block of the bar that is, stand out from
-// their ground by their own colour, or by the colour of what is on them.
+// The mark of the beat that is sounding stands out from its ground by its own colour, or
+// by the colour of what is on it. The block of the bar that is sounding, by its own
+// colour or by the colour of its edge.
 const LIT = [
   ['--band-lit', '--band-lit-ink', '--band'],
-  ['--lit', '--lit-ink', '--ground'],
+  ['--lit', '--lit-edge', '--ground'],
 ]
 
 // Light is what :root sets. Dark is what the block for a dark system sets over it.

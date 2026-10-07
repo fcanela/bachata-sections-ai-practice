@@ -336,8 +336,9 @@ COLOURS = {
         "mark": (18, 18, 18),
         "plate": (205, 202, 192),
         "ink": (18, 18, 18),
-        "lit": (18, 18, 18),
-        "lit-ink": (255, 210, 0),
+        "lit": (255, 210, 0),
+        "lit-ink": (18, 18, 18),
+        "lit-edge": (18, 18, 18),
         "hover": (18, 18, 18, 0.14),
         "loop": (18, 18, 18),
         "loop-fill": (255, 210, 0, 0.6),
@@ -350,6 +351,7 @@ COLOURS = {
         "ink": (243, 241, 234),
         "lit": (242, 197, 0),
         "lit-ink": (18, 18, 18),
+        "lit-edge": (242, 197, 0),
         "hover": (243, 241, 234, 0.18),
         "loop": (242, 197, 0),
         "loop-fill": (242, 197, 0, 0.2),
@@ -1104,12 +1106,22 @@ def test_the_bar_that_holds_the_beat_that_is_sounding_is_lit_whole_in_light_and_
         page.wait_for_timeout(300)
         colours = COLOURS[scheme]
         # It is a block in place of its plate, 5 wider on each side and 6 higher, with
-        # its count in the middle in a colour of its own. The corners of the block are
-        # rounded, so its rim is read 2 inside its left and its right.
-        seen = page.evaluate(BOX, [[x - 3, y - 6, wide + 6, high + 12], colours["lit"], colours["lit-ink"]])
+        # its count in the middle in a colour of its own. The block is the sign's yellow
+        # in light and in dark, with black type.
+        assert colours["lit-ink"] == (18, 18, 18) and colours["lit"][0] > 240 and colours["lit"][2] == 0
+        # Inside its edge it is its own fill to the rim.
+        seen = page.evaluate(BOX, [[x - 2, y - 3, wide + 4, high + 6], colours["lit"], colours["lit-ink"]])
         assert seen["rim"] == 0 and seen["written"] >= 12 and max(abs(off) for off in seen["off"]) <= 1.5 and max(seen["reach"]) <= 9, (scheme, seen)
         assert visitor.written(plates[bar]) == [(hex_of(colours["lit-ink"]), "700", "17px")], scheme
-        assert is_colour(visitor.at(x - 5, y + high / 2), colours["lit"]) and is_colour(visitor.at(x + wide + 4, y + high / 2), colours["lit"])
+        # The edge is 3 wide all round, inside the block: black in light, where the yellow
+        # is as light as the ground, and the colour of the block in dark.
+        middle, centre = y + high / 2, x + wide / 2
+        for inside in (0, 1, 2):
+            edge = [(x - 5 + inside, middle), (x + wide + 4 - inside, middle), (centre, y - 6 + inside), (centre, y + high + 5 - inside)]
+            assert all(is_colour(visitor.at(*point), colours["lit-edge"]) for point in edge), (scheme, inside)
+        within = [(x - 2, middle), (x + wide + 1, middle), (centre, y - 3), (centre, y + high + 2)]
+        assert all(is_colour(visitor.at(*point), colours["lit"]) for point in within), scheme
+        assert (colours["lit-edge"] == colours["lit"]) == (scheme == "dark")
         assert visitor.at(x - 5, y - 6)[3] < 255, scheme
         # No other bar is lit: there is no ink but that block and the plates of the others,
         # and each of the others has the fill of a plate, not far from a corner.
