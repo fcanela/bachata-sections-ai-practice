@@ -1,5 +1,5 @@
-// The page: adding a song, the list of remembered songs, and playing one with its beats
-// and their count.
+// The page: adding a song, the list of remembered songs, and playing one with its beats,
+// their count and its bars.
 
 import {
   MAX_NAME,
@@ -7,6 +7,8 @@ import {
   MIN_SECONDS,
   RATE,
   addressOf,
+  barOf,
+  barsOf,
   beatsUntil,
   bpmAt,
   channelsFrom16,
@@ -26,7 +28,7 @@ import {
   tagsOf,
   wrapped,
 } from './song.js'
-import { beatAt, drawMap, drawNow, forgetTokens, mapLayout, markOf, nowLayout, rowOf } from './draw.js'
+import { barAt, drawMap, drawNow, forgetTokens, mapLayout, nowLayout, rowOf } from './draw.js'
 
 const $ = (id) => document.getElementById(id)
 
@@ -125,16 +127,23 @@ async function add(file) {
   const samples = interleaved16(sound.getChannelData(0), right)
   say(`Sending ${name}…`, false, 0)
   const query = new URLSearchParams({ name, rate: RATE, frames: sound.length })
-  const answer = await send(`/api/songs/${id}?${query}`, samples, (part) => say(`Sending ${name}…`, false, part))
+  let answer
+  try {
+    answer = await send(`/api/songs/${id}?${query}`, samples, (part) => say(`Sending ${name}…`, false, part))
+  } catch {
+    return say('The song did not reach the server. It was not added.', true)
+  }
   // 409: another browser sent the same song in the meantime.
   if (!answer.ok && answer.status !== 409) return say(`The server refused the song. ${answer.text.trim()}`, true)
-  say(`${name} is in the library. It opens when it has been analysed.`)
+  // A song that is sounding is left to sound: see `refresh`.
+  say(`${name} is in the library. ${player.playing ? 'It is ready' : 'It opens'} when it has been analysed.`)
   return openWhenReady(id)
 }
 
 // ---- The list
 
 const STATES = { waiting: 'waiting', analysing: 'being analysed', ready: 'ready', failed: 'failed' }
+const FAILED = 'The analysis failed. To try again, delete the song and add the file again.'
 
 let songs = []
 const rows = new Map() // the rows on screen, by song: { row, from }, where `from` is what the row was built from
@@ -145,6 +154,16 @@ let wanted = null // the song to open as soon as it is ready
 let linked = null // the song the address named when the page was loaded, until it is settled
 let focusNext = null // where the keyboard goes once the list is on screen again: { id, where, key }
 const notes = new Map() // what went wrong with a song, shown in its row: id, or 'title', to { text, refused }
+const analysedSince = new Map() // when this page saw the analysis of a song start, by song
+let listed = false // whether the list has been on screen before
+
+// What the row of a song says of its state. An analysis this page saw start says for how
+// long it has run: one that was already running when the page was loaded cannot.
+function stateOf(song) {
+  const since = analysedSince.get(song.id)
+  if (since === undefined) return STATES[song.state]
+  return `${STATES[song.state]} for ${clock((performance.now() - since) / 1000)}`
+}
 
 async function refresh() {
   let response
@@ -155,7 +174,13 @@ async function refresh() {
     return
   }
   if (!response.ok) return
+  const before = new Map(songs.map((song) => [song.id, song.state]))
   songs = await response.json()
+  for (const id of analysedSince.keys()) if (!songs.some((song) => song.id === id && song.state === 'analysing')) analysedSince.delete(id)
+  for (const song of songs) {
+    if (listed && song.state === 'analysing' && before.get(song.id) !== 'analysing') analysedSince.set(song.id, performance.now())
+  }
+  listed = true
   // A count 1 set in another browser. A list that was asked for before this browser's
   // own last change may not have it yet, and is not believed.
   const playing = songs.find((song) => song.id === player.id)
@@ -168,7 +193,9 @@ async function refresh() {
   const song = songs.find((candidate) => candidate.id === wanted)
   if (song?.state === 'ready') {
     wanted = linked = null
-    await open(song)
+    // A song that is sounding is not cut off by one that has just been analysed.
+    if (player.playing) say(`${song.name} is ready. Open it from the list.`)
+    else await open(song)
   } else if (wanted && (!song || song.state === 'failed')) {
     // A song the address named and the library does not have is said in the middle of
     // the page: no control of the page asked for it.
@@ -257,7 +284,7 @@ function rowFor(song) {
     name.title = song.name
     row.append(name)
   }
-  row.append(element('span', 'state', `${clock(song.seconds)}, ${STATES[song.state]}`))
+  row.append(element('span', 'state', `${clock(song.seconds)}, ${stateOf(song)}`))
 
   const actions = element('div', 'actions')
   if (opening?.id === song.id) {
@@ -282,7 +309,7 @@ function rowFor(song) {
     )
   }
   if (actions.childElementCount) row.append(actions)
-  const note = noteOf(song.id)
+  const note = noteOf(song.id) ?? (song.state === 'failed' ? element('p', 'note refused', FAILED) : null)
   if (note) row.append(note)
   return row
 }
@@ -309,6 +336,7 @@ function showList() {
   for (const song of songs) {
     const from = JSON.stringify([
       song,
+      stateOf(song),
       player.id === song.id,
       confirming === song.id,
       renaming?.id === song.id && renaming.where,
@@ -442,6 +470,7 @@ const player = {
   count: [], // the count of every beat, with those
   byHand: new Set(), // the beats the user set to count 1
   ochos: [], // the ochos that count makes, each { first, last }
+  bars: [], // the bars that count makes, each { first, last }
   context: null,
   source: null, // the sound that is playing
   playing: false,
@@ -526,10 +555,11 @@ async function open(song) {
 function closePlayer(text) {
   pause()
   Object.assign(player, { id: null, buffer: null, result: null, offset: 0, range: { first: null, last: null }, looping: false })
-  Object.assign(player, { ones: [], count: [], byHand: new Set(), ochos: [] })
+  Object.assign(player, { ones: [], count: [], byHand: new Set(), ochos: [], bars: [] })
   for (const control of ['play', 'seek', 'loop', 'loop-start', 'loop-end', 'one']) $(control).disabled = true
-  $('position').textContent = $('where').textContent = $('duration').textContent = clock(0)
+  $('position').textContent = $('duration').textContent = clock(0)
   $('seek').value = 0
+  $('seek').style.setProperty('--at', 0)
   showAddress(null)
   showNothing(text)
   showLoop()
@@ -698,11 +728,16 @@ function stepOcho(by) {
 
 let counting = 0 // how many times this browser has changed the beats set to count 1
 
-// Counts the song again with the beats the user set to count 1, and draws it again.
+// Counts the song again with the beats the user set to count 1, makes its ochos and its
+// bars again, and draws it again. The bars may be other ones now: what the pointer was
+// on, or was dragging across, is forgotten.
 function recount(ones) {
   const { beats, count } = player.result
   const counted = countsWith(beats, count, ones)
-  Object.assign(player, { ones, count: counted.count, byHand: new Set(counted.byHand), ochos: ochosOf(counted.count) })
+  Object.assign(player, { ones, count: counted.count, byHand: new Set(counted.byHand) })
+  Object.assign(player, { ochos: ochosOf(counted.count), bars: barsOf(counted.count) })
+  hover = -1
+  drag = null
   layOut()
 }
 
@@ -740,11 +775,19 @@ function showLoop() {
   const loop = beats ? markedLoop() : null
   $('loop').disabled = !loop
   $('loop').checked = Boolean(loop) && player.looping
-  let text = 'Drag across beats'
+  let text = 'Drag across bars'
   if (loop) text = `${clock(beats[first])} to ${clock(loop.end)}`
   else if (first !== null) text = `From ${clock(beats[first])}`
   else if (last !== null) text = `To ${clock(beats[last])}`
   $('loop-range').textContent = text
+  // The range on the position control: two ends, and filled while the playing goes round it.
+  const onSeek = $('seek-loop')
+  onSeek.hidden = !loop
+  if (loop) {
+    onSeek.style.setProperty('--from', loop.start / player.buffer.duration)
+    onSeek.style.setProperty('--to', loop.end / player.buffer.duration)
+    onSeek.toggleAttribute('data-on', player.looping)
+  }
   $('player').dataset.state = player.playing ? (player.loop ? 'looping' : 'playing') : 'paused'
   for (const end of ['loop-start', 'loop-end']) $(end).disabled = !beats
   // The keyboard does not stay on a control that can no longer be pressed.
@@ -805,27 +848,27 @@ $('loop').addEventListener('change', () => {
 
 // ---- What is on screen while a song is open
 
-let layout = null // where the rows of the song are, on the canvas as it is now
-let hover = -1 // the beat under the pointer
-let drag = null // a press on the song that has not been let go: { from, to }, beats
+let layout = null // where the plates of the song are, on the canvas as it is now
+let hover = -1 // the bar under the pointer, as its place in the bars
+let drag = null // a press on the song that has not been let go: { from, to }, bars
 let mapFrom = null // what the song on screen was drawn from
 let laidOut = 0 // how many times the song has been laid out
-let litShown = -1 // the beat that is lit on it
+let litShown = -1 // the bar that is lit on it
 
 // The canvas of the song is as tall as its rows, and the part of the page it is in scrolls.
 function layOut() {
   if (!player.buffer) return
-  layout = mapLayout($('song').clientWidth, player.ochos)
+  layout = mapLayout($('song').clientWidth, player.ochos, player.bars)
   $('map').style.height = `${layout.height}px`
-  // Where the marks are and what they say, for whoever needs to find one without reading
-  // the canvas: the middle of every mark, its count, the beats set by hand, and how many
-  // ochos a row holds.
-  const marks = player.count.map((count, beat) => [markOf(layout, beat).x, markOf(layout, beat).y])
+  // Where the plates are and what they stand for, for whoever needs to find one without
+  // reading the canvas: the count of every beat, the beats set by hand, how many ochos a
+  // row holds, the first beat of every bar, and the box of its plate.
   Object.assign($('map').dataset, {
-    marks: JSON.stringify(marks),
     counts: player.count.join(' '),
     byHand: [...player.byHand].join(' '),
     perRow: layout.perRow,
+    bars: player.bars.map((bar) => bar.first).join(' '),
+    plates: JSON.stringify(layout.plates.map(({ x, y, wide, high }) => [x, y, wide, high])),
   })
   laidOut++
   show()
@@ -838,12 +881,14 @@ function show() {
   const lit = beatsUntil(beats, now) - 1
 
   const time = clock(now)
-  if ($('position').textContent !== time) $('position').textContent = $('where').textContent = time
+  if ($('position').textContent !== time) $('position').textContent = time
   const tempo = String(bpmAt(player.result, now) ?? '–')
   if ($('bpm').textContent !== tempo) $('bpm').textContent = tempo
   const count = String(player.count[lit] ?? '–')
   if ($('count').textContent !== count) $('count').textContent = count
   $('seek').value = now
+  // How far along the song is, from 0 to 1: the line of the position control is drawn to there.
+  $('seek').style.setProperty('--at', now / player.buffer.duration)
   // The control says what a press would do to the beat the song is on.
   const one = player.byHand.has(Math.max(0, lit)) ? 'Not count 1' : 'Count 1 here'
   if ($('one').textContent !== one) $('one').textContent = one
@@ -862,26 +907,31 @@ function show() {
   })
   Object.assign($('now').dataset, { lit: lit < 0 ? '' : lit, ocho: ocho ? `${ocho.first} ${ocho.last}` : '' })
 
-  // The song is drawn again only when something on it has changed.
-  const marked = drag ? { first: Math.min(drag.from, drag.to), last: Math.max(drag.from, drag.to) } : player.range
+  // On the song the bar that holds that beat is lit, whole. The song is drawn again only
+  // when something on it has changed: when another bar is lit, not at every beat. While
+  // a press is held, the bars it has crossed show as a range, and no bar has a halo.
+  const { bars } = player
+  const litBar = barOf(bars, lit)
+  const marked = drag ? { first: bars[Math.min(drag.from, drag.to)].first, last: bars[Math.max(drag.from, drag.to)].last } : player.range
   const range = marked.first !== null && marked.last !== null ? { ...marked, on: !drag && player.looping } : null
-  const from = JSON.stringify([lit, hover, range, laidOut])
+  const under = drag ? -1 : hover
+  const from = JSON.stringify([litBar, under, range, laidOut])
   if (from !== mapFrom) {
     mapFrom = from
-    drawMap($('map'), layout, { beats, count: player.count, byHand: player.byHand, lit, hover, range })
-    $('map').dataset.range = range ? `${range.first} ${range.last}` : ''
-    if (lit !== litShown && player.playing) follow()
-    litShown = lit
+    drawMap($('map'), layout, { beats, bars, count: player.count, byHand: player.byHand, lit: litBar, hover: under, range })
+    Object.assign($('map').dataset, { lit: litBar < 0 ? '' : litBar, range: range ? `${range.first} ${range.last}` : '' })
+    if (litBar !== litShown && player.playing) follow()
+    litShown = litBar
   }
 }
 
 // Scrolls the song so that the row of the playing position is on screen.
 function follow() {
-  if (!player.buffer || !layout?.count) return
+  if (!player.buffer || !layout?.plates.length) return
   const song = $('song')
-  const row = rowOf(layout, beatHere())
+  const row = rowOf(layout, barOf(player.bars, beatHere()))
   if (row.top >= song.scrollTop && row.bottom <= song.scrollTop + song.clientHeight) return
-  song.scrollTop = Math.max(0, row.top - Math.max(layout.top, song.clientHeight / 3))
+  song.scrollTop = Math.max(0, row.top - Math.max(rowOf(layout, 0).top, song.clientHeight / 3))
 }
 
 function frame() {
@@ -921,35 +971,38 @@ for (const end of ['pointerup', 'pointercancel']) {
   })
 }
 
-// A press on a beat of the song moves the playing position there. A press that is
-// dragged across several beats marks them as a loop.
-const beatUnder = (event, nearest) => {
+// A press on a bar of the song moves the playing position to its first beat. A press
+// that is dragged from one bar to another marks whole bars as a loop, from the first beat
+// of the earlier one to the last beat of the later, whichever way the drag went.
+const barUnder = (event, nearest) => {
   const box = $('map').getBoundingClientRect()
-  return beatAt(layout, event.clientX - box.left, event.clientY - box.top, nearest)
+  return barAt(layout, event.clientX - box.left, event.clientY - box.top, nearest)
 }
 
 $('map').addEventListener('pointerdown', (event) => {
   if (!player.buffer || event.button !== 0) return
-  const beat = beatUnder(event, false)
-  if (beat < 0) return
-  drag = { from: beat, to: beat }
+  const bar = barUnder(event, false)
+  if (bar < 0) return
+  drag = { from: bar, to: bar }
   $('map').setPointerCapture(event.pointerId)
   show()
 })
 
 $('map').addEventListener('pointermove', (event) => {
   if (!player.buffer) return
-  if (drag) drag.to = beatUnder(event, true)
-  else hover = beatUnder(event, false)
+  hover = barUnder(event, false)
+  // A drag may leave the rows: it takes the nearest row, and in it the nearest bar.
+  if (drag) drag.to = barUnder(event, true)
   show()
 })
 
 $('map').addEventListener('pointerup', () => {
   if (!drag) return
   const { from, to } = drag
+  const { bars } = player
   drag = null
-  if (from === to) moveTo(player.result.beats[from])
-  else markRange(Math.min(from, to), Math.max(from, to))
+  if (from === to) moveTo(player.result.beats[bars[from].first])
+  else markRange(bars[Math.min(from, to)].first, bars[Math.max(from, to)].last)
 })
 
 $('map').addEventListener('pointercancel', () => {
@@ -991,6 +1044,17 @@ document.addEventListener('keydown', (event) => {
     if (event.shiftKey) stepOcho(by)
     else step(by)
   }
+})
+
+// A press with the pointer does not leave the keyboard on the control it pressed. Space
+// would press that control again, and take back a count 1 or move an end of the loop,
+// when it was meant to play. A control the keyboard itself went to keeps it.
+let pointed = false // whether the last thing pressed was the pointer, not a key
+document.addEventListener('pointerdown', () => (pointed = true), true)
+document.addEventListener('keydown', () => (pointed = false), true)
+document.querySelector('.transport').addEventListener('click', (event) => {
+  const on = document.activeElement
+  if (pointed && event.currentTarget.contains(on) && on.matches('button, input[type="checkbox"]')) on.blur()
 })
 
 new ResizeObserver(layOut).observe($('song'))

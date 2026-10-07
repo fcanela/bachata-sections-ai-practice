@@ -1,10 +1,11 @@
-// The two drawings of a song: the ocho that is sounding, large, and every beat of the
-// song in rows of four ochos. A beat is a small square with its count under it. Count 1
-// is an upright bar, and a count 1 the user set has a cap across its top. The beat that
-// is sounding gets the large square a sign keeps for its pictogram, in the opposite of
-// its ground, with its own mark inside it.
+// The two drawings of a song: the ocho that is sounding, large, and the whole song in
+// rows of ochos. In the large view a beat is a small square with its count under it.
+// Count 1 is an upright bar, and a count 1 the user set has a cap across its top. The
+// beat that is sounding gets the large square a sign keeps for its pictogram, in the
+// opposite of its ground, with its own mark inside it. In the song a bar is one thing: a
+// plate with the count of its first beat on it, and the bar that is sounding is lit whole.
 
-import { OCHO, clock } from './song.js'
+import { OCHO, barOf, clock } from './song.js'
 
 // The custom properties a drawing reads from :root, by the name it uses for each.
 const READ = {
@@ -13,27 +14,26 @@ const READ = {
   bandLit: '--band-lit',
   bandLitInk: '--band-lit-ink',
   mark: '--mark',
+  plate: '--plate',
+  ground: '--ground',
   lit: '--lit',
   litInk: '--lit-ink',
+  litEdge: '--lit-edge',
   hover: '--hover',
   loop: '--loop',
   loopFill: '--loop-fill',
   label: '--ink-soft',
   ink: '--ink',
   font: '--font',
-  beat: '--beat',
-  row: '--row',
 }
 
 let read = null
 
-// What the style sheet sets: colours as text, and the two sizes of the rows as numbers.
+// What the style sheet sets: the colours and the typeface, as text.
 export function tokens() {
   if (!read) {
     const style = getComputedStyle(document.documentElement)
     read = Object.fromEntries(Object.entries(READ).map(([name, property]) => [name, style.getPropertyValue(property).trim()]))
-    read.beat = parseFloat(read.beat)
-    read.row = parseFloat(read.row)
   }
   return read
 }
@@ -117,148 +117,230 @@ export function drawNow(canvas, { ocho, count, byHand, lit, pulse }) {
   }
 }
 
-// ---- Every beat of the song
 
-// Marks are never closer than this, in pixels. A row holds four ochos when they fit with
-// that, and two or one when they do not.
-const CLOSEST = 20
-// The room on the left of a row for its time, on its right, and between two ochos.
+// ---- The whole song, a plate for each bar
+
+// All in pixels of the page. The room on the left of a row for its time, and on its right.
 const LEFT = 80
 const RIGHT = 16
-const GAP = 12
+// Between the two plates of an ocho, and between two ochos.
+const INSIDE = 2
+const BETWEEN = 14
+// How high a plate is, how far the top of one row's plates is from the top of the next
+// row's, and the room above the plates of the first row and under those of the last.
+const HIGH = 30
+const PITCH = 62
+const EDGE = 28
+// A row holds the most ochos, of these, that leave a whole plate at least NARROWEST wide.
+// A whole plate is never wider than WIDEST.
+const PER_ROW = [8, 4, 2, 1]
+const NARROWEST = 44
+const WIDEST = 96
+// A plate narrower than this has no count written on it.
+const ROOM_FOR_COUNT = 14
 
-// The rows of a song on a canvas this wide. `ochos` are its ochos, each { first, last }.
-// An ocho of fewer than eight beats takes less room, so the ochos after it in its row
-// stand further left, and the next row starts in line again. `x` is the left edge of the
-// cell of every beat and `line` the row it is in. `seat` is how far down a row its
-// marks are.
-export function mapLayout(width, ochos) {
-  const { beat: widest, row } = tokens()
-  let perRow, step
-  for (perRow of [4, 2, 1]) {
-    step = Math.min(widest, Math.floor((width - LEFT - RIGHT - (perRow - 1) * GAP) / (perRow * OCHO)))
-    if (step >= CLOSEST) break
+// The plates of a song on a canvas this wide. `ochos` are its ochos and `bars` its bars,
+// each { first, last }. A bar of four beats has a whole plate. One of fewer has a
+// narrower plate, so the ochos after it in its row stand further left, and the next row
+// starts in line again. `plates` has, for every bar, the left and the top of its plate,
+// how wide and how high it is, and the row and the ocho it is in. `rows` has the first
+// and the last bar of every row, and `perRow` is how many ochos a row holds.
+export function mapLayout(width, ochos, bars) {
+  let perRow, whole
+  for (perRow of PER_ROW) {
+    whole = Math.min(WIDEST, Math.floor((width - LEFT - RIGHT - (perRow - 1) * BETWEEN - perRow * INSIDE) / (2 * perRow)))
+    if (whole >= NARROWEST) break
   }
-  step = Math.max(step, 10)
-  const x = []
-  const line = []
+  const plates = []
   const rows = []
+  let x = LEFT
   ochos.forEach((ocho, n) => {
-    if (n % perRow === 0) rows.push({ first: ocho.first, last: ocho.last, end: LEFT })
-    const at = rows[rows.length - 1]
-    for (let beat = ocho.first; beat <= ocho.last; beat++) {
-      x.push(at.end + (beat - ocho.first) * step)
-      line.push(rows.length - 1)
+    if (n % perRow === 0) {
+      rows.push({ first: plates.length, last: plates.length })
+      x = LEFT
     }
-    at.last = ocho.last
-    at.end += (ocho.last - ocho.first + 1) * step + GAP
+    const row = rows.length - 1
+    // An ocho is one bar or two.
+    for (let bar = plates.length; bar < bars.length && bars[bar].first <= ocho.last; bar++) {
+      const wide = Math.round((whole * (bars[bar].last - bars[bar].first + 1)) / 4)
+      plates.push({ x, y: EDGE + row * PITCH, wide, high: HIGH, row, ocho: n })
+      rows[row].last = bar
+      x += wide + INSIDE
+    }
+    x += BETWEEN - INSIDE
   })
-  const top = 12
-  return { left: LEFT, top, step, row, seat: 16, perRow, rows, count: x.length, x, line, height: 2 * top + rows.length * row }
+  return { perRow, plates, rows, height: EDGE + (rows.length - 1) * PITCH + HIGH + EDGE }
 }
 
-// The middle of the mark of a beat.
-export const markOf = (layout, beat) => ({
-  x: layout.x[beat] + layout.step / 2,
-  y: layout.top + layout.line[beat] * layout.row + layout.seat,
-})
+// Where the band of a row starts, top to bottom: it is as high as the rows are apart,
+// with the plates in its middle, so the bands of two rows meet.
+const bandTop = (row) => EDGE + row * PITCH - (PITCH - HIGH) / 2
 
-// The beat at a point of the canvas, or -1 where there is none. With `nearest`, a point
-// beside the beats gives the closest one: a drag may leave the rows.
-export function beatAt(layout, x, y, nearest = false) {
-  if (layout.count === 0) return -1
-  let row = Math.floor((y - layout.top) / layout.row)
-  if (nearest) row = Math.min(Math.max(row, 0), layout.rows.length - 1)
-  else if (row < 0 || row >= layout.rows.length) return -1
-  const { first, last } = layout.rows[row]
+// The bar a point of the canvas belongs to, as its place in the bars, or -1 where there
+// is none. Its row is the one whose band the point is in. In that row it is the bar
+// whose plate the point is on, and between two plates the bar whose plate is nearer, the
+// left one when both are as near. Left of the first plate of a row and right of its last
+// there is no bar. With `nearest`, a point outside the rows takes the nearest row, and
+// in it the nearest bar: a drag may leave the rows.
+export function barAt(layout, x, y, nearest = false) {
+  const { plates, rows } = layout
+  if (rows.length === 0) return -1
+  let row = Math.floor((y - bandTop(0)) / PITCH)
+  if (nearest) row = Math.min(Math.max(row, 0), rows.length - 1)
+  else if (row < 0 || row >= rows.length) return -1
+  const { first, last } = rows[row]
+  if (!nearest && (x < plates[first].x || x >= plates[last].x + plates[last].wide)) return -1
   let closest = first
-  for (let beat = first; beat <= last; beat++) {
-    if (x >= layout.x[beat] && x < layout.x[beat] + layout.step) return beat
-    if (Math.abs(x - markOf(layout, beat).x) < Math.abs(x - markOf(layout, closest).x)) closest = beat
+  let least = Infinity
+  for (let bar = first; bar <= last; bar++) {
+    const away = Math.max(plates[bar].x - x, x - (plates[bar].x + plates[bar].wide), 0)
+    if (away < least) {
+      least = away
+      closest = bar
+    }
   }
-  return nearest ? closest : -1
+  return closest
 }
 
-// Where the row of a beat starts and ends, top to bottom.
-export function rowOf(layout, beat) {
-  const top = layout.top + layout.line[beat] * layout.row
-  return { top, bottom: top + layout.row }
+// Where the band of the row of a bar starts and ends, top to bottom.
+export function rowOf(layout, bar) {
+  const top = bandTop(layout.plates[bar].row)
+  return { top, bottom: top + PITCH }
 }
 
-// One row's part of a marked range: a band of the sign's yellow while the playing goes
-// round it, two dashed rules while it does not, and a black bar where the range starts
-// and where it ends.
-function loopRun(pen, x, y, width, layout, { opens, closes, on }, colours) {
-  const top = y + 3
-  const tall = layout.row - 6
+// How far under a point the line of a text goes, for the middle of what the text covers
+// to be level with the point. A typeface puts the middle of its line elsewhere.
+function level(pen, text) {
+  const covered = pen.measureText(text)
+  return (covered.actualBoundingBoxAscent - covered.actualBoundingBoxDescent) / 2
+}
+
+// The count of a bar, with the middle of what it covers on a point, both ways.
+function figure(pen, text, x, y) {
+  const covered = pen.measureText(text)
+  pen.fillText(text, x + (covered.actualBoundingBoxLeft - covered.actualBoundingBoxRight) / 2, y + level(pen, text))
+}
+
+// The lid of a count 1 the user set, over a plate or over the block of a lit bar: a
+// strip 4 high, 3 above it, and 3 wider than it on each side.
+function lid(pen, x, y, wide, colour) {
+  pen.fillStyle = colour
+  pen.fillRect(x - 3, y - 7, wide + 6, 4)
+}
+
+// How far the band of a range reaches beyond a plate, on its left (-1) or on its right
+// (1): 8, into the room between two ochos or at the end of a row, and 1 where the other
+// plate of its ocho is on that side, into the 2 pixels between them.
+const reach = (plates, bar, side) => (plates[bar + side]?.ocho === plates[bar].ocho ? 1 : 8)
+
+// One row's part of a marked range, over the bars `first` to `last` of that row: a band
+// of the sign's yellow while the playing goes round it, two dashed rules while it does
+// not, and a bracket where the range starts and where it ends.
+function loopRun(pen, plates, first, last, { opens, closes, on }, colours) {
+  const left = plates[first].x - reach(plates, first, -1)
+  const right = plates[last].x + plates[last].wide + reach(plates, last, 1)
+  const top = plates[first].y - 8
+  const tall = plates[first].high + 16
   if (on) {
     pen.fillStyle = colours.loopFill
-    pen.fillRect(x, top, width, tall)
+    pen.fillRect(left, top, right - left, tall)
   } else {
     pen.strokeStyle = colours.loop
     pen.lineWidth = 1.5
     pen.setLineDash([6, 5])
     pen.beginPath()
-    pen.moveTo(x, top)
-    pen.lineTo(x + width, top)
-    pen.moveTo(x, top + tall)
-    pen.lineTo(x + width, top + tall)
+    pen.moveTo(left, top)
+    pen.lineTo(right, top)
+    pen.moveTo(left, top + tall)
+    pen.lineTo(right, top + tall)
     pen.stroke()
     pen.setLineDash([])
   }
   pen.fillStyle = colours.loop
   if (opens) {
-    pen.fillRect(x, top, 4, tall)
-    pen.fillRect(x, top, 9, 4)
-    pen.fillRect(x, top + tall - 4, 9, 4)
+    pen.fillRect(left, top, 4, tall)
+    pen.fillRect(left, top, 10, 4)
+    pen.fillRect(left, top + tall - 4, 10, 4)
   }
   if (closes) {
-    pen.fillRect(x + width - 4, top, 4, tall)
-    pen.fillRect(x + width - 9, top, 9, 4)
-    pen.fillRect(x + width - 9, top + tall - 4, 9, 4)
+    pen.fillRect(right - 4, top, 4, tall)
+    pen.fillRect(right - 10, top, 10, 4)
+    pen.fillRect(right - 10, top + tall - 4, 10, 4)
   }
 }
 
-// `count` is the count of every beat and `byHand` the beats the user set to count 1.
-// `range` is the marked range, { first, last, on }, or null. `on` says whether the
-// playing goes round it.
-export function drawMap(canvas, layout, { beats, count, byHand, lit, hover, range }) {
+// `beats` are the times of the beats, `bars` the bars of the song, `count` the count of
+// every beat and `byHand` the beats the user set to count 1. `lit` is the bar that is
+// sounding and `hover` the bar under the pointer, each as its place in `bars`, or -1.
+// `range` is the marked range in beats, { first, last, on }, or null. `on` says whether
+// the playing goes round it.
+export function drawMap(canvas, layout, { beats, bars, count, byHand, lit, hover, range }) {
   const { pen } = sheetOf(canvas)
   const colours = tokens()
+  const { plates, rows } = layout
 
-  if (range) {
-    // One run for every row the range touches.
-    for (let row = layout.line[range.first]; row <= layout.line[range.last]; row++) {
-      const from = Math.max(range.first, layout.rows[row].first)
-      const to = Math.min(range.last, layout.rows[row].last)
-      const y = layout.top + row * layout.row
-      const ends = { opens: from === range.first, closes: to === range.last, on: range.on }
-      loopRun(pen, layout.x[from], y, layout.x[to] + layout.step - layout.x[from], layout, ends, colours)
+  if (range && plates.length) {
+    // Every bar that holds a beat of the range is covered whole: one run for every row
+    // the range touches. The runs come first, so the plates stand on them.
+    const from = barOf(bars, range.first)
+    const to = barOf(bars, range.last)
+    for (let row = plates[from].row; row <= plates[to].row; row++) {
+      const first = Math.max(from, rows[row].first)
+      const last = Math.min(to, rows[row].last)
+      loopRun(pen, plates, first, last, { opens: first === from, closes: last === to, on: range.on }, colours)
     }
   }
 
-  pen.textBaseline = 'middle'
+  pen.textBaseline = 'alphabetic'
   pen.font = `500 12px ${colours.font}`
   pen.textAlign = 'right'
   pen.fillStyle = colours.label
-  layout.rows.forEach((row, n) => {
-    pen.fillText(clock(beats[row.first]), layout.left - 14, layout.top + n * layout.row + layout.seat + 0.5)
+  for (const row of rows) {
+    const time = clock(beats[bars[row.first].first])
+    pen.fillText(time, LEFT - 14, plates[row.first].y + HIGH / 2 + level(pen, time))
+  }
+
+  // The halo of the bar under the pointer, behind its plate. A lit bar has none.
+  if (hover >= 0 && hover !== lit) {
+    const { x, y, wide, high } = plates[hover]
+    pen.fillStyle = colours.hover
+    pen.fillRect(x - 4, y - 4, wide + 8, high + 8)
+  }
+
+  // A plate for each bar, with the count of its first beat. The first bar of an ocho is
+  // solid and the second quiet: told apart by the fill and by the count, never by colour
+  // alone. Nothing keeps a place for the beats inside a bar.
+  pen.textAlign = 'center'
+  plates.forEach(({ x, y, wide, high }, bar) => {
+    if (bar === lit) return
+    const start = bars[bar].first
+    const first = count[start] <= OCHO / 2
+    pen.fillStyle = first ? colours.mark : colours.plate
+    pen.fillRect(x, y, wide, high)
+    if (wide >= ROOM_FOR_COUNT) {
+      pen.font = `${first ? 700 : 500} 15px ${colours.font}`
+      pen.fillStyle = first ? colours.ground : colours.ink
+      figure(pen, String(count[start]), x + wide / 2, y + high / 2)
+    }
+    if (byHand.has(start)) lid(pen, x, y, wide, colours.mark)
   })
 
-  pen.textAlign = 'center'
-  const litSide = Math.min(26, layout.step - 2)
-  for (let beat = 0; beat < layout.count; beat++) {
-    const { x, y } = markOf(layout, beat)
-    const first = count[beat] === 1
-    if (beat === lit) {
-      square(pen, x, y, litSide, colours.lit, 2)
-      mark(pen, x, y, 8, colours.litInk, first, byHand.has(beat))
-    } else {
-      if (beat === hover) square(pen, x, y, litSide - 2, colours.hover)
-      mark(pen, x, y, 8, colours.mark, first, byHand.has(beat))
-    }
-    pen.font = `${first ? 700 : 500} 12px ${colours.font}`
-    pen.fillStyle = first ? colours.ink : colours.label
-    pen.fillText(String(count[beat]), x, y + 21.5)
+  // The bar that is sounding is a block in place of its plate, drawn last, over the
+  // edges of its neighbours. A count 1 the user set keeps its lid while its bar sounds.
+  if (lit >= 0) {
+    const { x, y, wide, high } = plates[lit]
+    const start = bars[lit].first
+    // The block has an edge 3 wide inside it. On a light ground the edge is what tells
+    // the yellow from the ground; on a dark one it has the colour of the block.
+    pen.beginPath()
+    pen.roundRect(x - 5, y - 6, wide + 10, high + 12, 2)
+    pen.fillStyle = colours.litEdge
+    pen.fill()
+    pen.fillStyle = colours.lit
+    pen.fillRect(x - 2, y - 3, wide + 4, high + 6)
+    pen.font = `700 17px ${colours.font}`
+    pen.fillStyle = colours.litInk
+    figure(pen, String(count[start]), x + wide / 2, y + high / 2)
+    if (byHand.has(start)) lid(pen, x - 5, y - 6, wide + 10, colours.mark)
   }
 }

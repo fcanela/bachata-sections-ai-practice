@@ -46,25 +46,33 @@ const TEXT = [
   ['--band-ink', '--band'],
   ['--band-soft', '--band'],
   ['--band-mark', '--band'],
+  // The count on the plate of a bar of the song, and on the block of the bar that is lit.
+  // The plate of a second bar is a ground for its count, faint against the page on
+  // purpose: it is not checked as a mark.
+  ['--ground', '--mark'],
+  ['--ink', '--plate'],
+  ['--lit-ink', '--lit'],
 ]
 
 // A mark, a rule or a focus ring and what it is drawn on.
 const MARKS = [
   ['--focus', '--panel'],
+  ['--seek-line', '--panel'],
+  ['--accent', '--seek-line'],
   ['--panel-ink', '--panel'],
   ['--mark', '--ground'],
   ['--loop', '--ground'],
   ['--band-mark', '--band'],
   ['--band-sounded', '--band'],
   ['--band-lit-ink', '--band-lit'],
-  ['--lit-ink', '--lit'],
 ]
 
 // The mark of the beat that is sounding stands out from its ground by its own colour, or
-// by the colour of what is on it.
+// by the colour of what is on it. The block of the bar that is sounding, by its own
+// colour or by the colour of its edge.
 const LIT = [
   ['--band-lit', '--band-lit-ink', '--band'],
-  ['--lit', '--lit-ink', '--ground'],
+  ['--lit', '--lit-edge', '--ground'],
 ]
 
 // Light is what :root sets. Dark is what the block for a dark system sets over it.
