@@ -403,6 +403,8 @@ test('a bar starts with every ocho and at its count 5', () => {
   for (const ocho of ochosOf(count)) assert.ok(starts.includes(ocho.first), `the ocho at ${ocho.first} starts no bar`)
   // And nothing else starts one: a bar starts on the first beat, on a count 5, or where the count does not go on.
   assert.deepEqual(starts, [0, 2, 6, 10, 14, 18, 22])
+  // A count that jumps to something that is neither 1 nor 5 does not go on either: a bar starts there.
+  assert.deepEqual(barsOf([1, 2, 3, 7, 8, 1, 2]), [bar(0, 2), bar(3, 4), bar(5, 6)])
 })
 
 test('a song that starts inside a bar has a short first bar, and a song may end on one', () => {

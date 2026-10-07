@@ -145,7 +145,10 @@ def browser(request, playwright):
 
 # Notes every sound the page hands to the audio clock, with the loop it was given, the
 # clock itself, and every volume control the page makes. And how many times each canvas
-# has been wiped, which is how a drawing of it starts.
+# has been wiped, which is how a drawing of it starts, and where the page wrote on it in
+# its last drawing, with the colour and the typeface it asked for, each as the page set
+# it. The pixels cannot tell two inks of one hue apart, or a weight from another. Which
+# text was written is not noted: which numeral is on a plate is for the owner's eye.
 SPY = """
 window.started = []
 window.volumes = []
@@ -163,10 +166,29 @@ BaseAudioContext.prototype.createGain = function () {
   return volume
 }
 window.drawn = { now: 0, map: 0 }
+window.written = { now: [], map: [] }
 const clearRect = CanvasRenderingContext2D.prototype.clearRect
 CanvasRenderingContext2D.prototype.clearRect = function () {
-  if (this.canvas.id in window.drawn) window.drawn[this.canvas.id]++
+  if (this.canvas.id in window.drawn) {
+    window.drawn[this.canvas.id]++
+    window.written[this.canvas.id] = []
+  }
   return clearRect.apply(this, arguments)
+}
+for (const name of ['font', 'fillStyle']) {
+  const own = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, name)
+  Object.defineProperty(CanvasRenderingContext2D.prototype, name, {
+    ...own,
+    set(value) {
+      this.asked = { ...this.asked, [name]: value }
+      own.set.call(this, value)
+    },
+  })
+}
+const fillText = CanvasRenderingContext2D.prototype.fillText
+CanvasRenderingContext2D.prototype.fillText = function (text, x, y) {
+  if (this.canvas.id in window.written) window.written[this.canvas.id].push({ x, y, ink: this.asked?.fillStyle, font: this.asked?.font })
+  return fillText.apply(this, arguments)
 }
 """
 
@@ -268,6 +290,14 @@ class Visitor:
         solid it is, each up to 255. Where nothing was drawn it is not solid at all."""
         return self.page.evaluate(AT, [x, y])
 
+    def written(self, box):
+        """What the page wrote on the song inside a box, in its last drawing: for each
+        writing the colour it asked for, as the style sheet has it, and the weight and
+        the size of its typeface."""
+        x, y, wide, high = box
+        inside = [one for one in self.page.evaluate("window.written.map") if x <= one["x"] < x + wide and y <= one["y"] < y + high]
+        return [(one["ink"], *one["font"].split()[:2]) for one in inside]
+
     def over(self, bar):
         """The pixel just above the middle of the plate of a bar: inside the block of a lit
         bar and inside a halo, and clear of a plate and of its lid."""
@@ -302,6 +332,7 @@ READY = 60_000  # ms: an analysis takes a few seconds, the first one loads the m
 COLOURS = {
     "light": {
         "ground": (229, 227, 220),
+        "ink-soft": (75, 74, 69),
         "mark": (18, 18, 18),
         "plate": (205, 202, 192),
         "ink": (18, 18, 18),
@@ -313,6 +344,7 @@ COLOURS = {
     },
     "dark": {
         "ground": (18, 18, 17),
+        "ink-soft": (169, 166, 157),
         "mark": (243, 241, 234),
         "plate": (51, 50, 46),
         "ink": (243, 241, 234),
@@ -342,7 +374,9 @@ ALONG = """([x, y, wide]) => {
 # What the canvas of the song has in a box, for the colour the box should be filled with
 # and the colour of what should be written on it: how many pixels of its rim are not the
 # fill, how much of it is the fill, how many pixels are nearer to the colour of the
-# writing than to the fill, and how far the middle of those is from the middle of the box.
+# writing than to the fill, how far the middle of those is from the middle of the box,
+# and how far from the middle of the box the farthest pixel is that is not the fill,
+# across and down: a count reaches a few pixels, a mark for a beat would reach further.
 BOX = """([[x, y, wide, high], fill, ink]) => {
     const canvas = document.getElementById('map')
     const scale = canvas.width / canvas.clientWidth
@@ -351,16 +385,22 @@ BOX = """([[x, y, wide, high], fill, ink]) => {
     const far = (n, colour) => (data[4 * n + 3] < 255 ? Infinity : colour.reduce((sum, part, at) => sum + Math.abs(data[4 * n + at] - part), 0))
     let rim = 0
     let filled = 0
+    let reach = null
     const written = []
     for (let n = 0; n < across * down; n++) {
         const isFill = far(n, fill) <= 12
         const onRim = n < across || n >= across * (down - 1) || n % across === 0 || n % across === across - 1
         if (onRim && !isFill) rim++
-        if (isFill) filled++
-        else if (far(n, ink) < far(n, fill)) written.push([n % across, Math.floor(n / across)])
+        if (isFill) {
+            filled++
+            continue
+        }
+        const [px, py] = [n % across, Math.floor(n / across)]
+        reach = [Math.max(reach?.[0] ?? 0, Math.abs(px + 0.5 - across / 2) / scale), Math.max(reach?.[1] ?? 0, Math.abs(py + 0.5 - down / 2) / scale)]
+        if (far(n, ink) < far(n, fill)) written.push([px, py])
     }
     const middle = (part, size) => (Math.min(...written.map((at) => at[part])) + Math.max(...written.map((at) => at[part])) + 1 - size) / 2 / scale
-    return { rim, filled: filled / (across * down), written: written.length, off: written.length ? [middle(0, across), middle(1, down)] : null }
+    return { rim, filled: filled / (across * down), written: written.length, off: written.length ? [middle(0, across), middle(1, down)] : null, reach }
 }"""
 
 # The ink the canvas of the song has outside a set of boxes, right of a line: how many
@@ -405,6 +445,11 @@ def is_colour(pixel, colour):
     ground through is as solid on the canvas as it says it is."""
     solid = colour[3] if len(colour) > 3 else 1
     return abs(pixel[3] - 255 * solid) <= 3 and all(abs(pixel[part] - colour[part]) <= 8 for part in range(3))
+
+
+def hex_of(colour):
+    """A colour as the style sheet writes it."""
+    return "#%02x%02x%02x" % tuple(colour[:3])
 
 
 def bars_of(counts):
@@ -791,6 +836,10 @@ def test_a_marked_range_can_be_cleared(visit, files):
     for line in (y - 8, y + high + 7):
         rule = page.evaluate(ALONG, [edge[0], line, edge[2]])
         assert max(rule) > 128 and min(rule) == 0, rule
+    # A rule is 1.5 thick, on the edge of the band: the line 2 above it and the line 1
+    # under it have no ink, and neither have those around the lower rule.
+    for line in (y - 10, y - 7, y + high + 6, y + high + 9):
+        assert max(page.evaluate(ALONG, [edge[0], line, edge[2]])) == 0, line
     expect(clear).to_be_enabled()
     # Cleared, the range is gone from the song and from the transport bar.
     clear.click()
@@ -853,6 +902,9 @@ def test_a_range_set_inside_bars_is_kept_in_beats_and_drawn_over_the_whole_bars(
     assert is_colour(visitor.at(x - 7, y + high / 2), colours["loop"])
     assert is_colour(visitor.at(x, y - 7), colours["loop"]) and is_colour(visitor.at(x, y + high + 6), colours["loop"])
     assert visitor.at(x - 9, y + high / 2)[3] == 0
+    # The upright is 4 wide: the band shows from the fifth pixel on.
+    assert all(is_colour(visitor.at(x - before, y + high / 2), colours["loop"]) for before in (8, 5))
+    assert is_colour(visitor.at(x - 4, y + high / 2), colours["loop-fill"])
     x, y, wide, high = plates[last]
     assert is_colour(visitor.at(x + wide + 6, y + high + 6), colours["loop"])
     assert is_colour(visitor.at(x + wide - 1, y - 7), colours["loop"]) and is_colour(visitor.at(x + wide - 1, y + high + 6), colours["loop"])
@@ -932,6 +984,10 @@ def test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_
     assert bars == bars_of(counts)
     assert len(plates) == len(bars)
     assert song.get_attribute("data-marks") is None
+    assert song.get_attribute("aria-label") == (
+        "The song in rows of ochos, a plate for each bar with its count on it. "
+        "Press a bar to move the playing position to its first beat. Drag across bars to mark them as a loop."
+    )
 
     # A row holds eight ochos: it starts on the first bar of an ocho and has no ninth.
     assert song.get_attribute("data-per-row") == "8"
@@ -946,11 +1002,12 @@ def test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_
     # and the canvas ends 28 under the plates of the last.
     assert tops[0] == 28 and all(under - over == 62 for over, under in zip(tops, tops[1:])), tops
     assert song.bounding_box()["height"] == tops[-1] + 30 + 28
+    assert [bars[rows[top][0]] in ochos for top in tops] == [True] * len(tops), [bars[rows[top][0]] for top in tops]
     for top in tops:
         in_row = rows[top]
         starts = [bar for bar in in_row if bars[bar] in ochos]
-        assert starts[0] == in_row[0], in_row
-        assert len(starts) == 8 if top != tops[-1] else len(starts) <= 8, in_row
+        # Eight ochos, and in the last row what is left of the song.
+        assert len(starts) <= 8 and (len(starts) == 8 or top == tops[-1]), (top, len(starts))
         # It starts 80 from the left. The two plates of an ocho are 2 apart, and two ochos 14.
         assert plates[in_row[0]][0] == 80
         for left, right in zip(in_row, in_row[1:]):
@@ -981,11 +1038,15 @@ def test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_
             fill, ink = (colours["mark"], colours["ground"]) if first else (colours["plate"], colours["ink"])
             seen = page.evaluate(BOX, [box, fill, ink])
             assert seen["rim"] == 0 and seen["filled"] > 0.75, (scheme, bar, seen)
-            # A plate narrower than 14 has no count.
+            # A plate narrower than 14 has no count: it is its fill and nothing else.
             if box[2] < 14:
-                assert seen["written"] == 0, (scheme, bar, seen)
-            else:
-                assert seen["written"] >= 12 and max(abs(off) for off in seen["off"]) <= 1.5, (scheme, bar, seen)
+                assert seen["written"] == 0 and seen["reach"] is None and visitor.written(box) == [], (scheme, bar, seen)
+                continue
+            # The count is in the middle of the plate, both ways, and nothing else is on
+            # the plate: no beat inside the bar has a mark. The page asked for the count
+            # in its colour, heavy on a first bar and less so on a second, 15 high.
+            assert seen["written"] >= 12 and max(abs(off) for off in seen["off"]) <= 1.5 and max(seen["reach"]) <= 8, (scheme, bar, seen)
+            assert visitor.written(box) == [(hex_of(ink), "700" if first else "500", "15px")], (scheme, bar)
         # A plate for each bar and nothing else: no ink in the 2 pixels inside an ocho, in
         # the 14 between two ochos, between two rows, or anywhere else right of the times.
         assert page.evaluate(STRAY, [plates, 67]) == {"stray": 0, "first": None}, scheme
@@ -994,16 +1055,23 @@ def test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_
         for top in tops:
             time = page.evaluate(INKED, [0, top - 16, 80, 62])
             assert time and 62 <= time[2] <= 66 and abs((time[1] + time[3]) / 2 - (top + 15)) <= 1.5, (scheme, top, time)
+            assert visitor.written([0, top - 16, 80, 62]) == [(hex_of(colours["ink-soft"]), "500", "12px")], (scheme, top)
     # No section is written: the text where the song is shown is the count, which is not
     # there before the first beat, the tempo and the time.
     assert page.locator("#player").inner_text().split() == ["–", page.locator("#bpm").inner_text(), "BPM", "0:00"]
 
     # How many ochos a row holds, and how wide a whole plate is, follow the width of the
-    # window: four ochos under about 1200, eight from there on, and a plate is never
-    # wider than 96.
-    for width, per_row, whole in ((1100, "4", 83), (1920, "8", 88), (2400, "8", 96)):
-        page.set_viewport_size({"width": width, "height": 720})
-        page.wait_for_function("wide => JSON.parse(document.getElementById('map').dataset.plates).some((plate) => plate[2] === wide)", arg=whole)
+    # window: a row holds eight ochos where that leaves a whole plate 44 wide or more,
+    # which is from about 1200, and four under that. A plate is never wider than 96. The
+    # window is high enough for the song not to scroll, at any of these widths.
+    for width, per_row, whole in ((1100, "4", 83), (1190, "4", 94), (1210, "8", 44), (1920, "8", 88), (2400, "8", 96)):
+        drawn = page.evaluate("window.drawn.map")
+        page.set_viewport_size({"width": width, "height": 900})
+        # The song is laid out and drawn again when its part of the page has its new
+        # size: by two pictures of the screen later. It is as wide as the window leaves it.
+        page.wait_for_function("drawn => window.drawn.map > drawn", arg=drawn)
+        page.evaluate("() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))")
+        assert song.bounding_box()["width"] == width - 288, width
         assert song.get_attribute("data-per-row") == per_row, width
         resized = visitor.plates()
         assert {resized[bar][2] for bar in range(len(bars)) if long[bar] == 4} == {whole}, width
@@ -1039,7 +1107,8 @@ def test_the_bar_that_holds_the_beat_that_is_sounding_is_lit_whole_in_light_and_
         # its count in the middle in a colour of its own. The corners of the block are
         # rounded, so its rim is read 2 inside its left and its right.
         seen = page.evaluate(BOX, [[x - 3, y - 6, wide + 6, high + 12], colours["lit"], colours["lit-ink"]])
-        assert seen["rim"] == 0 and seen["written"] >= 12 and max(abs(off) for off in seen["off"]) <= 1.5, (scheme, seen)
+        assert seen["rim"] == 0 and seen["written"] >= 12 and max(abs(off) for off in seen["off"]) <= 1.5 and max(seen["reach"]) <= 9, (scheme, seen)
+        assert visitor.written(plates[bar]) == [(hex_of(colours["lit-ink"]), "700", "17px")], scheme
         assert is_colour(visitor.at(x - 5, y + high / 2), colours["lit"]) and is_colour(visitor.at(x + wide + 4, y + high / 2), colours["lit"])
         assert visitor.at(x - 5, y - 6)[3] < 255, scheme
         # No other bar is lit: there is no ink but that block and the plates of the others,
@@ -1164,9 +1233,11 @@ def test_a_press_on_a_bar_moves_the_position_to_its_first_beat_and_the_bar_under
     assert [visitor.at(x + wide / 2, y - above)[3] > 0 for above in (5, 4)] == [False, True]
     assert [visitor.at(x + wide / 2, y + high + under)[3] > 0 for under in (3, 4)] == [True, False]
     assert page.evaluate(BOX, [plates[one], colours["mark"], colours["ground"]])["rim"] == 0
-    # It follows the pointer to another bar, and a bar that is lit has none to see.
+    # It follows the pointer to another bar. That one has a plate of the quiet grey, which
+    # a halo drawn over it would darken: the plate is its own fill to its rim.
     page.mouse.move(*visitor.point_in(two))
     assert visitor.over(one)[3] == 0 and is_colour(visitor.over(two), colours["hover"])
+    assert page.evaluate(BOX, [plates[two], colours["plate"], colours["ink"]])["rim"] == 0
     # Not while a press is held.
     page.mouse.down()
     assert visitor.over(two)[3] == 0
@@ -1179,17 +1250,22 @@ def test_a_press_on_a_bar_moves_the_position_to_its_first_beat_and_the_bar_under
     assert visitor.over(one)[3] == 0
 
     # Where there is no bar a press does nothing: left of a row, on its time, right of its
-    # last plate, and above the band of the first row. Nor does a press with another button.
-    visitor.press_bar(away)
-    is_on(away)
-    end = max(left + across for left, top, across, down in plates if top == y)
+    # last plate, and above the band of the first row. Nor does a press with another
+    # button. The position is on a bar in the middle of the row, which is none of the
+    # bars such a press would reach if it reached one: the first of the row, its last,
+    # and the one that is pressed.
+    row = [bar for bar, plate in enumerate(plates) if plate[1] == y]
+    assert two not in (row[0], row[-1], one)
+    visitor.press_bar(two)
+    is_on(two)
+    end = plates[row[-1]][0] + plates[row[-1]][2]
     for point in ((50, middle), (end + 8, middle), (x + wide / 2, 5)):
         press(*point)
         page.wait_for_timeout(100)
-        is_on(away)
+        is_on(two)
     press(x + wide / 2, middle, button="right")
     page.wait_for_timeout(100)
-    is_on(away)
+    is_on(two)
     expect(song).to_have_attribute("data-range", "")
 
 
@@ -1215,6 +1291,16 @@ def test_a_drag_marks_whole_bars_whichever_way_it_goes_and_a_band_with_brackets_
         and clear of a lid and of the block of a lit bar."""
         x, y, wide, high = plates[bar]
         return visitor.at(x + wide / 2, y - 7)
+
+    # The bands of two rows meet half way between their plates: 16 under the plates of the
+    # upper row, and so 16 above those of the lower. A press 15 under the upper plates
+    # reaches the bar of the upper row, and one 17 under them the bar of the lower.
+    assert upper[0] in ochos and lower[0] in ochos
+    x, y, wide, high = plates[upper[1]]
+    assert plates[lower[1]][:2] == [x, y + 62]
+    for under, bar in ((15, upper[1]), (17, lower[1])):
+        page.mouse.click(*visitor.on_page(x + wide / 2, y + high + under))
+        expect(now).to_have_attribute("data-lit", str(bars[bar]))
 
     # A press that is let go on the bar it started on is a press, also when the pointer
     # moved inside the bar: it marks nothing.
@@ -1270,6 +1356,15 @@ def test_a_drag_marks_whole_bars_whichever_way_it_goes_and_a_band_with_brackets_
         assert is_colour(visitor.at(x_last + wide_last - 10, line), band), line
     assert [visitor.at(x + 4, y - above_it)[3] for above_it in (9, 8, 5)] == [0, 255, 255]
     assert is_colour(visitor.at(x + 6, y - 4), band)
+    # The band is behind the plates: the later of the two, which the block of the lit
+    # bar does not touch, is its own fill to its rim.
+    assert page.evaluate(BOX, [plates[last], colours["mark"], colours["mark"]])["rim"] == 0
+    # In dark the band and its brackets have the colours of dark.
+    page.emulate_media(color_scheme="dark")
+    page.wait_for_timeout(300)
+    assert is_colour(above(last), COLOURS["dark"]["loop-fill"]) and is_colour(visitor.at(x + 4, y - 7), COLOURS["dark"]["loop"])
+    page.emulate_media(color_scheme="light")
+    page.wait_for_timeout(300)
 
     # From a bar to an earlier one, over the end of a row: from the second bar of the
     # first ocho of the lower row back to the first bar of the last ocho of the upper one.
@@ -1303,17 +1398,18 @@ def test_a_drag_marks_whole_bars_whichever_way_it_goes_and_a_band_with_brackets_
     x, y, wide, high = plates[earlier]
     assert [visitor.at(x + wide / 2, y + high + under)[3] > 0 for under in (7, 8)] == [True, False]
 
-    # A drag may leave the rows: it takes the nearest row, and in it the nearest bar. Let
-    # go above the first row and left of its plates, it ends on the first bar of the song.
+    # A drag may leave the rows: it takes the nearest row, and in it the nearest bar. The
+    # pointer goes there in one move, over no other bar on its way. Let go above the first
+    # row and left of its plates, the drag ends on the first bar of the song.
     page.mouse.move(*visitor.point_in(upper[2]))
     page.mouse.down()
-    page.mouse.move(*visitor.on_page(40, 3), steps=6)
+    page.mouse.move(*visitor.on_page(40, 3))
     page.mouse.up()
     expect(song).to_have_attribute("data-range", f"0 {last_beat[upper[2]]}")
     # Let go under the last row and right of its plates, on the last bar of the song.
     page.mouse.move(*visitor.point_in(lower[0]))
     page.mouse.down()
-    page.mouse.move(*visitor.on_page(plates[lower[-1]][0] + plates[lower[-1]][2] + 30, tops[-1] + 30 + 25), steps=6)
+    page.mouse.move(*visitor.on_page(plates[lower[-1]][0] + plates[lower[-1]][2] + 30, tops[-1] + 30 + 25))
     page.mouse.up()
     expect(song).to_have_attribute("data-range", f"{bars[lower[0]]} {len(counts) - 1}")
 
@@ -1471,6 +1567,12 @@ def test_count_1_is_set_by_hand_shown_in_every_browser_and_taken_back(visit, fil
     assert is_colour(visitor.at(middle, y - 12), colours["mark"])
     assert [visitor.at(x - before, y - 12)[3] for before in (9, 8)] == [0, 255]
     assert [visitor.at(x + wide + after, y - 12)[3] for after in (7, 8)] == [255, 0]
+    # In dark the lid has the colour of the marks of dark, which the block has not.
+    page.emulate_media(color_scheme="dark")
+    page.wait_for_timeout(300)
+    assert is_colour(visitor.at(middle, y - 12), COLOURS["dark"]["mark"]) and is_colour(visitor.at(middle, y - 3), COLOURS["dark"]["lit"])
+    page.emulate_media(color_scheme="light")
+    page.wait_for_timeout(300)
     # With the position elsewhere its plate is the plate of a first bar, with its lid: 3
     # above the plate and 3 wider than it on each side. The plate before it has none.
     visitor.press_bar(0)
@@ -1548,7 +1650,13 @@ def test_count_1_inside_a_bar_cuts_it_and_the_rest_of_its_row_stands_further_lef
         visitor.press_beat(beat)
         expect(page.locator("#now")).to_have_attribute("data-lit", str(beat))
         expect(page.locator("#one")).to_have_text("Count 1 here")
-        page.locator("#one").click()
+        # The control is pressed from the keyboard, with the pointer at rest on the second
+        # plate of the row under.
+        rest_x, rest_y = plates[lower[1]][0] + plates[lower[1]][2] / 2, plates[lower[1]][1] + 15
+        page.mouse.move(*visitor.on_page(rest_x, rest_y))
+        assert is_colour(visitor.over(lower[1]), colours["hover"])
+        page.locator("#one").focus()
+        page.keyboard.press("Enter")
         expect(song).to_have_attribute("data-by-hand", str(beat))
         after = before[:beat] + [(n - beat) % 8 + 1 for n in range(beat, len(before))]
         assert visitor.counts() == after
@@ -1558,6 +1666,13 @@ def test_count_1_inside_a_bar_cuts_it_and_the_rest_of_its_row_stands_further_lef
         assert cut_bars == bars_of(after) and len(cut_plates) == len(cut_bars)
         assert cut_bars[: cut + 2] == bars[: cut + 1] + [beat]
         expect(song).to_have_attribute("data-lit", str(cut + 1))
+        # The bars are other ones now and the pointer has not moved. No bar has a halo
+        # but the one that is under the pointer now: there is no ink but the plates, the
+        # block of the lit bar with its lid, and what a halo there would cover.
+        left, top, across, _ = cut_plates[cut + 1]
+        under = [[px - 4, py - 4, pw + 8, ph + 8] for px, py, pw, ph in cut_plates if px <= rest_x < px + pw and py <= rest_y < py + ph]
+        assert len(under) == 1 and cut_plates.index([side + 4 for side in under[0][:2]] + [side - 8 for side in under[0][2:]]) != lower[1]
+        assert page.evaluate(STRAY, [drawn_with(cut_plates, cut + 1) + [[left - 8, top - 13, across + 16, 4]] + under, 67])["stray"] == 0
         # The plate of what is left is narrower in the proportion of its beats, and the
         # plate of the new bar is whole.
         narrow = math.floor(whole * kept / 4 + 0.5)
@@ -1595,6 +1710,42 @@ def test_count_1_inside_a_bar_cuts_it_and_the_rest_of_its_row_stands_further_lef
         assert visitor.counts() == before and visitor.bars() == bars and visitor.plates() == plates
         page.mouse.move(0, 0)
         assert page.evaluate(STRAY, [drawn_with(plates, cut), 67])["stray"] == 0
+
+
+def test_the_song_scrolls_so_that_the_row_of_the_playing_position_is_on_screen(visit, files):
+    # A window too low for the three rows this song has in it: the song scrolls.
+    visitor = visit(viewport={"width": 1100, "height": 520})
+    page = visitor.page
+    visitor.pick(files["longer"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    beats = visitor.beats(LONGER)
+    bars, plates = visitor.bars(), visitor.plates()
+    tops = sorted({top for left, top, across, down in plates})
+    assert len(tops) == 3
+
+    def seen():
+        """What part of the canvas of the song is on screen: from where to where, down it."""
+        top, high, whole = page.locator("#song").evaluate("(part) => [part.scrollTop, part.clientHeight, part.scrollHeight]")
+        assert 62 <= high < whole, "the window must hold a row and not the whole song"
+        return top, top + high
+
+    def row_of(beat):
+        """The band of the row a beat is in: from 16 above its plates to 16 under them."""
+        top = plates[max(bar for bar, first in enumerate(bars) if first <= beat)][1]
+        return top - 16, top + 30 + 16
+
+    # The song opens at its top. The position goes to a beat of the last row: the song
+    # scrolls, and the whole band of that row is on screen.
+    assert seen()[0] == 0
+    beat = bars[min(bar for bar, plate in enumerate(plates) if plate[1] == tops[-1])] + 1
+    assert row_of(beat)[0] == tops[-1] - 16 and row_of(beat)[1] > seen()[1]
+    page.locator("#seek").fill(str(beats[beat]))
+    expect(page.locator("#now")).to_have_attribute("data-lit", str(beat))
+    assert seen()[0] > 0 and seen()[0] <= row_of(beat)[0] and row_of(beat)[1] <= seen()[1], (seen(), row_of(beat))
+    # Back on a beat of the first row, the song is at its top again.
+    page.locator("#seek").fill(str(beats[2]))
+    expect(page.locator("#now")).to_have_attribute("data-lit", "2")
+    assert seen()[0] == 0
 
 
 def test_a_list_asked_for_before_a_count_1_was_set_does_not_take_it_back(visit, files):
