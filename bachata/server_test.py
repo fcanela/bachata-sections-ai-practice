@@ -695,3 +695,14 @@ def test_the_program_listens_on_the_loopback_interface_only(tmp_path):
     finally:
         program.terminate()
         program.wait()
+
+
+@pytest.mark.parametrize("checkpoint", ["MODEL_PATH", "PARTS_PATH"])
+def test_the_program_does_not_start_without_one_of_its_two_checkpoints(monkeypatch, tmp_path, checkpoint):
+    from bachata import __main__ as program
+    from bachata import model
+
+    monkeypatch.setattr(model, checkpoint, tmp_path / "not-fetched.ckpt")
+    monkeypatch.setattr(program, "create_app", lambda data: pytest.fail("the program went on to start"))
+    with pytest.raises(RuntimeError, match="not-fetched.ckpt is missing: run `uv run python scripts/fetch_model.py`"):
+        program.main()
