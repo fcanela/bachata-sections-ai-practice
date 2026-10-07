@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   addressOf,
   barOf,
@@ -11,6 +12,7 @@ import {
   clicksUntil,
   clock,
   countsWith,
+  failureOf,
   idOf,
   interleaved16,
   kindOf,
@@ -21,6 +23,7 @@ import {
   ochosOf,
   songIn,
   tagsOf,
+  triedAgain,
   wrapped,
 } from './song.js'
 
@@ -451,4 +454,44 @@ test('a song has an address of its own', () => {
   assert.equal(songIn(`?song=${id.toUpperCase()}`), null)
   assert.equal(songIn(`?song=${id}0`), null)
   assert.equal(songIn(`?song=${id.slice(1)}`), null)
+})
+
+// The example the server and the page agree on: every song as the list sends it.
+const EXAMPLE = JSON.parse(readFileSync(new URL('../fixtures/failed_songs.json', import.meta.url), 'utf8'))
+const listedAs = (name) => EXAMPLE.songs.find((one) => one.listed.name === name).listed
+
+test('a failed song says for how long the analysis ran and why it failed', () => {
+  // The test carries its own sentences: read from the page, a wrong one would pass.
+  assert.deepEqual(failureOf(listedAs('Sin memoria')), { said: 'failed after 0:42', why: 'The analysis ran out of memory.' })
+  assert.deepEqual(failureOf(listedAs('Sin modelo')), {
+    said: 'failed after 0:00',
+    why: 'A file the analysis needs is missing or was changed.',
+  })
+  // An analysis that failed before it ran is not one whose time was not kept.
+  assert.deepEqual(failureOf(listedAs('Sin sonido')), { said: 'failed after 0:00', why: 'The stored sound could not be read.' })
+  assert.deepEqual(failureOf(listedAs('Otra cosa')), { said: 'failed after 1:02', why: 'The analysis failed.' })
+  assert.deepEqual(failureOf(listedAs('De antes')), { said: 'failed', why: 'The analysis failed.' })
+  assert.deepEqual(failureOf(listedAs('Sin nombre')), { said: 'failed after 0:02', why: 'The analysis failed.' })
+  // Every failure of the example is one of these six.
+  assert.equal(EXAMPLE.songs.filter((one) => one.listed.state === 'failed').length, 6)
+})
+
+test('a failure the page cannot read is one with no reason and no duration', () => {
+  const unread = { said: 'failed', why: 'The analysis failed.' }
+  // A reason the page does not know, also one that names something every object has.
+  assert.deepEqual(failureOf({ failure: { reason: 'disk', seconds: null } }), unread)
+  assert.deepEqual(failureOf({ failure: { reason: 'constructor', seconds: null } }), unread)
+  assert.deepEqual(failureOf({ failure: { reason: 7, seconds: null } }), unread)
+  // A server that does not send `failure` yet, and seconds that are not a number.
+  assert.deepEqual(failureOf({}), unread)
+  assert.deepEqual(failureOf({ failure: {} }), unread)
+  assert.deepEqual(failureOf({ failure: { reason: 'other', seconds: '41.7' } }), unread)
+  // The reason is kept when the duration is not known, and the other way round.
+  assert.deepEqual(failureOf({ failure: { reason: 'memory', seconds: null } }), { said: 'failed', why: 'The analysis ran out of memory.' })
+  assert.deepEqual(failureOf({ failure: { reason: 'disk', seconds: 200 } }), { said: 'failed after 3:20', why: 'The analysis failed.' })
+})
+
+test('only an answer that the next list explains leaves "Try again" with nothing to say', () => {
+  assert.deepEqual([204, 409, 404].map(triedAgain), [true, true, true])
+  assert.deepEqual([200, 400, 403, 500, 503, 0].map(triedAgain), [false, false, false, false, false, false])
 })
