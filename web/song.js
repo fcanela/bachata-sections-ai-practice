@@ -271,6 +271,18 @@ export function ochosOf(count) {
   return ochos
 }
 
+// The bars of a song: a new one starts with every ocho, and at its count 5. Each is
+// { first, last }, beats, both included. One whose ocho was cut short, or that started
+// before the song, has fewer than four beats.
+export function barsOf(count) {
+  const bars = []
+  count.forEach((value, beat) => {
+    if (beat > 0 && value !== 5 && value === count[beat - 1] + 1) bars[bars.length - 1].last = beat
+    else bars.push({ first: beat, last: beat })
+  })
+  return bars
+}
+
 // The ocho a beat is in, as its place in ochosOf(), or -1 when there is none.
 export function ochoOf(ochos, beat) {
   let low = 0

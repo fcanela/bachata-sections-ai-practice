@@ -1,7 +1,8 @@
 """End-to-end tests: whole flows through the page, in a real browser, against the real program.
 
 The beats of a song are drawn on two canvases. The page says in attributes of those
-canvases which beat is lit and where the marks of the song are, and the tests read them.
+canvases which beat is lit, where the place of every beat of the song is and where the
+mark of every bar, and the tests read them.
 
     uv run pytest e2e
 
@@ -200,8 +201,24 @@ class Visitor:
         return [int(count) for count in self.page.locator("#map").get_attribute("data-counts").split()]
 
     def marks(self):
-        """The middle of the mark of every beat, inside the canvas of the song."""
+        """The middle of the mark of every bar, inside the canvas of the song."""
         return json.loads(self.page.locator("#map").get_attribute("data-marks"))
+
+    def bars(self):
+        """The beat every bar starts on, in the order of marks()."""
+        return [int(beat) for beat in self.page.locator("#map").get_attribute("data-bars").split()]
+
+    def places(self):
+        """The middle of the place of every beat, inside the canvas of the song."""
+        return json.loads(self.page.locator("#map").get_attribute("data-places"))
+
+    def mark_of(self, beat):
+        """The middle of the mark of the bar that starts on a beat."""
+        return self.marks()[self.bars().index(beat)]
+
+    def lit_on_the_song(self):
+        """The beats whose place on the song has the large square of the beat that is sounding."""
+        return self.page.evaluate(LIT_PLACES)
 
     def changes_of_count(self):
         return [(method, url) for method, url in self.sent if url.endswith("/ones") or "/ones?" in url]
@@ -212,9 +229,9 @@ class Visitor:
         return int(lit) if lit else -1
 
     def point_of(self, beat):
-        """Where the mark of a beat is on the page. The song says where it puts its marks."""
+        """Where the place of a beat is on the page. The song says where it puts its beats."""
         box = self.page.locator("#map").bounding_box()
-        x, y = self.marks()[beat]
+        x, y = self.places()[beat]
         return box["x"] + x, box["y"] + y
 
     def press_beat(self, beat):
@@ -315,6 +332,7 @@ def test_an_uploaded_song_is_analysed_listed_and_played(visit, files):
 
     # No beat has sounded yet, so none is lit. Playing lights them one after the other.
     assert visitor.lit() == -1
+    assert visitor.lit_on_the_song() == []
     page.locator("#play").click()
     expect(page.locator("#play")).to_have_text("Pause")
     needs_sound(page)
@@ -327,6 +345,8 @@ def test_an_uploaded_song_is_analysed_listed_and_played(visit, files):
     stopped = page.locator("#position").inner_text()
     page.wait_for_timeout(1200)
     assert page.locator("#position").inner_text() == stopped
+    # The song shows where it stopped: the place of that beat, and no other, is lit.
+    assert visitor.lit_on_the_song() == [visitor.lit()]
 
     # A press on a beat of the song moves the playing position onto it.
     visitor.press_beat(24)
@@ -567,8 +587,8 @@ def test_a_marked_range_can_be_cleared(visit, files):
     expect(page.locator("#loop")).to_be_checked()
     expect(song).to_have_attribute("data-range", "8 11")
     # The bar that opens the range is on the canvas, at the left edge of its first beat.
-    marks = visitor.marks()
-    edge = [marks[8][0] - (marks[9][0] - marks[8][0]) / 2 + 2, marks[8][1]]
+    places = visitor.places()
+    edge = [places[8][0] - (places[9][0] - places[8][0]) / 2 + 2, places[8][1]]
     page.mouse.move(0, 0)
     assert page.evaluate(INK, edge)["inked"]
 
@@ -600,6 +620,21 @@ def test_a_marked_range_can_be_cleared(visit, files):
     visitor.drag_across(4, 6)
     expect(song).to_have_attribute("data-range", "4 6")
     expect(page.locator("#loop")).to_be_checked()
+
+    # A drag from the mark of a bar to the last place of the bar after it marks the two
+    # bars whole. The band runs over the places that have no mark, and ends with the range.
+    bars = visitor.bars()
+    bar = next(n for n, start in enumerate(bars) if start >= 8 and bars[n + 2] == start + 8)
+    first, last = bars[bar], bars[bar] + 7
+    visitor.drag_across(first, last)
+    expect(song).to_have_attribute("data-range", f"{first} {last}")
+    expect(page.locator("#loop-range")).to_have_text(f"{clock(beats[first])} to {clock(beats[last + 1] - 0.02)}")
+    page.mouse.move(0, 0)
+    assert all(page.evaluate(INK, places[beat])["inked"] for beat in range(first, last + 1))
+    assert not page.evaluate(INK, places[last + 2])["inked"]
+    clear.click()
+    expect(song).to_have_attribute("data-range", "")
+    assert not any(page.evaluate(INK, places[beat])["inked"] for beat in range(first, last + 1) if beat not in bars)
 
 
 def test_every_song_has_an_address_that_opens_it(visit, files):
@@ -665,32 +700,61 @@ INK = """([x, y]) => {
     for (let up = 0; at(x, y - up)[3] > 128; up++) tall++
     for (let down = 1; at(x, y + down)[3] > 128; down++) tall++
     const [red, green, blue, alpha] = at(x, y)
-    return { tall: tall / scale, inked: alpha > 128, light: red + green + blue }
+    return { tall: tall / scale, inked: alpha > 128, light: red + green + blue, alpha }
+}"""
+
+# The beats whose place on the song is drawn lit. The large square of the beat that is
+# sounding reaches further to the side than any mark, so there is ink 7 pixels beside the
+# middle of its place and of no other. Not for a song with a range marked: its band is ink.
+LIT_PLACES = """() => {
+    const canvas = document.getElementById('map')
+    const scale = canvas.width / canvas.clientWidth
+    const pen = canvas.getContext('2d')
+    const solid = ([x, y]) => pen.getImageData(Math.round((x + 7) * scale), Math.round(y * scale), 1, 1).data[3] > 128
+    return JSON.parse(canvas.dataset.places).flatMap((place, beat) => (solid(place) ? [beat] : []))
+}"""
+
+# Whether something is written under a point of the song, where the count of a mark goes.
+WRITTEN = """([x, y]) => {
+    const canvas = document.getElementById('map')
+    const scale = canvas.width / canvas.clientWidth
+    const size = [Math.round(12 * scale), Math.round(13 * scale)]
+    const under = canvas.getContext('2d').getImageData(Math.round((x - 6) * scale), Math.round((y + 15) * scale), ...size).data
+    return under.some((part, n) => n % 4 === 3 && part > 128)
 }"""
 
 
-def test_every_beat_has_its_own_mark_and_its_count_in_rows_of_four_ochos_in_light_and_in_dark(visit, files):
+def test_every_bar_has_one_mark_and_every_beat_its_place_in_rows_of_four_ochos_in_light_and_in_dark(visit, files):
     visitor = visit(viewport={"width": 1280, "height": 720}, color_scheme="light")
     page = visitor.page
     visitor.pick(files["tagged"])
     expect(page.locator("#player")).to_be_visible(timeout=READY)
     result = visitor.result(TAGGED)
-    counts, marks = visitor.counts(), visitor.marks()
-    # The count on screen is the one of the analysis, one for every beat.
-    assert counts == result["count"] and len(marks) == len(result["beats"])
+    counts, bars, marks, places = visitor.counts(), visitor.bars(), visitor.marks(), visitor.places()
+    # The count on screen is the one of the analysis, and every beat has a place.
+    assert counts == result["count"] and len(places) == len(result["beats"])
     assert set(counts) == set(range(1, 9))
+
+    # A bar starts with the song, at every count 1 and at every count 5, and nowhere else:
+    # after the first one, a bar is four beats. Each has one mark, at the place of its
+    # first beat.
+    starts = [beat for beat, count in enumerate(counts) if beat == 0 or count in (1, 5)]
+    assert bars == starts and marks == [places[beat] for beat in starts]
+    assert all(later - earlier == 4 for earlier, later in zip(bars[1:], bars[2:])), bars
+    bare = [beat for beat in range(len(places)) if beat not in bars]
+    assert len(bars) >= 10 and len(bare) >= 30, "the test song must have bars to show"
 
     # A row holds four ochos: it starts on the first beat of one and has no fifth.
     assert page.locator("#map").get_attribute("data-per-row") == "4"
     rows = {}
-    for beat, (x, y) in enumerate(marks):
+    for beat, (x, y) in enumerate(places):
         rows.setdefault(y, []).append(beat)
     assert len(rows) >= 2, "the test song must fill its first row"
     for beats in rows.values():
         starts = [beat for beat in beats if beat == 0 or counts[beat] != counts[beat - 1] + 1]
         assert starts[0] == beats[0] and len(starts) <= 4, beats
         # Neighbours are 20 pixels apart or more, and further apart from one ocho to the next.
-        gaps = [marks[beat][0] - marks[beat - 1][0] for beat in beats[1:]]
+        gaps = [places[beat][0] - places[beat - 1][0] for beat in beats[1:]]
         assert min(gaps) >= 20, gaps
         for beat, gap in zip(beats[1:], gaps):
             assert (gap > min(gaps)) == (beat in starts), (beat, gap)
@@ -702,13 +766,17 @@ def test_every_beat_has_its_own_mark_and_its_count_in_rows_of_four_ochos_in_ligh
         page.wait_for_timeout(300)
         inks = [page.evaluate(INK, mark) for mark in marks]
         assert all(ink["inked"] for ink in inks), scheme
-        # Count 1 is told apart by its form: an upright bar, where the others are squares.
-        for beat, ink in enumerate(inks):
-            assert (ink["tall"] > 15) == (counts[beat] == 1), (scheme, beat, ink)
+        # The bar that starts an ocho is told from the bar that holds count 5 by its form:
+        # an upright bar, where the other is a square. Each has its count under it.
+        for first, mark, ink in zip(bars, marks, inks):
+            assert (ink["tall"] > 15) == (counts[first] == 1), (scheme, first, ink)
             assert ink["tall"] >= 7
-        # Between two marks there is no ink.
-        between = page.evaluate(INK, [(marks[1][0] + marks[2][0]) / 2, marks[1][1]])
-        assert not between["inked"], scheme
+            assert page.evaluate(WRITTEN, mark), (scheme, first)
+        # A beat that does not start a bar has no mark: nothing is drawn at its place, and
+        # nothing is written under it.
+        for beat in bare:
+            assert page.evaluate(INK, places[beat])["alpha"] == 0, (scheme, beat)
+            assert not page.evaluate(WRITTEN, places[beat]), (scheme, beat)
         ground = page.evaluate("getComputedStyle(document.body).backgroundColor")
         seen[scheme] = (sum(int(part) for part in ground[4:-1].split(",")), inks[0]["light"])
     # Dark marks on a light ground, then light marks on a dark one.
@@ -716,6 +784,64 @@ def test_every_beat_has_its_own_mark_and_its_count_in_rows_of_four_ochos_in_ligh
     # No section is written: the text where the song is shown is the count, which is not
     # there before the first beat, the tempo and the time.
     assert page.locator("#player").inner_text().split() == ["–", page.locator("#bpm").inner_text(), "BPM", "0:00"]
+
+
+def test_a_press_on_the_song_reaches_every_beat_and_the_position_shows_at_its_place(visit, files):
+    visitor = visit(viewport={"width": 1280, "height": 720}, color_scheme="light")
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    counts, bars, marks, places = visitor.counts(), visitor.bars(), visitor.marks(), visitor.places()
+
+    def beside(point):
+        """What is drawn 7 pixels to the side of a place: further than a mark reaches."""
+        return page.evaluate(INK, [point[0] + 7, point[1]])
+
+    # A whole bar that holds count 5, with a whole bar after it.
+    bar = next(n for n, first in enumerate(bars) if first >= 8 and counts[first] == 5 and bars[n + 2] == first + 8)
+    first = bars[bar]
+    unlit = page.evaluate(INK, marks[bar])
+    assert unlit["inked"] and not beside(marks[bar])["inked"]
+
+    # A press on the mark of a bar moves the position to the first beat of that bar. The
+    # mark is then lit: it is inside the large square, in another colour than it had.
+    page.mouse.click(*visitor.point_of(first))
+    expect(page.locator("#now")).to_have_attribute("data-lit", str(first))
+    expect(page.locator("#count")).to_have_text("5")
+    page.mouse.move(0, 0)
+    assert visitor.lit_on_the_song() == [first]
+    lit = page.evaluate(INK, marks[bar])
+    assert lit["tall"] > 20 and beside(marks[bar])["inked"], lit
+    assert abs(lit["light"] - unlit["light"]) > 100 and abs(lit["light"] - beside(marks[bar])["light"]) > 100, lit
+
+    # A press between two marks reaches the beat whose place it is on: here the third beat
+    # of the bar. The position shows there, as the square alone, and the mark is as it was.
+    inside = first + 2
+    assert inside not in bars and page.evaluate(INK, places[inside])["alpha"] == 0
+    visitor.press_beat(inside)
+    expect(page.locator("#now")).to_have_attribute("data-lit", str(inside))
+    expect(page.locator("#count")).to_have_text("7")
+    expect(page.locator("#position")).to_have_text(clock(visitor.beats(TAGGED)[inside]))
+    page.mouse.move(0, 0)
+    assert visitor.lit_on_the_song() == [inside]
+    assert page.evaluate(INK, marks[bar]) == unlit
+    here = page.evaluate(INK, places[inside])
+    assert here["tall"] > 20 and here["light"] == beside(places[inside])["light"], here
+    # The arrows move it from place to place, onto the mark of the next bar and past it.
+    for beat in (inside + 1, inside + 2, inside + 3):
+        page.keyboard.press("ArrowRight")
+        expect(page.locator("#now")).to_have_attribute("data-lit", str(beat))
+        assert visitor.lit_on_the_song() == [beat]
+
+    # The place under the pointer shows, faintly, before it is pressed: a press can be
+    # aimed at a beat that has no mark.
+    aimed = first + 1
+    assert beside(places[aimed])["alpha"] == 0
+    page.mouse.move(*visitor.point_of(aimed))
+    assert 0 < beside(places[aimed])["alpha"] < 128
+    assert visitor.lit_on_the_song() == [inside + 3]
+    page.mouse.move(0, 0)
+    assert beside(places[aimed])["alpha"] == 0
 
 
 # What the large view has drawn at the place of a count, 1 to 8: the ink down the middle
@@ -850,8 +976,8 @@ def test_count_1_is_set_by_hand_shown_in_every_browser_and_taken_back(visit, fil
     # A count 1 set by hand has a cap across its top, and the other count 1s have none.
     # Looked at with the playing position elsewhere, so that neither mark is the lit one.
     visitor.press_beat(beat + 2)
-    x, y = visitor.marks()[beat]
-    x_other, y_other = visitor.marks()[beat - 4]
+    x, y = visitor.mark_of(beat)
+    x_other, y_other = visitor.mark_of(beat - 4)
     assert page.evaluate(INK, [x + 7, y - 8])["inked"] and not page.evaluate(INK, [x_other + 7, y_other - 8])["inked"]
     assert page.evaluate(INK, [x_other, y_other])["tall"] > 15
 
@@ -885,6 +1011,54 @@ def test_count_1_is_set_by_hand_shown_in_every_browser_and_taken_back(visit, fil
     expect(other.page.locator("#map")).to_have_attribute("data-by-hand", "", timeout=6000)
     assert other.counts() == before
     assert [method for method, url in visitor.changes_of_count()] == ["PUT", "DELETE", "DELETE"]
+
+
+def test_count_1_is_set_on_a_beat_inside_a_bar_and_a_bar_then_starts_there(visit, files):
+    visitor = visit(viewport={"width": 1280, "height": 720})
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    song = page.locator("#map")
+    before, bars = visitor.counts(), visitor.bars()
+    # The third beat of a whole bar, well inside the song: it has a place and no mark.
+    first = next(start for n, start in enumerate(bars) if start >= 16 and before[start] == 1 and bars[n + 1] == start + 4)
+    beat = first + 2
+    assert beat not in bars and page.evaluate(INK, visitor.places()[beat])["alpha"] == 0
+
+    # A press on its place, and the user says it is count 1.
+    visitor.press_beat(beat)
+    expect(page.locator("#count")).to_have_text("3")
+    page.locator("#one").click()
+    expect(song).to_have_attribute("data-by-hand", str(beat))
+    expect(page.locator("#count")).to_have_text("1")
+    # A bar starts there now, and the bar before it is cut to two beats. From it the bars
+    # are four beats again.
+    after = before[:beat] + [(n - beat) % 8 + 1 for n in range(beat, len(before))]
+    assert visitor.counts() == after
+    cut = visitor.bars()
+    assert cut[cut.index(first) : cut.index(first) + 4] == [first, beat, beat + 4, beat + 8]
+    # Its mark is at its place: the upright bar of a count 1, with the cap of one set by
+    # hand. Looked at with the playing position elsewhere, so that the mark is not lit.
+    visitor.press_beat(beat + 2)
+    page.mouse.move(0, 0)
+    x, y = visitor.mark_of(beat)
+    assert [x, y] == visitor.places()[beat]
+    assert page.evaluate(INK, [x, y])["tall"] > 15 and page.evaluate(INK, [x + 7, y - 8])["inked"]
+    assert page.evaluate(WRITTEN, [x, y])
+    # The mark of the bar that was cut has no cap, and the count 5 after it is a square.
+    x_first, y_first = visitor.mark_of(first)
+    assert page.evaluate(INK, [x_first, y_first])["tall"] > 15 and not page.evaluate(INK, [x_first + 7, y_first - 8])["inked"]
+    assert page.evaluate(INK, visitor.mark_of(beat + 4))["tall"] < 15
+
+    # Taken back, the bars are the ones of the analysis and the place has no mark again.
+    visitor.press_beat(beat)
+    expect(page.locator("#one")).to_have_text("Not count 1")
+    page.locator("#one").click()
+    expect(song).to_have_attribute("data-by-hand", "")
+    assert visitor.counts() == before and visitor.bars() == bars
+    visitor.press_beat(beat + 2)
+    page.mouse.move(0, 0)
+    assert page.evaluate(INK, visitor.places()[beat])["alpha"] == 0
 
 
 def test_a_list_asked_for_before_a_count_1_was_set_does_not_take_it_back(visit, files):

@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   addressOf,
+  barsOf,
   beatsUntil,
   bpmAt,
   channelsFrom16,
@@ -388,6 +389,25 @@ test('an ocho starts at every count 1 and may be short', () => {
 
   assert.deepEqual([0, 1, 2, 9, 10, 13, 14, 22].map((beat) => ochoOf(ochos, beat)), [0, 0, 1, 1, 2, 2, 3, 4])
   assert.equal(ochoOf([], 3), -1)
+})
+
+test('a bar starts with every ocho and at its count 5, and may be short', () => {
+  const at = (first, last) => ({ first, last })
+  assert.deepEqual(barsOf(eights(18)), [at(0, 3), at(4, 7), at(8, 11), at(12, 15), at(16, 17)])
+  // A song that starts inside a bar: its first bar is what is left of one.
+  assert.deepEqual(barsOf(eights(12, 2)), [at(0, 1), at(2, 5), at(6, 9), at(10, 11)])
+  assert.deepEqual(barsOf(eights(7, 5)), [at(0, 0), at(1, 4), at(5, 6)])
+  // A beat set by hand starts a bar wherever it is: on a count 5, which leaves a half
+  // phrase before it, and inside a bar, which cuts that bar short.
+  assert.deepEqual(barsOf([1, 2, 3, 4, 1, 2, 3, 4, 5, 6]), [at(0, 3), at(4, 7), at(8, 9)])
+  assert.deepEqual(barsOf([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]), [at(0, 3), at(4, 5), at(6, 9), at(10, 10)])
+  assert.deepEqual(barsOf([1, 2, 3, 4, 5, 1, 1, 2]), [at(0, 3), at(4, 4), at(5, 5), at(6, 7)])
+  assert.deepEqual(barsOf([]), [])
+  // Every ocho starts a bar, and every beat is in one bar.
+  const count = [7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 1]
+  const bars = barsOf(count)
+  for (const ocho of ochosOf(count)) assert.ok(bars.some((bar) => bar.first === ocho.first), `ocho at ${ocho.first}`)
+  assert.deepEqual(bars.flatMap((bar) => Array.from({ length: bar.last - bar.first + 1 }, (_, n) => bar.first + n)), count.map((_, beat) => beat))
 })
 
 test('a song has an address of its own', () => {

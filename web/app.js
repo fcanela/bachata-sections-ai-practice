@@ -7,6 +7,7 @@ import {
   MIN_SECONDS,
   RATE,
   addressOf,
+  barsOf,
   beatsUntil,
   bpmAt,
   channelsFrom16,
@@ -26,7 +27,7 @@ import {
   tagsOf,
   wrapped,
 } from './song.js'
-import { beatAt, drawMap, drawNow, forgetTokens, mapLayout, markOf, nowLayout, rowOf } from './draw.js'
+import { beatAt, drawMap, drawNow, forgetTokens, mapLayout, nowLayout, placeOf, rowOf } from './draw.js'
 
 const $ = (id) => document.getElementById(id)
 
@@ -442,6 +443,7 @@ const player = {
   count: [], // the count of every beat, with those
   byHand: new Set(), // the beats the user set to count 1
   ochos: [], // the ochos that count makes, each { first, last }
+  bars: [], // and its bars, the same way
   context: null,
   source: null, // the sound that is playing
   playing: false,
@@ -526,7 +528,7 @@ async function open(song) {
 function closePlayer(text) {
   pause()
   Object.assign(player, { id: null, buffer: null, result: null, offset: 0, range: { first: null, last: null }, looping: false })
-  Object.assign(player, { ones: [], count: [], byHand: new Set(), ochos: [] })
+  Object.assign(player, { ones: [], count: [], byHand: new Set(), ochos: [], bars: [] })
   for (const control of ['play', 'seek', 'loop', 'loop-start', 'loop-end', 'one']) $(control).disabled = true
   $('position').textContent = $('where').textContent = $('duration').textContent = clock(0)
   $('seek').value = 0
@@ -702,7 +704,8 @@ let counting = 0 // how many times this browser has changed the beats set to cou
 function recount(ones) {
   const { beats, count } = player.result
   const counted = countsWith(beats, count, ones)
-  Object.assign(player, { ones, count: counted.count, byHand: new Set(counted.byHand), ochos: ochosOf(counted.count) })
+  const groups = { ochos: ochosOf(counted.count), bars: barsOf(counted.count) }
+  Object.assign(player, { ones, count: counted.count, byHand: new Set(counted.byHand), ...groups })
   layOut()
 }
 
@@ -806,7 +809,7 @@ $('loop').addEventListener('change', () => {
 // ---- What is on screen while a song is open
 
 let layout = null // where the rows of the song are, on the canvas as it is now
-let hover = -1 // the beat under the pointer
+let hover = -1 // the beat whose place is under the pointer
 let drag = null // a press on the song that has not been let go: { from, to }, beats
 let mapFrom = null // what the song on screen was drawn from
 let laidOut = 0 // how many times the song has been laid out
@@ -817,12 +820,15 @@ function layOut() {
   if (!player.buffer) return
   layout = mapLayout($('song').clientWidth, player.ochos)
   $('map').style.height = `${layout.height}px`
-  // Where the marks are and what they say, for whoever needs to find one without reading
-  // the canvas: the middle of every mark, its count, the beats set by hand, and how many
+  // Where things are and what they say, for whoever needs to find one without reading
+  // the canvas: the middle of the mark of every bar and the beat that bar starts on, the
+  // middle of the place of every beat and its count, the beats set by hand, and how many
   // ochos a row holds.
-  const marks = player.count.map((count, beat) => [markOf(layout, beat).x, markOf(layout, beat).y])
+  const point = (beat) => [placeOf(layout, beat).x, placeOf(layout, beat).y]
   Object.assign($('map').dataset, {
-    marks: JSON.stringify(marks),
+    marks: JSON.stringify(player.bars.map((bar) => point(bar.first))),
+    bars: player.bars.map((bar) => bar.first).join(' '),
+    places: JSON.stringify(player.count.map((count, beat) => point(beat))),
     counts: player.count.join(' '),
     byHand: [...player.byHand].join(' '),
     perRow: layout.perRow,
@@ -868,7 +874,7 @@ function show() {
   const from = JSON.stringify([lit, hover, range, laidOut])
   if (from !== mapFrom) {
     mapFrom = from
-    drawMap($('map'), layout, { beats, count: player.count, byHand: player.byHand, lit, hover, range })
+    drawMap($('map'), layout, { beats, bars: player.bars, count: player.count, byHand: player.byHand, lit, hover, range })
     $('map').dataset.range = range ? `${range.first} ${range.last}` : ''
     if (lit !== litShown && player.playing) follow()
     litShown = lit
@@ -921,8 +927,9 @@ for (const end of ['pointerup', 'pointercancel']) {
   })
 }
 
-// A press on a beat of the song moves the playing position there. A press that is
-// dragged across several beats marks them as a loop.
+// A press on the song moves the playing position to the beat whose place it is on,
+// whether that place has the mark of a bar or not. A press that is dragged across
+// several beats marks them as a loop.
 const beatUnder = (event, nearest) => {
   const box = $('map').getBoundingClientRect()
   return beatAt(layout, event.clientX - box.left, event.clientY - box.top, nearest)

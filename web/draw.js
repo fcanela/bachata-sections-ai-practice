@@ -1,8 +1,10 @@
-// The two drawings of a song: the ocho that is sounding, large, and every beat of the
-// song in rows of four ochos. A beat is a small square with its count under it. Count 1
-// is an upright bar, and a count 1 the user set has a cap across its top. The beat that
-// is sounding gets the large square a sign keeps for its pictogram, in the opposite of
-// its ground, with its own mark inside it.
+// The two drawings of a song: the ocho that is sounding, large, and the bars of the whole
+// song in rows of four ochos. A mark is a small square with its count under it. Count 1
+// is an upright bar, and a count 1 the user set has a cap across its top. The large view
+// has a mark for every beat of its ocho. The song has one for every bar, where the first
+// beat of the bar is: every beat keeps its place there, with a mark or without. The beat
+// that is sounding gets the large square a sign keeps for its pictogram, in the opposite
+// of its ground, with its own mark inside it if it has one.
 
 import { OCHO, clock } from './song.js'
 
@@ -117,10 +119,10 @@ export function drawNow(canvas, { ocho, count, byHand, lit, pulse }) {
   }
 }
 
-// ---- Every beat of the song
+// ---- The bars of the song
 
-// Marks are never closer than this, in pixels. A row holds four ochos when they fit with
-// that, and two or one when they do not.
+// The places of two beats are never closer than this, in pixels. A row holds four ochos
+// when they fit with that, and two or one when they do not.
 const CLOSEST = 20
 // The room on the left of a row for its time, on its right, and between two ochos.
 const LEFT = 80
@@ -130,7 +132,7 @@ const GAP = 12
 // The rows of a song on a canvas this wide. `ochos` are its ochos, each { first, last }.
 // An ocho of fewer than eight beats takes less room, so the ochos after it in its row
 // stand further left, and the next row starts in line again. `x` is the left edge of the
-// cell of every beat and `line` the row it is in. `seat` is how far down a row its
+// place of every beat and `line` the row it is in. `seat` is how far down a row its
 // marks are.
 export function mapLayout(width, ochos) {
   const { beat: widest, row } = tokens()
@@ -157,8 +159,8 @@ export function mapLayout(width, ochos) {
   return { left: LEFT, top, step, row, seat: 16, perRow, rows, count: x.length, x, line, height: 2 * top + rows.length * row }
 }
 
-// The middle of the mark of a beat.
-export const markOf = (layout, beat) => ({
+// The middle of the place of a beat. The mark of a bar is there for its first beat.
+export const placeOf = (layout, beat) => ({
   x: layout.x[beat] + layout.step / 2,
   y: layout.top + layout.line[beat] * layout.row + layout.seat,
 })
@@ -174,7 +176,7 @@ export function beatAt(layout, x, y, nearest = false) {
   let closest = first
   for (let beat = first; beat <= last; beat++) {
     if (x >= layout.x[beat] && x < layout.x[beat] + layout.step) return beat
-    if (Math.abs(x - markOf(layout, beat).x) < Math.abs(x - markOf(layout, closest).x)) closest = beat
+    if (Math.abs(x - placeOf(layout, beat).x) < Math.abs(x - placeOf(layout, closest).x)) closest = beat
   }
   return nearest ? closest : -1
 }
@@ -219,10 +221,13 @@ function loopRun(pen, x, y, width, layout, { opens, closes, on }, colours) {
   }
 }
 
-// `count` is the count of every beat and `byHand` the beats the user set to count 1.
-// `range` is the marked range, { first, last, on }, or null. `on` says whether the
-// playing goes round it.
-export function drawMap(canvas, layout, { beats, count, byHand, lit, hover, range }) {
+// `bars` are the bars of the song, each { first, last }: a bar has one mark, at the place
+// of its first beat, with the count of that beat under it. `count` is the count of every
+// beat and `byHand` the beats the user set to count 1. `lit` is the beat that is sounding
+// and `hover` the one under the pointer, each -1 when there is none: both show at the
+// place of their beat, whether it has a mark or not. `range` is the marked range,
+// { first, last, on }, or null. `on` says whether the playing goes round it.
+export function drawMap(canvas, layout, { beats, bars, count, byHand, lit, hover, range }) {
   const { pen } = sheetOf(canvas)
   const colours = tokens()
 
@@ -245,20 +250,23 @@ export function drawMap(canvas, layout, { beats, count, byHand, lit, hover, rang
     pen.fillText(clock(beats[row.first]), layout.left - 14, layout.top + n * layout.row + layout.seat + 0.5)
   })
 
-  pen.textAlign = 'center'
   const litSide = Math.min(26, layout.step - 2)
-  for (let beat = 0; beat < layout.count; beat++) {
-    const { x, y } = markOf(layout, beat)
-    const first = count[beat] === 1
-    if (beat === lit) {
-      square(pen, x, y, litSide, colours.lit, 2)
-      mark(pen, x, y, 8, colours.litInk, first, byHand.has(beat))
-    } else {
-      if (beat === hover) square(pen, x, y, litSide - 2, colours.hover)
-      mark(pen, x, y, 8, colours.mark, first, byHand.has(beat))
-    }
-    pen.font = `${first ? 700 : 500} 12px ${colours.font}`
-    pen.fillStyle = first ? colours.ink : colours.label
-    pen.fillText(String(count[beat]), x, y + 21.5)
+  if (hover >= 0 && hover !== lit) {
+    const { x, y } = placeOf(layout, hover)
+    square(pen, x, y, litSide - 2, colours.hover)
+  }
+  if (lit >= 0) {
+    const { x, y } = placeOf(layout, lit)
+    square(pen, x, y, litSide, colours.lit, 2)
+  }
+
+  pen.textAlign = 'center'
+  for (const { first } of bars) {
+    const { x, y } = placeOf(layout, first)
+    const one = count[first] === 1
+    mark(pen, x, y, 8, first === lit ? colours.litInk : colours.mark, one, byHand.has(first))
+    pen.font = `${one ? 700 : 500} 12px ${colours.font}`
+    pen.fillStyle = one ? colours.ink : colours.label
+    pen.fillText(String(count[first]), x, y + 21.5)
   }
 }
