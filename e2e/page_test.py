@@ -43,20 +43,26 @@ LONGER = "Los Tests - Canción larga"
 IN_OPUS = "Los Tests - Canción en opus"
 
 
-def a_song(path, seconds, *tags):
-    """A file with a short burst of noise on every beat at 120 BPM, and a quieter one between."""
+def stored_sound(seconds):
+    """A short burst of noise on every beat at 120 BPM, and a quieter one between: the bytes
+    of its samples as the library stores them, 16 bits, left and right in turn."""
     random = np.random.default_rng(7)
     samples = random.normal(0, 30, round(RATE * seconds))
     burst = random.normal(0, 9000, 2000) * np.exp(-np.arange(2000) / 300)
     for n in range(int(seconds * 4) - 1):
         start = round((0.25 + n * 30 / BPM) * RATE)
         samples[start : start + 2000] += burst * (1.0 if n % 2 == 0 else 0.35)
+    return np.repeat(samples.clip(-32768, 32767).astype("<i2"), 2).tobytes()
+
+
+def a_song(path, seconds, *tags):
+    """A file with that sound."""
     wav = path.with_suffix(".wav")
     with wave.open(str(wav), "wb") as file:
         file.setnchannels(2)
         file.setsampwidth(2)
         file.setframerate(RATE)
-        file.writeframes(np.repeat(samples.clip(-32768, 32767).astype("<i2"), 2).tobytes())
+        file.writeframes(stored_sound(seconds))
     metadata = [part for tag in tags for part in ("-metadata", tag)]
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(wav), *metadata, str(path)], check=True)
     return path
@@ -246,6 +252,10 @@ class Visitor:
         """The bar the song says is lit, as its place among the bars, or -1 before the first beat."""
         lit = self.page.locator("#map").get_attribute("data-lit")
         return int(lit) if lit else -1
+
+    def changes_of_result(self):
+        """Every request about a result that is not a reading of it."""
+        return [(method, url) for method, url in self.sent if url.endswith("/result") and method != "GET"]
 
     def changes_of_count(self):
         return [(method, url) for method, url in self.sent if url.endswith("/ones") or "/ones?" in url]
@@ -2207,6 +2217,113 @@ def test_try_again_says_nothing_when_the_next_list_explains_the_answer_and_says_
     # The browser writes every refusal to its console: these are the ones the test made.
     assert all(any(sign in error for sign in ["409", "404", "500", "ERR_FAILED", "NS_ERROR"]) for error in visitor.errors), visitor.errors
     visitor.errors.clear()
+
+
+# A library as an earlier run of the program left it, with three songs in the order they
+# arrived. The one in the middle failed for memory after 41.7 s and has a count 1 set by
+# hand; the one before it is ready, and the one after it failed too. The version is written
+# here as a number: with another one the program would take the failures for old results
+# and analyse the songs by itself.
+FAILED_BEFORE = [
+    ("c0" * 16, "Llegó antes", [], {"version": 5, "beats": [1.0, 1.5, 2.0], "bpm": [120.0] * 3, "bar": [1, 2, 3], "count": [1, 2, 3], "seconds": 3.2}),
+    ("c1" * 16, "La que falló", [9.25], {"version": 5, "error": "MemoryError", "reason": "memory", "seconds": 41.7}),
+    ("c2" * 16, "Llegó después", [], {"version": 5, "error": "ValueError", "reason": "other", "seconds": 62.0}),
+]
+
+
+@pytest.fixture
+def failed_library(tmp_path):
+    """Puts that library where `program` starts, so a test asks for it before `visit`."""
+    sound = stored_sound(24.5)
+    for place, (song_id, name, ones, result) in enumerate(FAILED_BEFORE):
+        folder = tmp_path / "data" / "songs" / song_id
+        folder.mkdir(parents=True)
+        song = {"id": song_id, "name": name, "frames": len(sound) // 4, "added": place + 1, "ones": ones}
+        (folder / "song.json").write_text(json.dumps(song))
+        (folder / "sound.raw").write_bytes(sound)
+        (folder / "result.json").write_text(json.dumps(result))
+    return tmp_path / "data" / "songs"
+
+
+def test_a_song_that_failed_before_the_program_started_is_tried_again_and_keeps_its_id_its_place_and_its_count_1(
+    failed_library, visit
+):
+    # Neither side of this is answered by the test: the real program, on a library it
+    # finds on disk, and the real analysis.
+    song_id, name, ones, _ = FAILED_BEFORE[1]
+    names = [name for _, name, *_ in FAILED_BEFORE]
+    kept = {song: (failed_library / song / "song.json").read_bytes() for song, *_ in FAILED_BEFORE}
+    visitor = visit()
+    page = visitor.page
+
+    def listed():
+        return page.evaluate("() => fetch('/api/songs').then((answer) => answer.json())")
+
+    # The program did not try the failed songs by itself when it started.
+    expect(visitor.rows().locator(".name")).to_have_text(names)
+    row = visitor.row(name)
+    expect(row).to_have_attribute("data-state", "failed")
+    expect(row).to_have_attribute("data-id", song_id)
+    expect(row.locator(".state")).to_have_text("0:24, failed after 0:42")
+    expect(row.locator(".note")).to_have_text("The analysis ran out of memory.")
+    after = visitor.row("Llegó después")
+    expect(after.locator(".state")).to_have_text("0:24, failed after 1:02")
+    expect(after.locator(".note")).to_have_text("The analysis failed.")
+    expect(visitor.row("Llegó antes").locator(".state")).to_have_text("0:24, ready")
+    expect(page.get_by_role("button", name="Try again")).to_have_count(2)
+    assert [(song["id"], song["state"]) for song in listed()] == [
+        ("c0" * 16, "ready"),
+        ("c1" * 16, "failed"),
+        ("c2" * 16, "failed"),
+    ]
+    assert not visitor.changes_of_result()
+
+    row.get_by_role("button", name="Try again").click()
+    # The real analysis runs: the first one loads the model too.
+    expect(row).to_have_attribute("data-state", "ready", timeout=READY)
+    assert visitor.changes_of_result() == [("DELETE", f"/api/songs/{song_id}/result")]
+    expect(row.locator(".state")).to_have_text("0:24, ready")
+    expect(row.locator(".note")).to_have_count(0)
+    expect(row.get_by_role("button", name="Try again")).to_have_count(0)
+
+    # The same id, the same place in the list and the same count 1, as the server says them.
+    assert listed() == [
+        {"id": "c0" * 16, "name": "Llegó antes", "state": "ready", "seconds": 24.5, "ones": []},
+        {"id": "c1" * 16, "name": "La que falló", "state": "ready", "seconds": 24.5, "ones": [9.25]},
+        {
+            "id": "c2" * 16,
+            "name": "Llegó después",
+            "state": "failed",
+            "seconds": 24.5,
+            "ones": [],
+            "failure": {"reason": "other", "seconds": 62.0},
+        },
+    ]
+    # And as the page shows them. The song that failed after it was not tried with it.
+    expect(visitor.rows().locator(".name")).to_have_text(names)
+    expect(row).to_have_attribute("data-id", song_id)
+    expect(after).to_have_attribute("data-state", "failed")
+    expect(page.get_by_role("button", name="Try again")).to_have_count(1)
+    # On disk: what the library holds of each song besides its result is byte for byte as it was.
+    assert {song: (failed_library / song / "song.json").read_bytes() for song in kept} == kept
+    stored = json.loads((failed_library / song_id / "result.json").read_text())
+    assert stored["version"] == 5 and "error" not in stored and "reason" not in stored
+    # A real result: about two beats a second for 24.5 s, like the same sound when it is uploaded.
+    beats = visitor.beats(name)
+    assert 44 <= len(beats) <= 50, len(beats)
+    assert stored["beats"] == beats
+
+    # It does not open by itself: nobody asked for it to be opened.
+    page.wait_for_timeout(2500)
+    expect(page.locator("#player")).to_be_hidden()
+    # Opened, the beat that was set to count 1 before the failure is still set by hand.
+    row.get_by_role("button", name="Open").click()
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    expect(page.locator("#song-name")).to_have_text(name)
+    by_hand = min(range(len(beats)), key=lambda beat: abs(beats[beat] - ones[0]))
+    assert abs(beats[by_hand] - ones[0]) < 0.09, beats[by_hand]
+    expect(page.locator("#map")).to_have_attribute("data-by-hand", str(by_hand))
+    assert visitor.counts()[by_hand] == 1
 
 
 def test_a_song_that_does_not_reach_the_server_is_said_so(visit, files):
