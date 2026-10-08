@@ -36,7 +36,7 @@ All *proposed*, except where an answer above already says it.
 **The page**
 
 - The readout says `Bar 24.3`. Before the first beat it says `Bar 1.1`. With no song open it is empty.
-- **Changed while building:** the readout is on the band, between the tempo and the time, and not in the bar under the song as this brief first said. The bar has no room for it: at 1100 wide the position control fell to 510 where the owner's check asks for 600, or the click switch went to a third line by itself. On the band it stands beside the clock, as the picture in my second question had it, and the position is still said in one place.
+- **Changed while building, and again after the review:** the readout is in the top bar, just before "Copy place", and not in the bar under the song as this brief first said. The bar has no room for it: at 1100 wide the position control fell to 510 where the owner's check asks for 600, or the click switch went to a third line by itself. It was first put on the band, between the tempo and the time, where it took 23% of the width of the large view at 1100. The owner chose the top bar on 2026-10-08 as "the least wrong": **its place is provisional and waits for a design pass.**
 - It is not announced at every beat to a screen reader.
 - The number of a row's first bar is drawn at the left of the row, with its time.
 - The bar under the pointer has a small tag drawn above its plate, `Bar 26`. The look of the tag and of the row numbers is for the owner's eye.
@@ -104,7 +104,7 @@ Ticked on 2026-10-08 from the whole run outside the sandbox, on `3021dfd`: 294 p
 - [x] **C11** A link with `at=240` opens the song at its start and says there is no bar 240. One with `at=x` opens it as a link without `at` does.
 - [x] **C12** "Copy place" hands the clipboard the line above, for the place in the readout. The test puts its own clipboard in the page and reads what it was given.
 - [x] **C13** The readout is not a live region.
-- [x] **C14** Every test of the page that passed before passes: the plates, the large view, a link without `at`. **Two of their assertions had to change**, both in the test of the plates: the left of a row holds two writings, its time and its number, where it held one, and the text of the player has "Bar 1.1" in it.
+- [x] **C14** Every test of the page that passed before passes: the plates, the large view, a link without `at`. **One of their assertions had to change**, in the test of the plates: the left of a row holds two writings, its time and its number, where it held one. A second, on the text of the player, was changed while the readout was on the band and is as it was again.
 
 **The commands, in `bachata/places_test.py`**
 
@@ -166,7 +166,7 @@ node --test web/                                         # under 1 s
 
 - `bachata/places.py` against `web/song.js`: the same rule written twice. The test that compares them makes its own songs: is there a kind of song it does not make?
 - `open()` and `goToLinked()` in `web/app.js`: when the place of the address is used, kept in the address, and dropped.
-- The two assertions of an existing test that were changed, in `test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_and_in_dark`.
+- The assertion of an existing test that was changed, in `test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_and_in_dark`.
 - `run()` at the end of `bachata/__main__.py`: with no argument it must be the server exactly as before.
 
 **What was run.** `node --test web/`: 41 passed. The whole run outside the sandbox, `.venv/bin/python -m pytest -rs`: 294 passed, none skipped, 932 s. 79 breaks of the code, one at a time: 70 caught as the tests stood, 78 after the tests were made stronger, in `LOG.md`.
@@ -187,7 +187,7 @@ A session of another tool reviewed `094dc94` on 2026-10-08 and asked for four ch
 | --- | --- | --- |
 | 1. An id in capitals is not found, and a whole id in capitals picks another song whose name has it | Yes: `bars AB01` did not find the song whose id starts `ab01`, and `bars AB01…AB01` answered the song named "A copy of AB01…AB01" | Fixed in `found()`. `test_a_song_is_found_by_its_id_the_start_of_it_or_a_part_of_its_name` failed before the fix |
 | 2. A song whose analysis failed stops the commands with a traceback | Yes: `KeyError: 'beats'` from `where` and from `bars`, on a result `{"version": 5, "error": "RuntimeError"}` as the queue writes it | Fixed in `counted()`: "The analysis of <name> failed.", status 1. `test_what_cannot_be_answered_is_said_in_one_sentence` failed before the fix |
-| 3. The readout on the band takes room from the large view | Yes: at 1100 by 800 in Firefox the large view is 576.5 wide on `master` and 444.5 on the branch, 23% less | **Not moved yet, by the owner's word.** Two places that take nothing from the large view were shown to him with pictures: the top bar before "Copy place", and the lower right corner of the band. He chooses |
+| 3. The readout on the band takes room from the large view | Yes: at 1100 by 800 in Firefox the large view is 576.5 wide on `master` and 444.5 on the branch, 23% less | Two places that take nothing from the large view were shown to the owner with pictures: the top bar before "Copy place", and the lower right corner of the band. **He chose the top bar**, as provisional: "I do not think either option is good design; A is the least wrong and I will redo it later with the design plugin." The test of the readout now says where it is and that the band holds only the count, the tempo and the time |
 | 4. The address loses its place when the same song is opened again | Yes: the test asserted it | Fixed in `open()`: the place stays in the address until another song opens, and the position goes there once. The assertion that was wrong is corrected, and failed before the fix |
 
 Not asked for and not done: the reviewer would let a time have more than three decimals, `4.7501s`.

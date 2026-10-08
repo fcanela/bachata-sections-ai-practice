@@ -1162,6 +1162,12 @@ def test_the_readout_says_the_bar_and_the_beat_at_the_playing_position(visit, fi
     expect(page.locator("#map")).to_have_attribute("data-by-hand", "")
     expect(readout).to_have_text("Bar 5.2")
 
+    # It is in the top bar, just before the button that copies it, and takes nothing from
+    # the band: the large view is as wide as the band leaves it beside the count, the tempo and the time.
+    assert page.locator("#title #place + #copy-place").count() == 1 and page.locator("#player #place").count() == 0
+    band, figure, large = (page.locator(part).bounding_box() for part in (".now", ".figure", "#now"))
+    assert [part.inner_text() for part in page.locator(".under > *").all()] == [f"{page.locator('#bpm').inner_text()} BPM", page.locator("#position").inner_text()]
+    assert large["x"] + large["width"] == pytest.approx(band["x"] + band["width"], abs=1) and large["x"] - (figure["x"] + figure["width"]) < 60
     # It is plain text: nothing reads it out at every beat.
     plain = "() => { const place = document.getElementById('place'); return [place.tagName, place.closest('output, [aria-live], [role]') === null] }"
     assert page.evaluate(plain) == ["SPAN", True]
@@ -1375,8 +1381,10 @@ def test_copy_place_hands_over_the_song_the_place_its_seconds_and_its_address(vi
     # While the name is typed the button is away, and it is back after.
     page.locator("#rename-open").click()
     expect(button).to_be_hidden()
+    expect(page.locator("#place")).to_be_hidden()
     page.keyboard.press("Escape")
     expect(button).to_be_visible()
+    expect(page.locator("#place")).to_be_visible()
 
     # A browser that will not take it: the page says so beside the name, and the button does not say it copied.
     page.evaluate(CLIPBOARD, True)
@@ -1478,8 +1486,8 @@ def test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_
             assert time and 62 <= time[2] <= 66 and abs((time[1] + time[3]) / 2 - (top + 15)) <= 1.5, (scheme, top, time)
             assert visitor.written([0, top - 16, 80, 62]) == [(hex_of(colours["ink-soft"]), "500", "12px"), (hex_of(colours["ink"]), "700", "12px")], (scheme, top)
     # No section is written: the text where the song is shown is the count, which is not
-    # there before the first beat, the tempo, the bar and the beat, and the time.
-    assert page.locator("#player").inner_text().split() == ["–", page.locator("#bpm").inner_text(), "BPM", "Bar", "1.1", "0:00"]
+    # there before the first beat, the tempo and the time.
+    assert page.locator("#player").inner_text().split() == ["–", page.locator("#bpm").inner_text(), "BPM", "0:00"]
 
     # How many ochos a row holds, and how wide a whole plate is, follow the width of the
     # window: a row holds eight ochos where that leaves a whole plate 44 wide or more,

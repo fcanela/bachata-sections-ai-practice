@@ -404,7 +404,7 @@ function showTitle() {
   $('song-name').title = song.name
   $('song-name').hidden = isRenaming
   $('rename-open').hidden = isRenaming
-  $('copy-place').hidden = isRenaming
+  $('place').hidden = $('copy-place').hidden = isRenaming
   title.querySelector('.rename')?.remove()
   title.querySelector('.note')?.remove()
   if (isRenaming) title.append(nameField(song))
