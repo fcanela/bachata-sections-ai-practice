@@ -27,13 +27,14 @@ import {
   nearestBeat,
   ochoOf,
   ochosOf,
+  placeLine,
   placeOf,
   placeText,
   songIn,
   tagsOf,
   wrapped,
 } from './song.js'
-import { barAt, drawMap, drawNow, forgetTokens, mapLayout, nowLayout, rowOf } from './draw.js'
+import { barAt, drawMap, drawNow, forgetTokens, mapLayout, nowLayout, rowOf, tagOf } from './draw.js'
 
 const $ = (id) => document.getElementById(id)
 
@@ -402,12 +403,40 @@ function showTitle() {
   $('song-name').title = song.name
   $('song-name').hidden = isRenaming
   $('rename-open').hidden = isRenaming
+  $('copy-place').hidden = isRenaming
   title.querySelector('.rename')?.remove()
   title.querySelector('.note')?.remove()
   if (isRenaming) title.append(nameField(song))
   const note = noteOf('title')
   if (note) title.append(note)
 }
+
+// Hands the clipboard the place at the playing position, as one line: the song, the bar
+// and the beat, the seconds, and the address that opens the song there. The button says
+// that it did, for a moment.
+let copied = 0 // the timer that gives the button its own words back
+$('copy-place').addEventListener('click', async (event) => {
+  // After a press with the pointer, Space is left to play and pause.
+  if (pointed) event.currentTarget.blur()
+  const song = songs.find((candidate) => candidate.id === player.id)
+  const beat = player.result ? beatHere() : -1
+  const place = placeOf(player.bars, beat)
+  if (!song || !place) return
+  const line = placeLine(song.name, song.id, place, player.result.beats[beat], location.origin + location.pathname)
+  let done = true
+  try {
+    await navigator.clipboard.writeText(line)
+  } catch {
+    done = false
+  }
+  if (player.id !== song.id) return
+  if (done) notes.delete('title')
+  else notes.set('title', { text: 'The place could not be copied.', refused: true })
+  showTitle()
+  $('copy-place').textContent = done ? 'Copied' : 'Copy place'
+  clearTimeout(copied)
+  copied = setTimeout(() => ($('copy-place').textContent = 'Copy place'), 1500)
+})
 
 $('rename-open').dataset.focus = 'rename'
 $('rename-open').addEventListener('click', () => {
@@ -953,7 +982,7 @@ function show() {
   if (from !== mapFrom) {
     mapFrom = from
     drawMap($('map'), layout, { beats, bars, count: player.count, byHand: player.byHand, lit: litBar, hover: under, range })
-    Object.assign($('map').dataset, { lit: litBar < 0 ? '' : litBar, range: range ? `${range.first} ${range.last}` : '' })
+    Object.assign($('map').dataset, { lit: litBar < 0 ? '' : litBar, range: range ? `${range.first} ${range.last}` : '', tag: under < 0 ? '' : tagOf(under) })
     if (litBar !== litShown && player.playing) follow()
     litShown = litBar
   }

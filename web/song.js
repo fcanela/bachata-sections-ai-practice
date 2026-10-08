@@ -385,6 +385,12 @@ export function missing(bars, place) {
 // opens that song. With a place, as it is written, the page opens the song there.
 export const addressOf = (id, at) => (at ? `?song=${id}&at=${at}` : `?song=${id}`)
 
+// A place in a song as one line to hand to someone else: the name of the song, the bar
+// and the beat, the seconds of that beat, which stay true when the bars are counted
+// again, and the address that opens the song there. `page` is the address of the page.
+export const placeLine = (name, id, place, seconds, page) =>
+  `${name}, bar ${placeText(place)} (${seconds.toFixed(2)} s) ${page}${addressOf(id, placeText(place))}`
+
 // The place an address names, as placeIn() gives it, or null.
 export const atIn = (search) => placeIn(new URLSearchParams(search).get('at'))
 

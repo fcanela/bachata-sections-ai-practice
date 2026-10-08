@@ -326,6 +326,11 @@ progress {
   max-width: 40rem;
 }
 
+/* As wide as its longer wording, "Copy place", so nothing moves when it says "Copied". */
+#copy-place {
+  min-width: 6.25rem;
+}
+
 .title .note {
   white-space: nowrap;
 }

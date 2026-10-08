@@ -23,6 +23,7 @@ import {
   ochoOf,
   ochosOf,
   placeIn,
+  placeLine,
   placeOf,
   placeText,
   songIn,
@@ -519,6 +520,16 @@ test('the address of a song can carry a place', () => {
   assert.equal(atIn(`?song=${id}&at=`), null)
   assert.equal(atIn(`?song=${id}&at=x`), null)
   assert.equal(atIn(`?song=${id}&at=24.3&at=5`).bar, 24)
+})
+
+test('a place is handed over as one line, with its seconds and the address that opens it', () => {
+  const id = 'ab01'.repeat(8)
+  const line = placeLine('Romeo Santos - Sus Huellas', id, { bar: 24, beat: 3 }, 62.408, 'http://127.0.0.1:8080/')
+  assert.equal(line, `Romeo Santos - Sus Huellas, bar 24.3 (62.41 s) http://127.0.0.1:8080/?song=${id}&at=24.3`)
+  assert.equal(placeLine('A', id, { bar: 1, beat: 1 }, 0.5, 'http://localhost/'), `A, bar 1.1 (0.50 s) http://localhost/?song=${id}&at=1.1`)
+  // The address in the line opens the song at the place the line says.
+  assert.deepEqual(atIn(new URL(line.split(' ').at(-1)).search), { bar: 24, beat: 3 })
+  assert.equal(songIn(new URL(line.split(' ').at(-1)).search), id)
 })
 
 test('a song has an address of its own', () => {

@@ -279,7 +279,7 @@ function loopRun(pen, plates, first, last, { opens, closes, on }, colours) {
 // `range` is the marked range in beats, { first, last, on }, or null. `on` says whether
 // the playing goes round it.
 export function drawMap(canvas, layout, { beats, bars, count, byHand, lit, hover, range }) {
-  const { pen } = sheetOf(canvas)
+  const { pen, width } = sheetOf(canvas)
   const colours = tokens()
   const { plates, rows } = layout
 
@@ -354,4 +354,30 @@ export function drawMap(canvas, layout, { beats, bars, count, byHand, lit, hover
     figure(pen, String(count[start]), x + wide / 2, y + high / 2)
     if (byHand.has(start)) lid(pen, x - 5, y - 6, wide + 10, colours.mark)
   }
+
+  // The bar under the pointer says its number, counted from 1, on a tag above its plate:
+  // over the middle of the plate where the canvas has the room, and clear of a lid and of
+  // the block of a lit bar. It is drawn last, over whatever is there.
+  if (hover >= 0) {
+    const { x, y, wide } = plates[hover]
+    const text = tagOf(hover)
+    pen.font = `700 12px ${colours.font}`
+    const across = Math.ceil(pen.measureText(text).width) + 2 * TAG_PAD
+    const left = Math.max(2, Math.min(width - 2 - across, Math.round(x + wide / 2 - across / 2)))
+    const top = y - TAG_ABOVE - TAG_HIGH
+    pen.fillStyle = colours.mark
+    pen.fillRect(left, top, across, TAG_HIGH)
+    pen.fillStyle = colours.ground
+    pen.textAlign = 'center'
+    pen.fillText(text, left + across / 2, top + TAG_HIGH / 2 + level(pen, text))
+  }
 }
+
+// How high the tag of the bar under the pointer is, how far its foot is above the plate,
+// and the room on each side of its text.
+const TAG_HIGH = 18
+const TAG_ABOVE = 8
+const TAG_PAD = 6
+
+// What the tag of a bar says: `bar` is its place in the bars, from 0.
+export const tagOf = (bar) => `Bar ${bar + 1}`
