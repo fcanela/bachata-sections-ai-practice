@@ -44,6 +44,15 @@ A session of another tool reviewed `094dc94` and asked for four changes. All fou
 | The whole run, outside the sandbox, on `0a911c4`: `TMPDIR=/tmp/claude-1000/e2e-c BACHATA_TEST_PORT=8087 .venv/bin/python -m pytest -rs` | 294 passed, none skipped | 1067 s |
 | The library in `data/` after all of it | As the mistake of the afternoon left it: no result written since | under 1 s |
 
+**The readout moved to the top bar**, in `7146767`, by the owner's choice of the first of the two places: "I do not think either option is good design; A is the least wrong and I will redo it later with the design plugin."
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| The tests of the page the move touches, in Firefox, inside the sandbox: the readout, "Copy place", the plates, the bar under the song, the large view, the renaming, the messages, the keyboard | 8 passed, 2 skipped for want of sound | 61 s |
+| The readout put back on the band, as a break, against the test of the readout | Caught: `#title #place + #copy-place` found 0 where 1 was expected | 20 s |
+| `node --test web/` | 41 passed | under 1 s |
+| The whole run, outside the sandbox, on `7146767`: the same command | 294 passed, none skipped | 945 s |
+
 The program was started only by the tests, each on a temporary folder of its own.
 
 ### Breaking the code on purpose
