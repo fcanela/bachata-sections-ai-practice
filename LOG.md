@@ -30,6 +30,22 @@ The capstone of the owner's course: a task no session had been given. A place in
 | The whole run, outside the sandbox, which the owner allowed once, on the build with the stronger tests, `3021dfd`: `TMPDIR=/tmp/claude-1000/e2e-c BACHATA_TEST_PORT=8087 .venv/bin/python -m pytest -rs` | 294 passed, none skipped: the tests of the page in Chrome and in Firefox, 88 runs, with sound, and the songs of the reference. Nothing was left listening on 8087 | 932 s |
 | Pictures of the page, with Playwright's Firefox inside the sandbox, of the test song of 44 s at 1280 by 720 in light and in dark, at 1920 by 1080 and at 1100 by 800 | Looked at by the session: the readout on the band, the numbers beside the rows, the tag over the bar under the pointer, "Copy place" in the top bar, and the bar under the song in the lines it had. Not kept in git | 16 s |
 
+### After the review
+
+A session of another tool reviewed `094dc94` and asked for four changes. All four were reproduced. Three are fixed in `0a911c4`; the fourth, where the readout sits, waits for the owner's choice. `CAPSTONE.md`, "After the review", has the table.
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| On a temporary library: `bars AB01`, and `bars` with the whole id in capitals, where another song's name has that id in capitals | The first did not find the song whose id starts `ab01`; the second answered the other song. Finding 1 holds | under 1 s each |
+| On the same library, a song with the result `{"version": 5, "error": "RuntimeError"}`: `bars` and `where` | `KeyError: 'beats'` from both. Finding 2 holds | under 1 s each |
+| The width of the large view at 1100 by 800, in Playwright's Firefox, on `master`, on the branch, and with the readout in the top bar and in the lower right corner of the band | 576.5 on `master`, 444.5 on the branch, 576.5 with either of the two. The position control is 613.8 in all four. Finding 3 holds: 23% less | 15 s each |
+| The three tests written or corrected for findings 1, 2 and 4, before the fixes | Each failed on its claim: the id in capitals not found, `KeyError: 'beats'`, the address without `&at=3.2` | under 1 s, and 20 s |
+| The same after the fixes: `bachata/places_test.py`, and the tests of the address, of a place far down and of "Copy place" in Firefox | 14 passed, and 3 passed | under 1 s, and 37 s |
+| The whole run, outside the sandbox, on `0a911c4`: `TMPDIR=/tmp/claude-1000/e2e-c BACHATA_TEST_PORT=8087 .venv/bin/python -m pytest -rs` | 294 passed, none skipped | 1067 s |
+| The library in `data/` after all of it | As the mistake of the afternoon left it: no result written since | under 1 s |
+
+The program was started only by the tests, each on a temporary folder of its own.
+
 ### Breaking the code on purpose
 
 One break at a time, on the committed build, with `.claude/skills/break-on-purpose/scripts/one_break.sh`: the file is changed, the checks run, and the file is written back as it was. 79 breaks; 70 were caught as the tests stood, and after four tests were made stronger and two added, 78 are. One is caught by nothing and left so. The claims are those of `CAPSTONE.md`.

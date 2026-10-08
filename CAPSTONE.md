@@ -40,7 +40,7 @@ All *proposed*, except where an answer above already says it.
 - It is not announced at every beat to a screen reader.
 - The number of a row's first bar is drawn at the left of the row, with its time.
 - The bar under the pointer has a small tag drawn above its plate, `Bar 26`. The look of the tag and of the row numbers is for the owner's eye.
-- `&at=` is used once, when the song's result is there. The song opens paused at the first beat of the place. The address does not follow the playing position. It keeps its `at` until another song is opened.
+- `&at=` is used once, when the song's result is there. The song opens paused at the first beat of the place. The address does not follow the playing position. It keeps its `at` until another song is opened: when the same song is opened again it starts at its start, and the address still has the place.
 - An `at` that names no place in the song: the song opens at its start and the page says "There is no bar 240 in this song." An `at` that is not a place at all is ignored.
 - The button is "Copy place". **Changed while building:** it is in the top bar, after "Rename", for the same lack of room. It copies one line: `Sus Huellas, bar 24.3 (62.41 s) http://127.0.0.1:8080/?song=<id>&at=24.3`. The place is the one in the readout.
 
@@ -63,8 +63,8 @@ Sus Huellas  3f2a9c…  analysis 5  412 beats  104 bars
 ```
 
 - The id is printed whole. Seconds have two decimals.
-- The song is its id, the start of its id, or a part of its name, in any case and with or without accents. None or more than one: the command lists the songs that match, or all of them, and ends with status 2.
-- A song with no result yet, and a place that is not in the song: one sentence, status 1.
+- The song is its id, the start of its id, or a part of its name, in any case and with or without accents. An id is found in capitals too, and a whole id is that song whatever the names of the others have in them. None or more than one: the command lists the songs that match, or all of them, and ends with status 2.
+- A song with no result yet, a song whose analysis failed, and a place that is not in the song: one sentence, status 1.
 - They read the library on disk, in `BACHATA_DATA` as the server does. They need no running server, change nothing in the library, and load neither torch nor the checkpoints.
 
 ## Constraints
@@ -178,3 +178,16 @@ node --test web/                                         # under 1 s
 - The commands on a library while the server is writing to it.
 - One break is caught by nothing: a tag may pass the right edge of the song by up to 3 pixels, over a plate of one beat that ends its row.
 - The tests of the twin are skipped where node is not installed, and the tests of the page where ffmpeg or a browser is missing.
+
+## After the review
+
+A session of another tool reviewed `094dc94` on 2026-10-08 and asked for four changes. Each was reproduced before it was believed, and all four hold.
+
+| Finding | Reproduced | What was done |
+| --- | --- | --- |
+| 1. An id in capitals is not found, and a whole id in capitals picks another song whose name has it | Yes: `bars AB01` did not find the song whose id starts `ab01`, and `bars AB01…AB01` answered the song named "A copy of AB01…AB01" | Fixed in `found()`. `test_a_song_is_found_by_its_id_the_start_of_it_or_a_part_of_its_name` failed before the fix |
+| 2. A song whose analysis failed stops the commands with a traceback | Yes: `KeyError: 'beats'` from `where` and from `bars`, on a result `{"version": 5, "error": "RuntimeError"}` as the queue writes it | Fixed in `counted()`: "The analysis of <name> failed.", status 1. `test_what_cannot_be_answered_is_said_in_one_sentence` failed before the fix |
+| 3. The readout on the band takes room from the large view | Yes: at 1100 by 800 in Firefox the large view is 576.5 wide on `master` and 444.5 on the branch, 23% less | **Not moved yet, by the owner's word.** Two places that take nothing from the large view were shown to him with pictures: the top bar before "Copy place", and the lower right corner of the band. He chooses |
+| 4. The address loses its place when the same song is opened again | Yes: the test asserted it | Fixed in `open()`: the place stays in the address until another song opens, and the position goes there once. The assertion that was wrong is corrected, and failed before the fix |
+
+Not asked for and not done: the reviewer would let a time have more than three decimals, `4.7501s`.
