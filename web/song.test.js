@@ -479,6 +479,9 @@ test('a short bar has beats 1 to n, and no more', () => {
   assert.equal(beatAt(whole, steady(16), { bar: 4, beat: 4 }, 60), 15)
   assert.equal(beatAt(whole, steady(16), { bar: 5, beat: 1 }, 60), -1)
   assert.equal(missing(whole, { bar: 5, beat: 1 }), 'There is no bar 5 in this song.')
+  // The last bar is in the song: what it lacks is the beat.
+  assert.equal(beatAt(whole, steady(16), { bar: 4, beat: 5 }, 60), -1)
+  assert.equal(missing(whole, { bar: 4, beat: 5 }), 'Bar 4 has no beat 5.')
   assert.equal(beatAt([], [], { bar: 1, beat: 1 }, 60), -1)
 })
 

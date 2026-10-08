@@ -35,14 +35,14 @@ All *proposed*, except where an answer above already says it.
 
 **The page**
 
-- The readout is in the bar under the song and says `Bar 24.3`. Before the first beat it says `Bar 1.1`. With no song open it is empty.
-- It has no clock. The owner chose on 2026-10-08 that the position is on the band alone, and the picture in my second question showed a time beside the readout: I leave it out.
+- The readout says `Bar 24.3`. Before the first beat it says `Bar 1.1`. With no song open it is empty.
+- **Changed while building:** the readout is on the band, between the tempo and the time, and not in the bar under the song as this brief first said. The bar has no room for it: at 1100 wide the position control fell to 510 where the owner's check asks for 600, or the click switch went to a third line by itself. On the band it stands beside the clock, as the picture in my second question had it, and the position is still said in one place.
 - It is not announced at every beat to a screen reader.
 - The number of a row's first bar is drawn at the left of the row, with its time.
 - The bar under the pointer has a small tag drawn above its plate, `Bar 26`. The look of the tag and of the row numbers is for the owner's eye.
 - `&at=` is used once, when the song's result is there. The song opens paused at the first beat of the place. The address does not follow the playing position. It keeps its `at` until another song is opened.
 - An `at` that names no place in the song: the song opens at its start and the page says "There is no bar 240 in this song." An `at` that is not a place at all is ignored.
-- The button is "Copy place", in the bar under the song. It copies one line: `Sus Huellas, bar 24.3 (62.41 s) http://127.0.0.1:8080/?song=<id>&at=24.3`. The place is the one in the readout.
+- The button is "Copy place". **Changed while building:** it is in the top bar, after "Rename", for the same lack of room. It copies one line: `Sus Huellas, bar 24.3 (62.41 s) http://127.0.0.1:8080/?song=<id>&at=24.3`. The place is the one in the readout.
 
 **The commands**
 
@@ -88,7 +88,7 @@ Each is one claim and names the check behind it. For breaking on purpose, the cl
 
 - [ ] **C1** Every beat of a song has one place, bar and beat from 1, and the place leads back to the same beat.
 - [ ] **C2** In a short bar the beats are 1 to n. `24.3` is refused when bar 24 has two beats.
-- [ ] **C3** `24.3`, `24` and `62.4s` are read. `0`, `24.0`, `24.3.1`, `-1`, `1e3`, `62.4` followed by anything but `s`, and words are not.
+- [ ] **C3** `24.3`, `24` and `62.4s` are read. `0`, `24.0`, `24.3.1`, `-1`, `1e3`, `62.4sec` and words are not. `62.4` without an `s` is bar 62, beat 4.
 - [ ] **C4** `?song=<id>&at=24.3` is written from an id and a place, and read back. Without a place it is `?song=<id>`, as today.
 
 **The page, in `e2e/page_test.py`**
@@ -102,7 +102,7 @@ Each is one claim and names the check behind it. For breaking on purpose, the cl
 - [ ] **C11** A link with `at=240` opens the song at its start and says there is no bar 240. One with `at=x` opens it as a link without `at` does.
 - [ ] **C12** "Copy place" hands the clipboard the line above, for the place in the readout. The test puts its own clipboard in the page and reads what it was given.
 - [ ] **C13** The readout is not a live region.
-- [ ] **C14** Every test of the page that passed before passes unchanged: the plates, the large view, a link without `at`.
+- [ ] **C14** Every test of the page that passed before passes: the plates, the large view, a link without `at`. **Two of their assertions had to change**, both in the test of the plates: the left of a row holds two writings, its time and its number, where it held one, and the text of the player has "Bar 1.1" in it.
 
 **The commands, in `bachata/places_test.py`**
 

@@ -1054,6 +1054,47 @@ def test_an_address_with_a_place_opens_the_song_paused_at_that_place(visit, file
     expect(other.page.locator("#position")).to_have_text("0:00")
     assert float(other.page.locator("#seek").input_value()) == 0
 
+    # The same song asked for again, by its file, with no other song between: it opens at
+    # its start, and the address has no place any more.
+    again = opened("3.2")
+    is_on(again, bars[2] + 1)
+    again.press_bar(5)
+    expect(again.page.locator("#map")).to_have_attribute("data-lit", "5")
+    again.pick(files["tagged"])
+    expect(again.page.locator("#position")).to_have_text("0:00")
+    expect(again.page).to_have_url(re.compile(rf"/\?song={tagged}$"))
+    assert float(again.page.locator("#seek").input_value()) == 0 and again.uploads() == []
+
+    # What was said of a place the song does not have goes when another song is opened.
+    lost = opened("240")
+    expect(lost.page.locator("#title .note")).to_have_text("There is no bar 240 in this song.")
+    lost.row("Sin etiquetas").get_by_role("button", name="Open").click()
+    expect(lost.page.locator("#song-name")).to_have_text("Sin etiquetas", timeout=READY)
+    expect(lost.page.locator("#title .note")).to_have_count(0)
+
+
+def test_a_song_opened_at_a_place_far_down_has_the_row_of_the_place_on_screen(visit, files):
+    # A window too low for the three rows this song has in it.
+    visitor = visit(viewport={"width": 1100, "height": 520})
+    visitor.pick(files["longer"])
+    expect(visitor.page.locator("#player")).to_be_visible(timeout=READY)
+    longer = visitor.row(LONGER).get_attribute("data-id")
+    bars, plates = visitor.bars(), visitor.plates()
+    last = len(bars) - 1
+    assert plates[last][1] > plates[0][1]
+
+    other = visit(path=f"/?song={longer}&at={last + 1}", viewport={"width": 1100, "height": 520})
+    expect(other.page.locator("#player")).to_be_visible(timeout=READY)
+    expect(other.page.locator("#map")).to_have_attribute("data-lit", str(last))
+    top, high, whole = other.page.locator("#song").evaluate("(part) => [part.scrollTop, part.clientHeight, part.scrollHeight]")
+    assert 62 <= high < whole, "the window must hold a row and not the whole song"
+    # The band of the row of the place, from 16 above its plates to 16 under them, is on screen.
+    assert top > 0 and top <= plates[last][1] - 16 and plates[last][1] + 30 + 16 <= top + high, (top, high, plates[last])
+    # A link to a place in the first row leaves the song at its top.
+    first = visit(path=f"/?song={longer}&at=2", viewport={"width": 1100, "height": 520})
+    expect(first.page.locator("#map")).to_have_attribute("data-lit", "1", timeout=READY)
+    assert first.page.locator("#song").evaluate("(part) => part.scrollTop") == 0
+
 
 def place_of(bars, beat):
     """What the readout says on a beat: its bar, from 1, and which beat of the bar it is."""
@@ -1169,6 +1210,9 @@ def test_every_row_of_the_song_has_the_number_of_its_first_bar(visit, files):
             margin = [0, top - 16, 80, 62]
             # Its time, and then the number of the bar, counted from 1.
             assert visitor.texts(margin) == [clock(beats[bars[first]]), str(first + 1)], first
+            # The time ends 30 left of where the number ends, which is 14 left of the plate: they do not meet.
+            ends = [one["x"] for one in page.evaluate("window.written.map") if one["text"] in (clock(beats[bars[first]]), str(first + 1)) and top - 16 <= one["y"] < top + 46 and one["x"] < 80]
+            assert ends == [x - 44, x - 14], (first, ends)
             # And both were drawn: the ink reaches to 14 left of the plate, where the number ends.
             inked = page.evaluate(INKED, margin)
             assert inked and 62 <= inked[2] <= 66 and inked[0] < 36, (first, inked)

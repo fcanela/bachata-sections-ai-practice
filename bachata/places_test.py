@@ -140,6 +140,18 @@ def test_a_song_is_found_by_its_id_the_start_of_it_or_a_part_of_its_name(data):
     # A whole id is that song, also when it is in the name of another one.
     keep(data, "c" * 32, f"A copy of {HUELLAS}", added=3)
     assert found(HUELLAS) == HUELLAS
+    # A folder that is not a song's is not read, as the store does not read it.
+    shutil.copytree(data / "songs" / HUELLAS, data / "songs" / "a copy by hand")
+    assert found("sus huellas") == HUELLAS
+
+
+def test_a_song_stored_before_count_1_could_be_set_has_none(data):
+    file = data / "songs" / HUELLAS / "song.json"
+    song = json.loads(file.read_text())
+    del song["ones"]
+    file.write_text(json.dumps(song))
+    assert run(data, "where", "huellas", "4.3")[1].splitlines()[1] == "bar 4, beat 3   6.16 s   count 3   128 BPM"
+    assert run(data, "bars", "huellas")[1].splitlines()[4] == "  4    5.22 s  count 1"
 
 
 def test_no_song_and_more_than_one_end_with_status_2_and_print_no_place(data):
