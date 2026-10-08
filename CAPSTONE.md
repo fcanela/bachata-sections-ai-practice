@@ -84,42 +84,97 @@ A field to type a bar into. Numbers for ochos or sections. A range of bars as on
 
 Each is one claim and names the check behind it. For breaking on purpose, the claims of this part are this list and the two sections above it.
 
+Ticked on 2026-10-08 from the whole run outside the sandbox, on `3021dfd`: 294 passed, none skipped, in Chrome and in Firefox with sound. The checks were seen to fail: 79 breaks, 78 caught, in `LOG.md`, session 12. A tick says the check passed, not that the owner accepted what it checks.
+
 **The place, in `web/song.test.js`** (`node --test web/`)
 
-- [ ] **C1** Every beat of a song has one place, bar and beat from 1, and the place leads back to the same beat.
-- [ ] **C2** In a short bar the beats are 1 to n. `24.3` is refused when bar 24 has two beats.
-- [ ] **C3** `24.3`, `24` and `62.4s` are read. `0`, `24.0`, `24.3.1`, `-1`, `1e3`, `62.4sec` and words are not. `62.4` without an `s` is bar 62, beat 4.
-- [ ] **C4** `?song=<id>&at=24.3` is written from an id and a place, and read back. Without a place it is `?song=<id>`, as today.
+- [x] **C1** Every beat of a song has one place, bar and beat from 1, and the place leads back to the same beat.
+- [x] **C2** In a short bar the beats are 1 to n. `24.3` is refused when bar 24 has two beats.
+- [x] **C3** `24.3`, `24` and `62.4s` are read. `0`, `24.0`, `24.3.1`, `-1`, `1e3`, `62.4sec` and words are not. `62.4` without an `s` is bar 62, beat 4.
+- [x] **C4** `?song=<id>&at=24.3` is written from an id and a place, and read back. Without a place it is `?song=<id>`, as today.
 
 **The page, in `e2e/page_test.py`**
 
-- [ ] **C5** The readout says the bar and beat at the playing position: after a press on a plate, after a step of one beat, and before the first beat.
-- [ ] **C6** While the song plays, the readout follows the beat that is lit. *Needs sound: run outside the sandbox.*
-- [ ] **C7** After "Count 1 here", the readout and the row numbers are those of the new bars.
-- [ ] **C8** Every row of the map has the number of its first bar, and something is drawn where the page says it is. Which numeral it is stays for the eye.
-- [ ] **C9** The bar under the pointer has its tag, and the tag goes when the pointer leaves.
-- [ ] **C10** A link with `at=3.2` opens the song paused on that beat, and one with `at=4.75s` at the beat nearest to that time.
-- [ ] **C11** A link with `at=240` opens the song at its start and says there is no bar 240. One with `at=x` opens it as a link without `at` does.
-- [ ] **C12** "Copy place" hands the clipboard the line above, for the place in the readout. The test puts its own clipboard in the page and reads what it was given.
-- [ ] **C13** The readout is not a live region.
-- [ ] **C14** Every test of the page that passed before passes: the plates, the large view, a link without `at`. **Two of their assertions had to change**, both in the test of the plates: the left of a row holds two writings, its time and its number, where it held one, and the text of the player has "Bar 1.1" in it.
+- [x] **C5** The readout says the bar and beat at the playing position: after a press on a plate, after a step of one beat, and before the first beat.
+- [x] **C6** While the song plays, the readout follows the beat that is lit. *Needs sound: run outside the sandbox.*
+- [x] **C7** After "Count 1 here", the readout and the row numbers are those of the new bars.
+- [x] **C8** Every row of the map has the number of its first bar, and something is drawn where the page says it is. Which numeral it is stays for the eye.
+- [x] **C9** The bar under the pointer has its tag, and the tag goes when the pointer leaves.
+- [x] **C10** A link with `at=3.2` opens the song paused on that beat, and one with `at=4.75s` at the beat nearest to that time.
+- [x] **C11** A link with `at=240` opens the song at its start and says there is no bar 240. One with `at=x` opens it as a link without `at` does.
+- [x] **C12** "Copy place" hands the clipboard the line above, for the place in the readout. The test puts its own clipboard in the page and reads what it was given.
+- [x] **C13** The readout is not a live region.
+- [x] **C14** Every test of the page that passed before passes: the plates, the large view, a link without `at`. **Two of their assertions had to change**, both in the test of the plates: the left of a row holds two writings, its time and its number, where it held one, and the text of the player has "Bar 1.1" in it.
 
 **The commands, in `bachata/places_test.py`**
 
-- [ ] **C15** `where <song> 24.3` prints the four lines above for a stored song, to the letter.
-- [ ] **C16** `where <song> 62.4s` prints the place of the nearest beat.
-- [ ] **C17** `bars <song>` prints one line for every bar, and marks a short bar and a count 1 set by hand.
-- [ ] **C18** A count 1 set through the store moves the numbers the commands print.
-- [ ] **C19** The twin: on the same beats, count and count 1s, Python and `web/song.js` make the same bars and read the same places. *Skipped where node is not installed.*
-- [ ] **C20** A song is found by its id, by the start of it, and by a part of its name without its accents. None and several end with status 2 and print no place.
-- [ ] **C21** A song with no result, and a place that is not in the song, end with status 1 and one sentence.
-- [ ] **C22** The commands load no torch, write nothing in the library, and read the folder `BACHATA_DATA` names.
-- [ ] **C23** `python -m bachata` alone still serves on 127.0.0.1: the test of `bachata/server_test.py` that starts the program, unchanged.
+- [x] **C15** `where <song> 24.3` prints the four lines above for a stored song, to the letter.
+- [x] **C16** `where <song> 62.4s` prints the place of the nearest beat.
+- [x] **C17** `bars <song>` prints one line for every bar, and marks a short bar and a count 1 set by hand.
+- [x] **C18** A count 1 set through the store moves the numbers the commands print.
+- [x] **C19** The twin: on the same beats, count and count 1s, Python and `web/song.js` make the same bars and read the same places. *Skipped where node is not installed.*
+- [x] **C20** A song is found by its id, by the start of it, and by a part of its name without its accents. None and several end with status 2 and print no place.
+- [x] **C21** A song with no result, and a place that is not in the song, end with status 1 and one sentence.
+- [x] **C22** The commands load no torch, write nothing in the library, and read the folder `BACHATA_DATA` names.
+- [x] **C23** `python -m bachata` alone still serves on 127.0.0.1: the test of `bachata/server_test.py` that starts the program, unchanged.
 
 **The whole run**
 
-- [ ] **C24** `node --test web/` and `uv run pytest` pass, the second once outside the sandbox, with what was skipped and why.
+- [x] **C24** `node --test web/` and `uv run pytest` pass, the second once outside the sandbox, with what was skipped and why.
 
 ## The records
 
-*Proposed:* `LOG.md` gets its entry for the session and `NEXT.md` is rewritten, on the branch, in a commit of their own after the code, so a reviewer can read the code's diff alone. `ACCEPTANCE.md` is not changed: this list is the part's. A section "For the reviewer" is added to this file at the end, with how to get the diff. It is the one file a reviewer needs.
+`LOG.md` has the entry of the session, 12, and `NEXT.md` says where things stand, in a commit of their own after the code. `ACCEPTANCE.md` is not changed: this list is the part's.
+
+## For the reviewer
+
+**The task**, in the owner's words: "When I use the app I cannot refer to a specific beat or bar. That would have been very useful each time an LLM or I want to point at a specific place in a song and check if it was detected correctly or not."
+
+**What to judge it against:** "What the owner decided", "The rules that follow", "Constraints" and "Acceptance checks" above. The rules marked *proposed* and the two marked **Changed while building** are the session's and not the owner's: say where you would have decided otherwise.
+
+**The diff.** The branch is `d5-capstone`, and `master` is where it started, at `d76b864`. Nothing is merged.
+
+```
+git diff master...d5-capstone --stat
+git diff master...d5-capstone -- web bachata e2e      # the code and its tests
+git diff master...d5-capstone -- LOG.md NEXT.md       # the records
+git log --oneline master..d5-capstone                  # one commit for each step, in the order they were built
+```
+
+| Commit | What |
+| --- | --- |
+| `620bead` | This brief, as the owner said "go" to it |
+| `4aee12a` | The place in `web/song.js`, its twin and the two commands in `bachata/places.py`, `bachata/__main__.py` |
+| `4ca40b7` | The address with `at`, in `web/app.js` |
+| `9b0f6f1` | The readout and the row numbers: `web/app.js`, `web/draw.js`, `web/index.html`, `web/style.css` |
+| `9a06c1e` | The tag and "Copy place" |
+| `3021dfd` | Tests made stronger after the breaks, and this brief brought up to what was built |
+| the last one | The records, and this section |
+
+**To run the checks.**
+
+```
+node --test web/                                         # under 1 s
+.venv/bin/python -m pytest bachata/places_test.py        # under 1 s
+.venv/bin/python -m pytest e2e -k "firefox and (address_with_a_place or far_down or readout or every_row or tag_above or copy_place)"
+.venv/bin/python -m pytest                               # everything; Chrome and sound need a machine that has them
+```
+
+**To try it by hand.** Start the program on a library of its own, never on `data/` of this folder, which it would analyse again: `BACHATA_DATA=/some/scratch/folder PORT=8090 uv run python -m bachata`. The commands only read: `uv run python -m bachata bars <part of a name>`.
+
+**Where a second pair of eyes is worth most.**
+
+- `bachata/places.py` against `web/song.js`: the same rule written twice. The test that compares them makes its own songs: is there a kind of song it does not make?
+- `open()` and `goToLinked()` in `web/app.js`: when the place of the address is used, kept in the address, and dropped.
+- The two assertions of an existing test that were changed, in `test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_and_in_dark`.
+- `run()` at the end of `bachata/__main__.py`: with no argument it must be the server exactly as before.
+
+**What was run.** `node --test web/`: 41 passed. The whole run outside the sandbox, `.venv/bin/python -m pytest -rs`: 294 passed, none skipped, 932 s. 79 breaks of the code, one at a time: 70 caught as the tests stood, 78 after the tests were made stronger, in `LOG.md`.
+
+**What was not checked.**
+
+- That the system's clipboard receives the line: the test puts a clipboard of its own in the page.
+- The page in a browser driven by a person. The session looked at four pictures taken by Playwright's Firefox.
+- The commands on a library while the server is writing to it.
+- One break is caught by nothing: a tag may pass the right edge of the song by up to 3 pixels, over a plate of one beat that ends its row.
+- The tests of the twin are skipped where node is not installed, and the tests of the page where ffmpeg or a browser is missing.
