@@ -137,9 +137,16 @@ def test_a_song_is_found_by_its_id_the_start_of_it_or_a_part_of_its_name(data):
     assert found("heroe") == HEROE
     assert found("héroe") == HEROE
     assert found("héroe") == HEROE
+    # An id is found in capitals too, whole or by its start, like a name.
+    assert found(HUELLAS.upper()) == HUELLAS
+    assert found("3F2A") == HUELLAS
+    assert found("3F2b") == HEROE
     # A whole id is that song, also when it is in the name of another one.
     keep(data, "c" * 32, f"A copy of {HUELLAS}", added=3)
     assert found(HUELLAS) == HUELLAS
+    # And a whole id in capitals is still that song, when the name of another one has it so.
+    keep(data, "e" * 32, f"Another copy of {HUELLAS.upper()}", added=4)
+    assert found(HUELLAS.upper()) == HUELLAS
     # A folder that is not a song's is not read, as the store does not read it.
     shutil.copytree(data / "songs" / HUELLAS, data / "songs" / "a copy by hand")
     assert found("sus huellas") == HUELLAS
@@ -168,6 +175,11 @@ def test_what_cannot_be_answered_is_said_in_one_sentence(data):
     keep(data, "d" * 32, "Not analysed", added=3)
     assert run(data, "bars", "not analysed") == (1, "", "Not analysed has no result yet.\n")
     assert run(data, "where", "not analysed", "1.1") == (1, "", "Not analysed has no result yet.\n")
+    # A song whose analysis failed has a result that says so, and nothing else: as the queue writes it.
+    keep(data, "f" * 32, "Could not be analysed", added=4)
+    (data / "songs" / ("f" * 32) / "result.json").write_text(json.dumps({"version": 5, "error": "RuntimeError"}))
+    assert run(data, "bars", "could not") == (1, "", "The analysis of Could not be analysed failed.\n")
+    assert run(data, "where", "could not", "1.1") == (1, "", "The analysis of Could not be analysed failed.\n")
     assert run(data, "where", "huellas", "12") == (1, "", "There is no bar 12 in this song.\n")
     assert run(data, "where", "huellas", "11.4") == (1, "", "Bar 11 has no beat 4.\n")
     assert run(data, "where", "huellas", "62.4sec") == (2, "", '"62.4sec" is not a place. Write 24.3, 24 or 62.4s.\n')

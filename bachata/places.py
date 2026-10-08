@@ -129,12 +129,16 @@ def songs_in(data):
 
 
 def found(data, asked):
-    """The one song `asked` names: by its id, by the start of it, or by a part of its name."""
+    """The one song `asked` names: by its id, by the start of it, or by a part of its name.
+
+    Capitals do not matter, in an id or in a name. A whole id is that song, whatever the
+    names of the others have in them.
+    """
     songs = songs_in(data)
-    matches = [song for song in songs if song["id"] == asked]
+    part = folded(asked)
+    matches = [song for song in songs if song["id"] == part]
     if not matches:
-        part = folded(asked)
-        matches = [song for song in songs if song["id"].startswith(asked) or part in folded(song["name"])]
+        matches = [song for song in songs if song["id"].startswith(part) or part in folded(song["name"])]
     if len(matches) == 1:
         return matches[0]
     if not songs:
@@ -149,6 +153,9 @@ def counted(data, song):
         result = json.loads((Path(data) / "songs" / song["id"] / "result.json").read_text())
     except FileNotFoundError:
         raise Stop(f"{song['name']} has no result yet.", 1) from None
+    # An analysis that failed leaves a result with the error and no beats.
+    if "error" in result:
+        raise Stop(f"The analysis of {song['name']} failed.", 1)
     count, by_hand = counts_with(result["beats"], result["count"], song["ones"])
     return result, count, bars_of(count), by_hand
 

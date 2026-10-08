@@ -226,7 +226,8 @@ function showAddress(id) {
 }
 
 // Moves the playing position to the place the address named, once, when its song has
-// opened. A place the song does not have is said beside its name.
+// opened: opened again, the song starts at its start, and the address keeps the place
+// until another song takes it. A place the song does not have is said beside its name.
 function goToLinked() {
   if (!linkedAt || linkedAt.used) return
   linkedAt.used = true
@@ -555,8 +556,6 @@ async function open(song) {
   pause()
   notes.delete(song.id)
   confirming = null
-  // The address may name a place in this song. Asked for any other way, the song opens at its start.
-  if (linkedAt && (linkedAt.used || linkedAt.id !== song.id)) linkedAt = null
   opening = { id: song.id, part: 0 }
   if (!player.id) showNothing(`Opening ${song.name}…`)
   showSongs()

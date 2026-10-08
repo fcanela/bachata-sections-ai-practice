@@ -1054,16 +1054,21 @@ def test_an_address_with_a_place_opens_the_song_paused_at_that_place(visit, file
     expect(other.page.locator("#position")).to_have_text("0:00")
     assert float(other.page.locator("#seek").input_value()) == 0
 
-    # The same song asked for again, by its file, with no other song between: it opens at
-    # its start, and the address has no place any more.
+    # The same song asked for again, by its file, with no other song between: the place
+    # was used once, so the song opens at its start. The address keeps the place, which it
+    # loses only when another song opens.
     again = opened("3.2")
     is_on(again, bars[2] + 1)
     again.press_bar(5)
     expect(again.page.locator("#map")).to_have_attribute("data-lit", "5")
     again.pick(files["tagged"])
     expect(again.page.locator("#position")).to_have_text("0:00")
-    expect(again.page).to_have_url(re.compile(rf"/\?song={tagged}$"))
     assert float(again.page.locator("#seek").input_value()) == 0 and again.uploads() == []
+    expect(again.page).to_have_url(re.compile(rf"/\?song={tagged}&at=3\.2$"))
+    # Loaded again, the page is at the place again.
+    again.page.reload()
+    expect(again.page.locator("#player")).to_be_visible(timeout=READY)
+    is_on(again, bars[2] + 1)
 
     # What was said of a place the song does not have goes when another song is opened.
     lost = opened("240")
