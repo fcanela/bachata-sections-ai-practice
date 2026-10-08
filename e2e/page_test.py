@@ -187,7 +187,7 @@ for (const name of ['font', 'fillStyle']) {
 }
 const fillText = CanvasRenderingContext2D.prototype.fillText
 CanvasRenderingContext2D.prototype.fillText = function (text, x, y) {
-  if (this.canvas.id in window.written) window.written[this.canvas.id].push({ x, y, ink: this.asked?.fillStyle, font: this.asked?.font })
+  if (this.canvas.id in window.written) window.written[this.canvas.id].push({ x, y, text, ink: this.asked?.fillStyle, font: this.asked?.font })
   return fillText.apply(this, arguments)
 }
 """
@@ -969,6 +969,80 @@ def test_every_song_has_an_address_that_opens_it(visit, files):
     expect(other.page.locator("#player")).to_be_hidden(timeout=10_000)
     expect(other.page.locator("#nothing-text")).to_have_text("The song was deleted.")
     expect(other.page).to_have_url(re.compile(r"/$"))
+
+
+def test_an_address_with_a_place_opens_the_song_paused_at_that_place(visit, files):
+    visitor = visit()
+    visitor.pick(files["tagged"])
+    expect(visitor.page.locator("#player")).to_be_visible(timeout=READY)
+    tagged = visitor.row(TAGGED).get_attribute("data-id")
+    beats, bars = visitor.beats(TAGGED), visitor.bars()
+
+    def opened(at):
+        other = visit(path=f"/?song={tagged}&at={at}")
+        expect(other.page.locator("#player")).to_be_visible(timeout=READY)
+        return other
+
+    def is_on(other, beat):
+        bar = max(n for n, first in enumerate(bars) if first <= beat)
+        expect(other.page.locator("#now")).to_have_attribute("data-lit", str(beat))
+        expect(other.page.locator("#map")).to_have_attribute("data-lit", str(bar))
+        expect(other.page.locator("#position")).to_have_text(clock(beats[beat]))
+        assert float(other.page.locator("#seek").input_value()) == pytest.approx(beats[beat], abs=0.001)
+        # Nothing plays, and nothing was asked to.
+        expect(other.page.locator("#play")).to_have_text("Play")
+        assert other.page.evaluate("window.started") == []
+
+    # A bar and a beat: the second beat of the third bar. The address keeps the place.
+    other = opened("3.2")
+    is_on(other, bars[2] + 1)
+    expect(other.page).to_have_url(re.compile(rf"/\?song={tagged}&at=3\.2$"))
+    expect(other.page.locator("#title .note")).to_have_count(0)
+    assert other.uploads() == []
+    # It does not follow the playing position.
+    other.press_bar(5)
+    expect(other.page.locator("#map")).to_have_attribute("data-lit", "5")
+    expect(other.page).to_have_url(re.compile(rf"/\?song={tagged}&at=3\.2$"))
+    # Loaded again, the page is at the place again.
+    other.page.reload()
+    expect(other.page.locator("#player")).to_be_visible(timeout=READY)
+    is_on(other, bars[2] + 1)
+
+    # A bar alone is its first beat, and the last beat of the song is a place too.
+    is_on(opened("4"), bars[3])
+    is_on(opened(f"{len(bars)}.{len(beats) - bars[-1]}"), len(beats) - 1)
+    # A time is the beat nearest to it: a fifth of a second after the tenth beat, and before the eleventh.
+    assert beats[10] - beats[9] > 0.45
+    is_on(opened(f"{beats[9] + 0.2:.2f}s"), 9)
+    is_on(opened(f"{beats[10] - 0.2:.2f}s"), 10)
+
+    # A place the song does not have: the song opens at its start, and the page says so beside its name.
+    for at, said in (("240", "There is no bar 240 in this song."), ("3.5", "Bar 3 has no beat 5."), ("900s", "This song ends before 900 s.")):
+        lost = opened(at)
+        expect(lost.page.locator("#title .note")).to_have_text(said)
+        expect(lost.page.locator("#position")).to_have_text("0:00")
+        assert float(lost.page.locator("#seek").input_value()) == 0
+        expect(lost.page.locator("#song-name")).to_have_text(TAGGED)
+    # What is not a place at all is left out: the song opens as its plain address opens it.
+    for at in ("x", "3.2.1", "62.4sec", "0", ""):
+        odd = opened(at)
+        expect(odd.page).to_have_url(re.compile(rf"/\?song={tagged}$"))
+        expect(odd.page.locator("#position")).to_have_text("0:00")
+        expect(odd.page.locator("#title .note")).to_have_count(0)
+
+    # The place is used once. Another song opens at its start with its own address, and so
+    # does the first song when it is opened from the list after that.
+    other = opened("3.2")
+    other.pick(files["untagged"])
+    expect(other.page.locator("#song-name")).to_have_text("Sin etiquetas", timeout=READY)
+    untagged = other.row("Sin etiquetas").get_attribute("data-id")
+    expect(other.page).to_have_url(re.compile(rf"/\?song={untagged}$"))
+    expect(other.page.locator("#position")).to_have_text("0:00")
+    other.row(TAGGED).get_by_role("button", name="Open").click()
+    expect(other.page.locator("#song-name")).to_have_text(TAGGED, timeout=READY)
+    expect(other.page).to_have_url(re.compile(rf"/\?song={tagged}$"))
+    expect(other.page.locator("#position")).to_have_text("0:00")
+    assert float(other.page.locator("#seek").input_value()) == 0
 
 
 def test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_and_in_dark(visit, files):
