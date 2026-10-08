@@ -298,6 +298,16 @@ class Visitor:
         inside = [one for one in self.page.evaluate("window.written.map") if x <= one["x"] < x + wide and y <= one["y"] < y + high]
         return [(one["ink"], *one["font"].split()[:2]) for one in inside]
 
+    def texts(self, box):
+        """The texts the page wrote on the song inside a box, in its last drawing."""
+        x, y, wide, high = box
+        return [one["text"] for one in self.page.evaluate("window.written.map") if x <= one["x"] < x + wide and y <= one["y"] < y + high]
+
+    def place(self):
+        """The beat that is lit and what the readout says, read at the same moment."""
+        lit, said = self.page.evaluate("[document.getElementById('now').dataset.lit, document.getElementById('place').textContent]")
+        return (int(lit) if lit else -1), said
+
     def over(self, bar):
         """The pixel just above the middle of the plate of a bar: inside the block of a lit
         bar and inside a halo, and clear of a plate and of its lid."""
@@ -1045,6 +1055,140 @@ def test_an_address_with_a_place_opens_the_song_paused_at_that_place(visit, file
     assert float(other.page.locator("#seek").input_value()) == 0
 
 
+def place_of(bars, beat):
+    """What the readout says on a beat: its bar, from 1, and which beat of the bar it is."""
+    bar = max(n for n, first in enumerate(bars) if first <= beat)
+    return f"Bar {bar + 1}.{beat - bars[bar] + 1}"
+
+
+def test_the_readout_says_the_bar_and_the_beat_at_the_playing_position(visit, files):
+    visitor = visit(viewport={"width": 1280, "height": 720})
+    page = visitor.page
+    readout = page.locator("#place")
+    # With no song open it says nothing.
+    expect(readout).to_have_text("")
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    beats, bars = visitor.beats(TAGGED), visitor.bars()
+    # Before the first beat it says the place of that beat.
+    assert visitor.lit() == -1
+    expect(readout).to_have_text("Bar 1.1")
+    expect(readout).to_be_visible()
+
+    # A press on a plate: the first beat of that bar. The bars are counted from 1.
+    assert bars[5] - bars[4] == 4
+    visitor.press_bar(4)
+    expect(readout).to_have_text("Bar 5.1")
+    # A beat at a time, through the bar and into the next one, and back.
+    for said in ("Bar 5.2", "Bar 5.3", "Bar 5.4", "Bar 6.1"):
+        page.keyboard.press("ArrowRight")
+        expect(readout).to_have_text(said)
+    page.keyboard.press("ArrowLeft")
+    expect(readout).to_have_text("Bar 5.4")
+    # On every beat of the song it says the place of the beat that is lit.
+    visitor.press_bar(0)
+    seen = []
+    for beat in range(len(beats)):
+        expect(page.locator("#now")).to_have_attribute("data-lit", str(beat))
+        assert visitor.place() == (beat, place_of(bars, beat))
+        seen.append(visitor.place()[1])
+        page.keyboard.press("ArrowRight")
+    assert len(set(seen)) == len(beats) and seen[-1] == f"Bar {len(bars)}.{len(beats) - bars[-1]}"
+
+    # A count 1 set on the second beat of the fifth bar cuts that bar: the beat is the
+    # first of the sixth bar now, and the readout says so at once.
+    visitor.press_beat(bars[4] + 1)
+    expect(readout).to_have_text("Bar 5.2")
+    page.locator("#one").click()
+    expect(page.locator("#map")).to_have_attribute("data-by-hand", str(bars[4] + 1))
+    expect(readout).to_have_text("Bar 6.1")
+    cut = visitor.bars()
+    assert cut != bars and cut[5] == bars[4] + 1
+    page.keyboard.press("ArrowLeft")
+    expect(readout).to_have_text("Bar 5.1")
+    page.keyboard.press("ArrowRight")
+    page.keyboard.press("ArrowRight")
+    expect(readout).to_have_text("Bar 6.2")
+    assert visitor.place() == (bars[4] + 2, place_of(cut, bars[4] + 2))
+    # Taken back, the bars and the readout are as they were.
+    page.keyboard.press("ArrowLeft")
+    page.locator("#one").click()
+    expect(page.locator("#map")).to_have_attribute("data-by-hand", "")
+    expect(readout).to_have_text("Bar 5.2")
+
+    # It is plain text: nothing reads it out at every beat.
+    plain = "() => { const place = document.getElementById('place'); return [place.tagName, place.closest('output, [aria-live], [role]') === null] }"
+    assert page.evaluate(plain) == ["SPAN", True]
+
+    # When the song is closed it says nothing again.
+    row = visitor.row(TAGGED)
+    row.get_by_role("button", name="Delete").click()
+    row.get_by_role("button", name="Yes, delete").click()
+    expect(page.locator("#player")).to_be_hidden()
+    expect(readout).to_have_text("")
+
+
+def test_while_the_song_plays_the_readout_follows_the_beat_that_is_lit(visit, files):
+    visitor = visit(viewport={"width": 1280, "height": 720})
+    page = visitor.page
+    visitor.pick(files["tagged"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    bars = visitor.bars()
+    visitor.press_bar(2)
+    needs_sound(page)
+    page.locator("#play").click()
+    seen = set()
+    for _ in range(40):
+        lit, said = visitor.place()
+        assert said == place_of(bars, max(0, lit))
+        seen.add(said)
+        page.wait_for_timeout(100)
+    page.locator("#play").click()
+    # Four seconds at 120 BPM: the readout went through eight beats or so, in more than one bar.
+    assert len(seen) >= 6 and len({said.split(".")[0] for said in seen}) >= 2, seen
+
+
+def test_every_row_of_the_song_has_the_number_of_its_first_bar(visit, files):
+    visitor = visit(viewport={"width": 900, "height": 720})
+    page = visitor.page
+    visitor.pick(files["longer"])
+    expect(page.locator("#player")).to_be_visible(timeout=READY)
+    song = page.locator("#map")
+    beats = visitor.beats(LONGER)
+
+    def rows():
+        return [int(bar) for bar in song.get_attribute("data-rows").split()]
+
+    def check():
+        bars, plates = visitor.bars(), visitor.plates()
+        # A row starts with the bar whose plate is not level with the one before it.
+        firsts = [bar for bar in range(len(bars)) if bar == 0 or plates[bar][1] != plates[bar - 1][1]]
+        assert rows() == firsts and len(firsts) >= 3
+        for first in firsts:
+            x, top, wide, high = plates[first]
+            margin = [0, top - 16, 80, 62]
+            # Its time, and then the number of the bar, counted from 1.
+            assert visitor.texts(margin) == [clock(beats[bars[first]]), str(first + 1)], first
+            # And both were drawn: the ink reaches to 14 left of the plate, where the number ends.
+            inked = page.evaluate(INKED, margin)
+            assert inked and 62 <= inked[2] <= 66 and inked[0] < 36, (first, inked)
+        return firsts
+
+    before = check()
+    assert before[1] > 1
+    # A count 1 set inside a bar of the first row cuts its ocho in two: the rows after it start on another bar.
+    bars = visitor.bars()
+    visitor.press_beat(bars[2] + 1)
+    page.locator("#one").click()
+    expect(song).to_have_attribute("data-by-hand", str(bars[2] + 1))
+    after = check()
+    assert after[1] != before[1]
+    # In dark the numbers are there as well.
+    page.emulate_media(color_scheme="dark")
+    page.wait_for_timeout(300)
+    check()
+
+
 def test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_and_in_dark(visit, files):
     visitor = visit(viewport={"width": 1280, "height": 720}, color_scheme="light")
     page = visitor.page
@@ -1126,15 +1270,15 @@ def test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_
         # A plate for each bar and nothing else: no ink in the 2 pixels inside an ocho, in
         # the 14 between two ochos, between two rows, or anywhere else right of the times.
         assert page.evaluate(STRAY, [plates, 67]) == {"stray": 0, "first": None}, scheme
-        # Every row has its time, which ends 14 left of its first plate, level with the
-        # middle of the plates.
+        # Every row has its time and the number of its first bar, which ends 14 left of its
+        # first plate, level with the middle of the plates.
         for top in tops:
             time = page.evaluate(INKED, [0, top - 16, 80, 62])
             assert time and 62 <= time[2] <= 66 and abs((time[1] + time[3]) / 2 - (top + 15)) <= 1.5, (scheme, top, time)
-            assert visitor.written([0, top - 16, 80, 62]) == [(hex_of(colours["ink-soft"]), "500", "12px")], (scheme, top)
+            assert visitor.written([0, top - 16, 80, 62]) == [(hex_of(colours["ink-soft"]), "500", "12px"), (hex_of(colours["ink"]), "700", "12px")], (scheme, top)
     # No section is written: the text where the song is shown is the count, which is not
-    # there before the first beat, the tempo and the time.
-    assert page.locator("#player").inner_text().split() == ["–", page.locator("#bpm").inner_text(), "BPM", "0:00"]
+    # there before the first beat, the tempo, the bar and the beat, and the time.
+    assert page.locator("#player").inner_text().split() == ["–", page.locator("#bpm").inner_text(), "BPM", "Bar", "1.1", "0:00"]
 
     # How many ochos a row holds, and how wide a whole plate is, follow the width of the
     # window: a row holds eight ochos where that leaves a whole plate 44 wide or more,

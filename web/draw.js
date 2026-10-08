@@ -120,9 +120,13 @@ export function drawNow(canvas, { ocho, count, byHand, lit, pulse }) {
 
 // ---- The whole song, a plate for each bar
 
-// All in pixels of the page. The room on the left of a row for its time, and on its right.
+// All in pixels of the page. The room on the left of a row for its time and the number
+// of its first bar, and on its right.
 const LEFT = 80
 const RIGHT = 16
+// Where the number of a row ends, and where its time does, left of that.
+const NUMBER_END = LEFT - 14
+const TIME_END = NUMBER_END - 30
 // Between the two plates of an ocho, and between two ochos.
 const INSIDE = 2
 const BETWEEN = 14
@@ -291,13 +295,20 @@ export function drawMap(canvas, layout, { beats, bars, count, byHand, lit, hover
     }
   }
 
+  // At the left of a row, when its first bar starts and which bar that is, counted from
+  // 1: the time is quiet, and the number is heavier and in full ink.
   pen.textBaseline = 'alphabetic'
-  pen.font = `500 12px ${colours.font}`
   pen.textAlign = 'right'
-  pen.fillStyle = colours.label
   for (const row of rows) {
+    const middle = plates[row.first].y + HIGH / 2
     const time = clock(beats[bars[row.first].first])
-    pen.fillText(time, LEFT - 14, plates[row.first].y + HIGH / 2 + level(pen, time))
+    pen.font = `500 12px ${colours.font}`
+    pen.fillStyle = colours.label
+    pen.fillText(time, TIME_END, middle + level(pen, time))
+    const number = String(row.first + 1)
+    pen.font = `700 12px ${colours.font}`
+    pen.fillStyle = colours.ink
+    pen.fillText(number, NUMBER_END, middle + level(pen, number))
   }
 
   // The halo of the bar under the pointer, behind its plate. A lit bar has none.

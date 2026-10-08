@@ -27,6 +27,8 @@ import {
   nearestBeat,
   ochoOf,
   ochosOf,
+  placeOf,
+  placeText,
   songIn,
   tagsOf,
   wrapped,
@@ -584,6 +586,7 @@ function closePlayer(text) {
   Object.assign(player, { ones: [], count: [], byHand: new Set(), ochos: [], bars: [] })
   for (const control of ['play', 'seek', 'loop', 'loop-start', 'loop-end', 'one']) $(control).disabled = true
   $('position').textContent = $('duration').textContent = clock(0)
+  $('place').textContent = ''
   $('seek').value = 0
   $('seek').style.setProperty('--at', 0)
   showAddress(null)
@@ -894,6 +897,7 @@ function layOut() {
     byHand: [...player.byHand].join(' '),
     perRow: layout.perRow,
     bars: player.bars.map((bar) => bar.first).join(' '),
+    rows: layout.rows.map((row) => row.first).join(' '),
     plates: JSON.stringify(layout.plates.map(({ x, y, wide, high }) => [x, y, wide, high])),
   })
   laidOut++
@@ -912,6 +916,10 @@ function show() {
   if ($('bpm').textContent !== tempo) $('bpm').textContent = tempo
   const count = String(player.count[lit] ?? '–')
   if ($('count').textContent !== count) $('count').textContent = count
+  // The bar and the beat the song is on, and before its first beat those of that beat.
+  const here = placeOf(player.bars, Math.max(0, lit))
+  const place = here ? `Bar ${placeText(here)}` : ''
+  if ($('place').textContent !== place) $('place').textContent = place
   $('seek').value = now
   // How far along the song is, from 0 to 1: the line of the position control is drawn to there.
   $('seek').style.setProperty('--at', now / player.buffer.duration)
