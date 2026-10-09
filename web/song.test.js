@@ -2,7 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   addressOf,
+  atIn,
   barOf,
+  beatAt,
   barsOf,
   beatsUntil,
   bpmAt,
@@ -15,10 +17,15 @@ import {
   interleaved16,
   kindOf,
   loopOf,
+  missing,
   nameFor,
   nearestBeat,
   ochoOf,
   ochosOf,
+  placeIn,
+  placeLine,
+  placeOf,
+  placeText,
   songIn,
   tagsOf,
   wrapped,
@@ -437,6 +444,95 @@ test('every beat is in exactly one bar, and a song with no beat has none', () =>
   assert.equal(barOf(bars, -1), -1)
   assert.deepEqual(barsOf([]), [])
   assert.equal(barOf([], 3), -1)
+})
+
+test('every beat has one place, a bar and a beat from 1, and the place leads back to it', () => {
+  const count = [7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 1]
+  const beats = steady(count.length)
+  const bars = barsOf(count)
+  const places = count.map((_, beat) => placeText(placeOf(bars, beat)))
+  assert.deepEqual(places.slice(0, 7), ['1.1', '1.2', '2.1', '2.2', '2.3', '2.4', '3.1'])
+  assert.equal(places.at(-1), '7.1')
+  assert.equal(new Set(places).size, count.length)
+  places.forEach((text, beat) => assert.equal(beatAt(bars, beats, placeIn(text), 60), beat))
+  // No beat, no place.
+  assert.equal(placeOf(bars, -1), null)
+  assert.equal(placeOf(bars, count.length), null)
+  assert.equal(placeOf([], 0), null)
+})
+
+test('a short bar has beats 1 to n, and no more', () => {
+  const beats = steady(24)
+  // A count 1 set on the eleventh beat cuts the third bar to two beats: counts 1 and 2, then 1 again.
+  const cut = barsOf(countsWith(beats, eights(24), [beats[10]]).count)
+  assert.deepEqual(placeOf(cut, 9), { bar: 3, beat: 2 })
+  assert.deepEqual(placeOf(cut, 10), { bar: 4, beat: 1 })
+  assert.equal(beatAt(cut, beats, { bar: 3, beat: 2 }, 60), 9)
+  assert.equal(beatAt(cut, beats, { bar: 3, beat: 3 }, 60), -1)
+  assert.equal(missing(cut, { bar: 3, beat: 3 }), 'Bar 3 has no beat 3.')
+  // A song that starts inside a bar: its first two beats are 1.1 and 1.2, with counts 7 and 8.
+  const late = barsOf(eights(12, 2))
+  assert.deepEqual(placeOf(late, 1), { bar: 1, beat: 2 })
+  assert.equal(beatAt(late, steady(12), { bar: 1, beat: 3 }, 60), -1)
+  // The bars end with the song.
+  const whole = barsOf(eights(16))
+  assert.equal(beatAt(whole, steady(16), { bar: 4, beat: 4 }, 60), 15)
+  assert.equal(beatAt(whole, steady(16), { bar: 5, beat: 1 }, 60), -1)
+  assert.equal(missing(whole, { bar: 5, beat: 1 }), 'There is no bar 5 in this song.')
+  // The last bar is in the song: what it lacks is the beat.
+  assert.equal(beatAt(whole, steady(16), { bar: 4, beat: 5 }, 60), -1)
+  assert.equal(missing(whole, { bar: 4, beat: 5 }), 'Bar 4 has no beat 5.')
+  assert.equal(beatAt([], [], { bar: 1, beat: 1 }, 60), -1)
+})
+
+test('a place is read from 24.3, from 24 and from 62.4s, and from nothing else', () => {
+  assert.deepEqual(placeIn('24.3'), { bar: 24, beat: 3 })
+  assert.deepEqual(placeIn('24'), { bar: 24, beat: 1 })
+  assert.deepEqual(placeIn('1.1'), { bar: 1, beat: 1 })
+  assert.deepEqual(placeIn('62.4s'), { seconds: 62.4 })
+  assert.deepEqual(placeIn('62s'), { seconds: 62 })
+  assert.deepEqual(placeIn('0s'), { seconds: 0 })
+  const refused = ['0', '24.0', '0.3', '24.3.1', '-1', '-1.2', '1e3', '024', '24.', '.3', '24.10', '24,3', ' 24.3', '24.3 ']
+  refused.push('62.4 s', '62.4S', '62.4sec', 's', '-3s', '1e3s', '62.s', '62.4444s', '1:02', 'bar 24', 'abc', '', '1234567', '123456s')
+  for (const text of refused) assert.equal(placeIn(text), null, `"${text}" was read`)
+  for (const other of [null, undefined, 24.3, ['24.3']]) assert.equal(placeIn(other), null)
+})
+
+test('a time names the beat nearest to it, up to the end of the song', () => {
+  const beats = steady(16)
+  const bars = barsOf(eights(16))
+  assert.equal(beatAt(bars, beats, { seconds: 0 }, 9), 0)
+  assert.equal(beatAt(bars, beats, { seconds: 3.2 }, 9), 4)
+  assert.equal(beatAt(bars, beats, { seconds: 3.3 }, 9), 5)
+  assert.equal(beatAt(bars, beats, { seconds: 9 }, 9), 15)
+  assert.equal(beatAt(bars, beats, { seconds: 9.001 }, 9), -1)
+  assert.equal(missing(bars, { seconds: 9.5 }), 'This song ends before 9.5 s.')
+  assert.equal(beatAt([], [], { seconds: 3 }, 9), -1)
+  assert.equal(missing([], { seconds: 3 }), 'This song has no beats.')
+})
+
+test('the address of a song can carry a place', () => {
+  const id = 'ab01'.repeat(8)
+  assert.equal(addressOf(id, '24.3'), `?song=${id}&at=24.3`)
+  assert.equal(addressOf(id, null), `?song=${id}`)
+  assert.equal(songIn(addressOf(id, '24.3')), id)
+  assert.deepEqual(atIn(addressOf(id, '24.3')), { bar: 24, beat: 3 })
+  assert.deepEqual(atIn(addressOf(id, '24')), { bar: 24, beat: 1 })
+  assert.deepEqual(atIn(addressOf(id, '62.4s')), { seconds: 62.4 })
+  assert.equal(atIn(addressOf(id)), null)
+  assert.equal(atIn(`?song=${id}&at=`), null)
+  assert.equal(atIn(`?song=${id}&at=x`), null)
+  assert.equal(atIn(`?song=${id}&at=24.3&at=5`).bar, 24)
+})
+
+test('a place is handed over as one line, with its seconds and the address that opens it', () => {
+  const id = 'ab01'.repeat(8)
+  const line = placeLine('Romeo Santos - Sus Huellas', id, { bar: 24, beat: 3 }, 62.408, 'http://127.0.0.1:8080/')
+  assert.equal(line, `Romeo Santos - Sus Huellas, bar 24.3 (62.41 s) http://127.0.0.1:8080/?song=${id}&at=24.3`)
+  assert.equal(placeLine('A', id, { bar: 1, beat: 1 }, 0.5, 'http://localhost/'), `A, bar 1.1 (0.50 s) http://localhost/?song=${id}&at=1.1`)
+  // The address in the line opens the song at the place the line says.
+  assert.deepEqual(atIn(new URL(line.split(' ').at(-1)).search), { bar: 24, beat: 3 })
+  assert.equal(songIn(new URL(line.split(' ').at(-1)).search), id)
 })
 
 test('a song has an address of its own', () => {

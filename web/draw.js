@@ -120,9 +120,13 @@ export function drawNow(canvas, { ocho, count, byHand, lit, pulse }) {
 
 // ---- The whole song, a plate for each bar
 
-// All in pixels of the page. The room on the left of a row for its time, and on its right.
+// All in pixels of the page. The room on the left of a row for its time and the number
+// of its first bar, and on its right.
 const LEFT = 80
 const RIGHT = 16
+// Where the number of a row ends, and where its time does, left of that.
+const NUMBER_END = LEFT - 14
+const TIME_END = NUMBER_END - 30
 // Between the two plates of an ocho, and between two ochos.
 const INSIDE = 2
 const BETWEEN = 14
@@ -275,7 +279,7 @@ function loopRun(pen, plates, first, last, { opens, closes, on }, colours) {
 // `range` is the marked range in beats, { first, last, on }, or null. `on` says whether
 // the playing goes round it.
 export function drawMap(canvas, layout, { beats, bars, count, byHand, lit, hover, range }) {
-  const { pen } = sheetOf(canvas)
+  const { pen, width } = sheetOf(canvas)
   const colours = tokens()
   const { plates, rows } = layout
 
@@ -291,13 +295,20 @@ export function drawMap(canvas, layout, { beats, bars, count, byHand, lit, hover
     }
   }
 
+  // At the left of a row, when its first bar starts and which bar that is, counted from
+  // 1: the time is quiet, and the number is heavier and in full ink.
   pen.textBaseline = 'alphabetic'
-  pen.font = `500 12px ${colours.font}`
   pen.textAlign = 'right'
-  pen.fillStyle = colours.label
   for (const row of rows) {
+    const middle = plates[row.first].y + HIGH / 2
     const time = clock(beats[bars[row.first].first])
-    pen.fillText(time, LEFT - 14, plates[row.first].y + HIGH / 2 + level(pen, time))
+    pen.font = `500 12px ${colours.font}`
+    pen.fillStyle = colours.label
+    pen.fillText(time, TIME_END, middle + level(pen, time))
+    const number = String(row.first + 1)
+    pen.font = `700 12px ${colours.font}`
+    pen.fillStyle = colours.ink
+    pen.fillText(number, NUMBER_END, middle + level(pen, number))
   }
 
   // The halo of the bar under the pointer, behind its plate. A lit bar has none.
@@ -343,4 +354,30 @@ export function drawMap(canvas, layout, { beats, bars, count, byHand, lit, hover
     figure(pen, String(count[start]), x + wide / 2, y + high / 2)
     if (byHand.has(start)) lid(pen, x - 5, y - 6, wide + 10, colours.mark)
   }
+
+  // The bar under the pointer says its number, counted from 1, on a tag above its plate:
+  // over the middle of the plate where the canvas has the room, and clear of a lid and of
+  // the block of a lit bar. It is drawn last, over whatever is there.
+  if (hover >= 0) {
+    const { x, y, wide } = plates[hover]
+    const text = tagOf(hover)
+    pen.font = `700 12px ${colours.font}`
+    const across = Math.ceil(pen.measureText(text).width) + 2 * TAG_PAD
+    const left = Math.max(2, Math.min(width - 2 - across, Math.round(x + wide / 2 - across / 2)))
+    const top = y - TAG_ABOVE - TAG_HIGH
+    pen.fillStyle = colours.mark
+    pen.fillRect(left, top, across, TAG_HIGH)
+    pen.fillStyle = colours.ground
+    pen.textAlign = 'center'
+    pen.fillText(text, left + across / 2, top + TAG_HIGH / 2 + level(pen, text))
+  }
 }
+
+// How high the tag of the bar under the pointer is, how far its foot is above the plate,
+// and the room on each side of its text.
+const TAG_HIGH = 18
+const TAG_ABOVE = 8
+const TAG_PAD = 6
+
+// What the tag of a bar says: `bar` is its place in the bars, from 0.
+export const tagOf = (bar) => `Bar ${bar + 1}`

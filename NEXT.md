@@ -2,7 +2,22 @@
 
 Rewritten at the end of every session.
 
-## Where things stand (2026-10-08, session 11)
+## Where things stand (2026-10-08, session 12)
+
+**A name for every bar and beat is built on the branch `d5-capstone`, and is not merged.** It is the capstone of the owner's course. A session of another tool reviews it first, then the owner looks at it. `CAPSTONE.md` on that branch is its brief, its acceptance list and the reviewer's file. `LOG.md`, session 12, has the figures.
+
+- **What it is.** A place is a bar and a beat from 1, written `24.3`, counted on the bars the page shows, with the count 1s set by hand. A time is written `62.4s`.
+  - **The page**: the place at the playing position in the top bar, before "Copy place", provisionally; the number of its first bar beside every row of the song; a tag with its number over the bar under the pointer; `?song=<id>&at=24.3` opens the song paused there; "Copy place", in the top bar, copies the song, the place, its seconds and that address as one line.
+  - **Two commands**, which read the library and need no server: `uv run python -m bachata where <song> <place>` and `uv run python -m bachata bars <song>`. `python -m bachata` alone is the server, as it was.
+- **Every check a program can run passes on the branch**: 294 tests, none skipped, outside the sandbox, in Chrome and in Firefox with sound.
+- **Its checks were seen to fail.** 79 breaks: 70 caught as the tests stood, 78 after four tests were made stronger and two added. One is left: a tag could pass the right edge of the song by 3 pixels.
+- **Reviewed by a session of another tool**, which asked for four changes. Three are made, with a test each that failed first: an id in capitals, a song whose analysis failed, and the place staying in the address when the same song opens again. The fourth, where the readout sits: on the band it took 23% of the width of the large view at 1100, and the owner had it moved to the top bar, which he calls the least wrong and will redo.
+- **For the owner to look at**, none of it confirmed: where "Copy place" ended up, which is not where the brief had it; the look of the row numbers and of the tag; the wordings. `CAPSTONE.md` lists them.
+- **Not checked by anything:** that the system's clipboard receives the line (the test puts its own clipboard in the page), and the page in a browser the owner drives.
+- **The library in `data/` of this folder was analysed again by mistake**, 17 of its 18 songs, from version 2 to version 5. See "Rules that are easy to break".
+- **If it is merged:** `ACCEPTANCE.md` has nothing of it yet. Its list is in `CAPSTONE.md`.
+
+Before that, in session 11:
 
 The lower view of the page is in plates, one for each bar, and it is on `master` since 2026-10-08. The owner accepted it. A critique of the page followed the same day, and three changes it led to are merged with it. Every check a program can run passed on the branch that was merged: 266 tests, none skipped. No test was run on `master` after the merge. What is open of this work is two commands of the critique that were not run, and what the owner has not yet seen. `LOG.md`, session 11, has the figures.
 
@@ -244,6 +259,10 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 
 ## Rules that are easy to break
 
+- **The bars are counted in two places, and a test holds them together.** `web/song.js` counts them for the page and `bachata/places.py` for the commands. A change to `countsWith`, `barsOf`, `nearestBeat` or to how a place is read is made in both, and `test_python_and_the_page_number_the_bars_of_a_song_alike` says when it was not.
+- **`python -m bachata` with no argument is never run on this folder's `data/` to try something.** It analyses every song of an older version again. To try the server, `BACHATA_DATA` names a scratch folder. `where` and `bars` only read.
+- **Breaks of a Python file that are run by a script each get their own `PYTHONPYCACHEPREFIX`.** Two in the same second that leave the file the same size share a compiled file, and the second reports the failure of the first.
+- **A bar number is not a place for good.** It moves when a count 1 is set by hand or the song is analysed again. The seconds beside it do not: whatever prints a place prints them too.
 - **The page plays the samples the server stored**, never an `<audio>` element on the original file. Otherwise the click drifts from the sound by whatever the browser trims at the start of the file.
 - **The page decodes a file at a fixed 44.1 kHz, in stereo**, and sends the rate and the length. An ordinary audio context would resample to the machine's own rate without saying so. The server mixes down and resamples for the analysis.
 - **The type of a file is read from its first bytes**, never from its name: mp3, m4a, and opus, which is `OggS` with `OpusHead` at the start of its first page. Other sound in Ogg is refused. The tags of an opus file run over many pages when it has a cover picture.
@@ -299,6 +318,8 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
   - A work folder has a port of its own for the whole run: `wt/bars-xhigh` used 8086, with `TMPDIR=/tmp/claude-1000/e2e-x`.
 
 ## Open
+
+- **The place of the readout of the bar and the beat is provisional and waits for a design pass.** It is in the top bar before "Copy place" on the branch `d5-capstone`, by the owner's choice of 2026-10-08: "the least wrong" of two, to be redone with the design plugin.
 
 **For slice 1**
 

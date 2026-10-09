@@ -2,6 +2,171 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-08, session 12: a name for every bar and beat, on the branch `d5-capstone`
+
+The capstone of the owner's course: a task no session had been given. A place in a song now has a name, a bar and a beat, `24.3`, that the page shows, an address opens, and two commands answer from the library. It is on the branch `d5-capstone`, from `master` at `d76b864`, and is **not merged**: a session of another tool reviews it, and then the owner. `CAPSTONE.md` is its brief, its acceptance list and the reviewer's file.
+
+**How it went.** Five questions to the owner, one at a time, each with a default. A brief, shown to him, and his "go" with an order to build in: the place and the commands, the address, the readout and the row numbers, the tag and "Copy place". One commit for each. Then the breaks, with the project's skill.
+
+**His five answers.** A place is a bar and a beat: "while ocho is nice, I think bar and beat will be most robust". The page shows it in a readout, beside each row and under the pointer. The address carries it, `&at=24.3`, with a button that copies it, and no field to type into. An LLM gets two commands, `where` and `bars`: "I like both this and the list of bars, both can be useful". The numbers count the bars as the page shows them, and the seconds are given beside them.
+
+**What changed against the brief while building**, each said in `CAPSTONE.md`:
+
+- **The readout is on the band, between the tempo and the time**, and "Copy place" is in the top bar after "Rename". The brief had both in the bar under the song. Measured in Firefox at 1100 wide: with the readout on the bar's first line the position control is 510 wide where `test_the_bar_under_the_song_gives_the_position_room_and_shows_the_marked_range_on_it` asks for 600, and on its second line the click switch goes to a third line by itself.
+- **Two assertions of an existing test changed**, both in `test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_and_in_dark`: the left of a row has two writings, and the text of the player has "Bar 1.1" in it. The brief said every earlier test would pass unchanged.
+- **`62.4` is a place**, bar 62, beat 4. The brief listed it among what is refused.
+
+### Runs
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| `node --test web/`, as built | 41 passed. It was 35: six tests of the place, the address and the copied line are new | under 1 s |
+| `.venv/bin/python -m pytest bachata/places_test.py`, as built | 13 passed. On its first run 5 failed: 4 were wrong figures in the tests, and one a real difference the comparison with the page found, a time printed as `12345.7` where the page says `12345.678` | under 1 s |
+| The whole run inside the sandbox, on the build before the breaks: `.venv/bin/python -m pytest -q -rs` | 240 passed, 51 skipped: 43 for Chrome, which does not start there, and 8 for want of sound | 638 s |
+| The breaks: 19 against `node --test web/`, 31 against `bachata/places_test.py` (one with `bachata/server_test.py` beside it), 29 against the tests of the page that should catch each, in Firefox | See "Breaking the code on purpose" | under 1 s, 1 to 3 s, and 14 to 45 s each; about 10 min for the page |
+| 8 breaks again from their kept patches, after the repairs | All 8 caught by the test that claims them, with a message about the claim | about 2 min |
+| The commands on the library of this folder, `data/`: `where imitadora 24.3`, `where imitadora 46.9s`, `bars imitadora`, `where a 2`, `where 0a21 999` | The four lines, the same for the time, 124 bars, the 18 songs listed with status 2, "There is no bar 999 in this song." with status 1 | under 1 s each |
+| **By mistake: `.venv/bin/python -m bachata` with no argument and no `BACHATA_DATA`**, at the end of that same line of commands | The server started on `data/` and analysed 17 of its 18 songs again, from version 2 to version 5, until it was stopped. Héroe Favorito is still at version 2. No sound, name or count 1 changed | about 2 min |
+| The whole run, outside the sandbox, which the owner allowed once, on the build with the stronger tests, `3021dfd`: `TMPDIR=/tmp/claude-1000/e2e-c BACHATA_TEST_PORT=8087 .venv/bin/python -m pytest -rs` | 294 passed, none skipped: the tests of the page in Chrome and in Firefox, 88 runs, with sound, and the songs of the reference. Nothing was left listening on 8087 | 932 s |
+| Pictures of the page, with Playwright's Firefox inside the sandbox, of the test song of 44 s at 1280 by 720 in light and in dark, at 1920 by 1080 and at 1100 by 800 | Looked at by the session: the readout on the band, the numbers beside the rows, the tag over the bar under the pointer, "Copy place" in the top bar, and the bar under the song in the lines it had. Not kept in git | 16 s |
+
+### After the review
+
+A session of another tool reviewed `094dc94` and asked for four changes. All four were reproduced. Three are fixed in `0a911c4`; the fourth, where the readout sits, waits for the owner's choice. `CAPSTONE.md`, "After the review", has the table.
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| On a temporary library: `bars AB01`, and `bars` with the whole id in capitals, where another song's name has that id in capitals | The first did not find the song whose id starts `ab01`; the second answered the other song. Finding 1 holds | under 1 s each |
+| On the same library, a song with the result `{"version": 5, "error": "RuntimeError"}`: `bars` and `where` | `KeyError: 'beats'` from both. Finding 2 holds | under 1 s each |
+| The width of the large view at 1100 by 800, in Playwright's Firefox, on `master`, on the branch, and with the readout in the top bar and in the lower right corner of the band | 576.5 on `master`, 444.5 on the branch, 576.5 with either of the two. The position control is 613.8 in all four. Finding 3 holds: 23% less | 15 s each |
+| The three tests written or corrected for findings 1, 2 and 4, before the fixes | Each failed on its claim: the id in capitals not found, `KeyError: 'beats'`, the address without `&at=3.2` | under 1 s, and 20 s |
+| The same after the fixes: `bachata/places_test.py`, and the tests of the address, of a place far down and of "Copy place" in Firefox | 14 passed, and 3 passed | under 1 s, and 37 s |
+| The whole run, outside the sandbox, on `0a911c4`: `TMPDIR=/tmp/claude-1000/e2e-c BACHATA_TEST_PORT=8087 .venv/bin/python -m pytest -rs` | 294 passed, none skipped | 1067 s |
+| The library in `data/` after all of it | As the mistake of the afternoon left it: no result written since | under 1 s |
+
+**The readout moved to the top bar**, in `7146767`, by the owner's choice of the first of the two places: "I do not think either option is good design; A is the least wrong and I will redo it later with the design plugin."
+
+| What was run | Result | Time |
+| --- | --- | --- |
+| The tests of the page the move touches, in Firefox, inside the sandbox: the readout, "Copy place", the plates, the bar under the song, the large view, the renaming, the messages, the keyboard | 8 passed, 2 skipped for want of sound | 61 s |
+| The readout put back on the band, as a break, against the test of the readout | Caught: `#title #place + #copy-place` found 0 where 1 was expected | 20 s |
+| `node --test web/` | 41 passed | under 1 s |
+| The whole run, outside the sandbox, on `7146767`: the same command | 294 passed, none skipped | 945 s |
+
+The program was started only by the tests, each on a temporary folder of its own.
+
+### Breaking the code on purpose
+
+One break at a time, on the committed build, with `.claude/skills/break-on-purpose/scripts/one_break.sh`: the file is changed, the checks run, and the file is written back as it was. 79 breaks; 70 were caught as the tests stood, and after four tests were made stronger and two added, 78 are. One is caught by nothing and left so. The claims are those of `CAPSTONE.md`.
+
+| Break | Caught by |
+| --- | --- |
+| **The place, in `web/song.js`, against `node --test web/`** | |
+| Bars are counted from 0 | `every beat has one place, a bar and a beat from 1, and the place leads back to it, a short bar has beats 1 to n, and no more` |
+| Beats of a bar are counted from 0 | `every beat has one place, a bar and a beat from 1, and the place leads back to it, a short bar has beats 1 to n, and no more` |
+| A place leads to the bar after it | `every beat has one place, a bar and a beat from 1, and the place leads back to it, a short bar has beats 1 to n, and no more` |
+| 24.3 is taken when bar 24 has two beats | `a short bar has beats 1 to n, and no more` |
+| 24 alone is the second beat of the bar | `a place is read from 24.3, from 24 and from 62.4s, and from nothing else, the address of a song can carry a place` |
+| A time is read without its s | `a place is read from 24.3, from 24 and from 62.4s, and from nothing else` |
+| 24.0 is read | `a place is read from 24.3, from 24 and from 62.4s, and from nothing else` |
+| Bar 0 is read | `a place is read from 24.3, from 24 and from 62.4s, and from nothing else` |
+| A time names the beat before it, not the nearest | `a time names the beat nearest to it, up to the end of the song` |
+| A time after the end of the song is a place | `a time names the beat nearest to it, up to the end of the song` |
+| The address carries the place under another name | `the address of a song can carry a place, a place is handed over as one line, with its seconds and the address that opens it` |
+| The address of a song without a place has an at | `the address of a song can carry a place, a song has an address of its own` |
+| The last bar with a beat too many is said not to be in the song | **Nothing** in `node --test web/`: the test asked for a beat too many in the third bar of seven, never in the last. Now `a short bar has beats 1 to n, and no more` asks it of the last bar too |
+| The copied line has the seconds to one decimal | `a place is handed over as one line, with its seconds and the address that opens it` |
+| The copied line has no address of the page | `a place is handed over as one line, with its seconds and the address that opens it` |
+| **The commands, against `bachata/places_test.py`** | |
+| where prints the analysis's count, without the count 1s set by hand | `test_a_count_1_set_through_the_store_moves_the_numbers_the_commands_print`: AssertionError: assert ['bar 5, beat...00000&at=5.2'] == ['bar 5, beat...00000&at=5.2'] |
+| The link of where names the bar only | `test_where_prints_the_song_the_place_its_bar_and_a_link`, and 1 more: AssertionError: assert (0, 'Romeo Sa...0&at=4\n', '') == (0, 'Romeo Sa...at=4.3\n', '') |
+| 128.5 BPM is printed as 128, where the page says 129 | `test_where_prints_the_song_the_place_its_bar_and_a_link`: AssertionError: assert 'bar 7, beat ...t 5   128 BPM' == 'bar 7, beat ...t 5   129 BPM' |
+| A time names the beat before it | `test_where_takes_a_time_and_prints_the_place_of_the_nearest_beat`, and 1 more: AssertionError: assert (0, 'Romeo Sa...at=4.2\n', '') == (0, 'Romeo Sa...at=4.3\n', '') |
+| bars does not mark a short bar | `test_bars_prints_every_bar_and_marks_a_short_one_and_one_set_by_hand`: AssertionError: assert ['Romeo Santo...by hand', ...] == ['Romeo Santo...by hand', ...] |
+| bars does not mark a count 1 set by hand | `test_bars_prints_every_bar_and_marks_a_short_one_and_one_set_by_hand`: AssertionError: assert ['Romeo Santo...count 1', ...] == ['Romeo Santo...by hand', ...] |
+| The commands count without the count 1s set by hand | `test_bars_prints_every_bar_and_marks_a_short_one_and_one_set_by_hand`, and 1 more: AssertionError: assert ['Romeo Santo...count 5', ...] == ['Romeo Santo...by hand', ...] |
+| Python starts no bar at a count 5 | `test_where_prints_the_song_the_place_its_bar_and_a_link`, and 8 more: AssertionErr |
+| Python puts a count 1 on the beat before its time, the page on the nearest | `test_python_and_the_page_number_the_bars_of_a_song_alike`: assert [6, 7, 8, 1, 1, 2, ...] == [6, 7, 8, 1, 1, 2, ...] |
+| Half way between two beats, Python takes the later and the page the earlier | `test_python_and_the_page_number_the_bars_of_a_song_alike`: assert [0, 15, 0, 2, 2, 3, ...] == [0, 15, 0, 1, 2, 3, ...] |
+| A song is found by the middle of its id | `test_no_song_and_more_than_one_end_with_status_2_and_print_no_place`: assert 0 == 2 |
+| heroe does not find Héroe | `test_a_song_is_found_by_its_id_the_start_of_it_or_a_part_of_its_name`: AssertionError: assert False == '3f2b1111111111111111111111111111' |
+| A whole id that is also in another song's name finds two songs | `test_a_song_is_found_by_its_id_the_start_of_it_or_a_part_of_its_name`: AssertionError: assert False == '3f2a9c00000000000000000000000000' |
+| The songs that match are not listed | `test_no_song_and_more_than_one_end_with_status_2_and_print_no_place`: assert (2, '', '3f2a...e Favorito\n') == (2, '', 'More...e Favorito\n') |
+| With several songs that match, the first is answered | `test_no_song_and_more_than_one_end_with_status_2_and_print_no_place`: AssertionError: assert (0, 'Romeo Sa...at=1.1\n', '') == (2, '', 'More...e Favorito\n') |
+| A song with no result ends with status 2 | `test_what_cannot_be_answered_is_said_in_one_sentence`: AssertionError: assert (2, '', 'Not ...esult yet.\n') == (1, '', 'Not ...esult yet.\n') |
+| A place that is not in the song ends with status 0 | `test_where_takes_a_time_and_prints_the_place_of_the_nearest_beat`, and 3 more |
+| The commands read the library beside the code whatever BACHATA_DATA says | `test_the_program_runs_a_command_on_the_folder_the_setting_names_and_loads_no_torch`, and 1 more: AssertionError: assert 'status 2' == 'Romeo Santos...eats  11 bars' |
+| A command makes the folder of a library that is not there | `test_the_commands_write_nothing_in_the_library`: AssertionError: assert not True |
+| A command asks for the checkpoint | `test_a_command_does_not_ask_for_the_checkpoints_or_start_the_server`: RuntimeError: /tmp/claude-1000/pytest-of-fcanela/pytest-625/test_a_command_does_not_ask_fo0/not-fetched.ckpt is missing: run `uv run python scripts/fe |
+| With no argument the program runs a command and serves nothing | `test_a_command_does_not_ask_for_the_checkpoints_or_start_the_server`, and 1 more: Failed: DID NOT RAISE RuntimeError |
+| A time after the end of the song is answered | `test_where_takes_a_time_and_prints_the_place_of_the_nearest_beat`, and 1 more: AssertionError: assert (0, 'Romeo Sa...t=11.2\n', '') == (1, '', 'This...re 19.9 s.\n') |
+| where prints the seconds to one decimal | `test_where_prints_the_song_the_place_its_bar_and_a_link`, and 3 more |
+| **The page, in Firefox** | |
+| Before the first beat the readout is empty | `test_the_readout_says_the_bar_and_the_beat_at_the_playing_position`: AssertionError: Locator expected to have text 'Bar 1.1' |
+| The readout counts the analysis's bars, not those with the count 1s set by hand | `test_the_readout_says_the_bar_and_the_beat_at_the_playing_position`: AssertionError: Locator expected to have text 'Bar 6.1' |
+| The rows are numbered from 0 | `test_every_row_of_the_song_has_the_number_of_its_first_bar`: AssertionError: 0 |
+| The number of a row is not drawn | `test_every_row_of_the_song_has_the_number_of_its_first_bar`, and 1 more: AssertionError: 0 |
+| The tag counts the bars from 0 | `test_the_bar_under_the_pointer_says_its_number_on_a_tag_above_its_plate`: AssertionError: Locator expected to have attribute 'Bar 1' |
+| The tag stands on the plate, over a lid | `test_the_bar_under_the_pointer_says_its_number_on_a_tag_above_its_plate`: AssertionError: assert [] == ['Bar 1'] |
+| The bar that is sounding has no tag | `test_the_bar_under_the_pointer_says_its_number_on_a_tag_above_its_plate`: AssertionError: assert [] == ['Bar 7'] |
+| A link opens the song a fifth of a second after the beat | `test_an_address_with_a_place_opens_the_song_paused_at_that_place`: assert 4.96 == 4.76 ± 0.001 |
+| The place of the address is used again when its song is opened from the list | **Nothing.** No test opened the song of the link a second time with no other song between. Now `test_an_address_with_a_place_opens_the_song_paused_at_that_place`, which picks the song's file again: the position was 0:04 where 0:00 was expected |
+| The address loses its place when the song opens | `test_an_address_with_a_place_opens_the_song_paused_at_that_place`: AssertionError: Page URL expected to be 're.compile('/\\?song=a24c9a69c153ce7f75329409d7150000&at=3\\.2$')' |
+| A place the song does not have is not said | `test_an_address_with_a_place_opens_the_song_paused_at_that_place`: AssertionError: Locator expected to have text 'There is no bar 240 in this song.' |
+| Copy place copies the beat before the one in the readout | `test_copy_place_hands_over_the_song_the_place_its_seconds_and_its_address`: AssertionError: assert ['Los Tests -...50000&at=5.1'] == ['Los Tests -...50000&at=5.2'] |
+| The button says Copied when the browser refused | `test_copy_place_hands_over_the_song_the_place_its_seconds_and_its_address`: AssertionError: Locator expected to have text 'The place could not be copied.' |
+| After a press with the pointer on Copy place, Space presses it again | `test_copy_place_hands_over_the_song_the_place_its_seconds_and_its_address`: AssertionError: assert 'copy-place' != 'copy-place' |
+| The readout is read out at every beat | `test_the_readout_says_the_bar_and_the_beat_at_the_playing_position`: AssertionError: assert ['SPAN', False] == ['SPAN', True] |
+| Copy place stays while the name is typed | `test_copy_place_hands_over_the_song_the_place_its_seconds_and_its_address`: AssertionError: Locator expected to be hidden |
+| The readout keeps its place when the song is closed | `test_the_readout_says_the_bar_and_the_beat_at_the_playing_position`: AssertionError: Locator expected to have text '' |
+| The number of a row is as light as its time | `test_every_bar_has_one_plate_with_its_count_in_rows_of_eight_ochos_in_light_and_in_dark`: AssertionError: ('light', 28) |
+| **What no claim speaks of: `web/song.js`** | |
+| A song with no beats is said to end before the time | `a time names the beat nearest to it, up to the end of the song` |
+| A bar number of any length is read | `a place is read from 24.3, from 24 and from 62.4s, and from nothing else` |
+| What is not a text is read as a place | `a place is read from 24.3, from 24 and from 62.4s, and from nothing else` |
+| A beat after the last one has a place | `every beat has one place, a bar and a beat from 1, and the place leads back to it` |
+| **What no claim speaks of: the commands** | |
+| The songs are listed by name, not as they arrived | `test_no_song_and_more_than_one_end_with_status_2_and_print_no_place`: assert (2, '', 'More...us Huellas\n') == (2, '', 'More...e Favorito\n') |
+| The lines of bars are out of line from bar 1000 | `test_the_numbers_stay_in_line_in_a_song_of_a_thousand_bars`: AssertionError: assert '  1    0.00 s  count 1' == '   1    0.00 s  count 1' |
+| The last bar with a beat too many is said not to be in the song | `test_what_cannot_be_answered_is_said_in_one_sentence`, and 1 more: AssertionError: assert (1, '', 'Ther...this song.\n') == (1, '', 'Bar ...no beat 4.\n') |
+| What is not a place ends with status 1 | `test_what_cannot_be_answered_is_said_in_one_sentence`: assert (1, '', '"62.... or 62.4s.\n') == (2, '', '"62.... or 62.4s.\n') |
+| A folder that is not a song's is read as one | **Nothing.** No test had a folder in `songs/` that is not a song's. Now `test_a_song_is_found_by_its_id_the_start_of_it_or_a_part_of_its_name`: a copy of a song's folder under another name made two songs match |
+| A song stored before count 1 could be set stops the command | **Nothing.** Every song of the tests had its `ones`. Now `test_a_song_stored_before_count_1_could_be_set_has_none`: KeyError: 'ones' |
+| A bar of one beat is said to have 1 beats | `test_bars_prints_every_bar_and_marks_a_short_one_and_one_set_by_hand`: AssertionError: assert ['Romeo Santo...by hand', ...] == ['Romeo Santo...by hand', ...] |
+| The song ends at its last beat for a time | `test_where_takes_a_time_and_prints_the_place_of_the_nearest_beat`: IndexError: list index out of range |
+| **What no claim speaks of: the page** | |
+| A song opened at a place far down does not scroll to it | **Nothing.** No test opened a link to a row that is off screen. Now `test_a_song_opened_at_a_place_far_down_has_the_row_of_the_place_on_screen`: the song was at its top, 0, with the row at 626 |
+| The page says its rows start a bar later than they do | `test_every_row_of_the_song_has_the_number_of_its_first_bar`: assert ([1, 9, 17] == [0, 8, 16] |
+| A song opened from the list keeps the place of the address | **Nothing**, for the same reason. Now the same test: the address still had `&at=3.2` |
+| The page says a bar has a tag during a drag | `test_the_bar_under_the_pointer_says_its_number_on_a_tag_above_its_plate`: AssertionError: Locator expected to have attribute '' |
+| A tag may leave the canvas | **Nothing, and left so.** No plate of a test song is near enough to an edge for its tag to leave the canvas: by the measures of the layout a tag can pass the right edge by 3 pixels at most, over a plate of one beat that ends its row |
+| The sentence that the place could not be copied stays after one that worked | `test_copy_place_hands_over_the_song_the_place_its_seconds_and_its_address`: AssertionError: Locator expected to have count '0' |
+| The button goes on saying Copied | `test_copy_place_hands_over_the_song_the_place_its_seconds_and_its_address`: AssertionError: Locator expected to have text 'Copy place' |
+| The tag has no ground under its text | `test_the_bar_under_the_pointer_says_its_number_on_a_tag_above_its_plate`: AssertionError: 0 |
+| What was said beside the name of one song stays when another opens | **Nothing.** No test opened another song after a sentence beside the name. Now `test_an_address_with_a_place_opens_the_song_paused_at_that_place`: the sentence was still there, 1 where 0 was expected |
+| The copied address has no path of the page | `test_copy_place_hands_over_the_song_the_place_its_seconds_and_its_address`: AssertionError: assert ['Los Tests -...50000&at=5.2'] == ['Los Tests -...50000&at=5.2'] |
+| The time of a row runs into its number | **Nothing.** The test looked at where the ink of the margin ends, not at where each writing does. Now `test_every_row_of_the_song_has_the_number_of_its_first_bar`: the writings ended at 54 and 66 where 36 and 66 were expected |
+
+**Not tried:** that the readout follows the lit beat while the song plays. Its test needs sound and is skipped inside the sandbox, so a break of it would have shown nothing there.
+
+**A fault of the method, found on the way.** The first run of the 31 breaks of the commands reported, for one break, the failure of the break before it. Two breaks in the same second that leave `places.py` the same size share one compiled file, which Python trusts by time and size. All 31 were run again, each with its own `PYTHONPYCACHEPREFIX`, and the table has those results. `one_break.sh` itself was not changed: the session cannot write in the skill's folder.
+
+### Decisions
+
+- **One rule for the bars, in two languages.** The page counts with the count 1s set by hand in `web/song.js`, and the server never did. The commands have a twin of it in `bachata/places.py`, and `test_python_and_the_page_number_the_bars_of_a_song_alike` runs both on 201 made-up songs and 31 texts and compares the count, the bars, the place of every beat and what each says of a place that is not there. It is skipped where node is not installed.
+- **A time takes an `s`**, `62.4s`, in the commands and in the address, and names the nearest beat. A time after the end of the song is no place.
+- **The commands read `song.json` and `result.json` themselves** and do not use `Store`, which makes folders and empties `tmp/` when it starts.
+- **`python -m bachata` chooses in the last lines of `__main__.py`**, not in `main()`: a test calls `main()` under pytest, whose arguments are not the program's.
+- **What was said beside the name of a song is taken away when a song opens.** It stayed before. A break showed nothing checked it, and a test now does.
+- **The tests of the page read the text of what is written on the song**, which they could not before: the spy on `fillText` keeps it. So the numerals beside the rows and on the tag are checked, not left to the eye.
+- **Mine, for the owner to confirm:** the look of the row numbers (12 px, heavy, in full ink, 30 right of the time), of the tag (18 high, 8 above the plate, in the colour of a first bar's plate), and of the readout on the band; the wording "Copy place" and "Copied"; the three sentences for a place that is not there; status 2 for a song that is not found or a text that is not a place, and 1 for a song with no result or a place the song does not have.
+
+### Cost
+
+- Paid APIs: none used, $0.
+- Network: none. Nothing was downloaded or installed, and there is no new dependency.
+- Cost of the Claude Code session itself: not measured from inside the session.
+
 ## 2026-10-07 and 08, session 11: the song in plates, built twice, a critique of the page, and the merge
 
 The lower view of the page shows a plate for each bar now, and no longer a mark for each beat. It is on `master` since 2026-10-08, merged from the branch `bars-xhigh` at `cbd2241`, with three changes a critique of the page led to. The records were not touched in the work folder: they are written here, at the merge, from the notes kept there, `wt/bars-xhigh/NOTES-for-records.md`.

@@ -326,6 +326,24 @@ progress {
   max-width: 40rem;
 }
 
+/* The bar and the beat at the playing position, before the button that copies them. As
+   wide as "Bar 188.4", so the button does not move while the song plays. On the band it
+   took room from the large view. */
+#place {
+  min-width: 5.25rem;
+  margin-left: 1rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* As wide as its longer wording, "Copy place", so nothing moves when it says "Copied". */
+#copy-place {
+  min-width: 6.25rem;
+}
+
 .title .note {
   white-space: nowrap;
 }

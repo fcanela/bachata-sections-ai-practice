@@ -7,8 +7,10 @@ import {
   MIN_SECONDS,
   RATE,
   addressOf,
+  atIn,
   barOf,
   barsOf,
+  beatAt,
   beatsUntil,
   bpmAt,
   channelsFrom16,
@@ -20,15 +22,19 @@ import {
   interleaved16,
   kindOf,
   loopOf,
+  missing,
   nameFor,
   nearestBeat,
   ochoOf,
   ochosOf,
+  placeLine,
+  placeOf,
+  placeText,
   songIn,
   tagsOf,
   wrapped,
 } from './song.js'
-import { barAt, drawMap, drawNow, forgetTokens, mapLayout, nowLayout, rowOf } from './draw.js'
+import { barAt, drawMap, drawNow, forgetTokens, mapLayout, nowLayout, rowOf, tagOf } from './draw.js'
 
 const $ = (id) => document.getElementById(id)
 
@@ -152,6 +158,7 @@ let renaming = null // the name that is being typed: { id, where, draft }, where
 let opening = null // the song that is being fetched: { id, part }
 let wanted = null // the song to open as soon as it is ready
 let linked = null // the song the address named when the page was loaded, until it is settled
+let linkedAt = null // the place the address named in that song: { id, text, place }, and `used` once the song has opened there
 let focusNext = null // where the keyboard goes once the list is on screen again: { id, where, key }
 const notes = new Map() // what went wrong with a song, shown in its row: id, or 'title', to { text, refused }
 const analysedSince = new Map() // when this page saw the analysis of a song start, by song
@@ -211,9 +218,23 @@ const NOT_THERE = 'This song is not in the library.'
 
 // Every song has an address of its own. The address bar shows the one of the open song,
 // and the plain address of the page when none is open. Nothing is added to the history:
-// Back leaves the page as it always did.
+// Back leaves the page as it always did. A place the address was loaded with stays in it
+// while its song is the open one: the address does not follow the playing position.
 function showAddress(id) {
-  history.replaceState(null, '', id ? addressOf(id) : location.pathname)
+  if (linkedAt?.id !== id) linkedAt = null
+  history.replaceState(null, '', id ? addressOf(id, linkedAt?.text) : location.pathname)
+}
+
+// Moves the playing position to the place the address named, once, when its song has
+// opened: opened again, the song starts at its start, and the address keeps the place
+// until another song takes it. A place the song does not have is said beside its name.
+function goToLinked() {
+  if (!linkedAt || linkedAt.used) return
+  linkedAt.used = true
+  const { beats } = player.result
+  const beat = beatAt(player.bars, beats, linkedAt.place, player.buffer.duration)
+  if (beat >= 0) player.offset = beats[beat]
+  else notes.set('title', { text: missing(player.bars, linkedAt.place), refused: true })
 }
 
 function openWhenReady(id) {
@@ -383,12 +404,40 @@ function showTitle() {
   $('song-name').title = song.name
   $('song-name').hidden = isRenaming
   $('rename-open').hidden = isRenaming
+  $('place').hidden = $('copy-place').hidden = isRenaming
   title.querySelector('.rename')?.remove()
   title.querySelector('.note')?.remove()
   if (isRenaming) title.append(nameField(song))
   const note = noteOf('title')
   if (note) title.append(note)
 }
+
+// Hands the clipboard the place at the playing position, as one line: the song, the bar
+// and the beat, the seconds, and the address that opens the song there. The button says
+// that it did, for a moment.
+let copied = 0 // the timer that gives the button its own words back
+$('copy-place').addEventListener('click', async (event) => {
+  // After a press with the pointer, Space is left to play and pause.
+  if (pointed) event.currentTarget.blur()
+  const song = songs.find((candidate) => candidate.id === player.id)
+  const beat = player.result ? beatHere() : -1
+  const place = placeOf(player.bars, beat)
+  if (!song || !place) return
+  const line = placeLine(song.name, song.id, place, player.result.beats[beat], location.origin + location.pathname)
+  let done = true
+  try {
+    await navigator.clipboard.writeText(line)
+  } catch {
+    done = false
+  }
+  if (player.id !== song.id) return
+  if (done) notes.delete('title')
+  else notes.set('title', { text: 'The place could not be copied.', refused: true })
+  showTitle()
+  $('copy-place').textContent = done ? 'Copied' : 'Copy place'
+  clearTimeout(copied)
+  copied = setTimeout(() => ($('copy-place').textContent = 'Copy place'), 1500)
+})
 
 $('rename-open').dataset.focus = 'rename'
 $('rename-open').addEventListener('click', () => {
@@ -541,13 +590,20 @@ async function open(song) {
   $('one').disabled = result.beats.length === 0
   $('one-note').textContent = ''
   say('')
+  notes.delete('title')
   showAddress(song.id)
   showPlayer()
+  // The list may have moved on while the song was fetched.
+  const { ones } = songs.find((candidate) => candidate.id === song.id) ?? song
+  // The place is found in the bars the count makes, before anything is drawn.
+  const counted = countsWith(result.beats, result.count, ones)
+  player.bars = barsOf(counted.count)
+  goToLinked()
   showSongs()
   showLoop()
-  // The list may have moved on while the song was fetched.
-  recount((songs.find((candidate) => candidate.id === song.id) ?? song).ones)
+  recount(ones)
   $('song').scrollTop = 0
+  follow()
   // The button that opened the song is gone from its row: the keyboard goes to Play.
   if (document.activeElement === document.body) $('play').focus()
 }
@@ -558,6 +614,7 @@ function closePlayer(text) {
   Object.assign(player, { ones: [], count: [], byHand: new Set(), ochos: [], bars: [] })
   for (const control of ['play', 'seek', 'loop', 'loop-start', 'loop-end', 'one']) $(control).disabled = true
   $('position').textContent = $('duration').textContent = clock(0)
+  $('place').textContent = ''
   $('seek').value = 0
   $('seek').style.setProperty('--at', 0)
   showAddress(null)
@@ -868,6 +925,7 @@ function layOut() {
     byHand: [...player.byHand].join(' '),
     perRow: layout.perRow,
     bars: player.bars.map((bar) => bar.first).join(' '),
+    rows: layout.rows.map((row) => row.first).join(' '),
     plates: JSON.stringify(layout.plates.map(({ x, y, wide, high }) => [x, y, wide, high])),
   })
   laidOut++
@@ -886,6 +944,10 @@ function show() {
   if ($('bpm').textContent !== tempo) $('bpm').textContent = tempo
   const count = String(player.count[lit] ?? '–')
   if ($('count').textContent !== count) $('count').textContent = count
+  // The bar and the beat the song is on, and before its first beat those of that beat.
+  const here = placeOf(player.bars, Math.max(0, lit))
+  const place = here ? `Bar ${placeText(here)}` : ''
+  if ($('place').textContent !== place) $('place').textContent = place
   $('seek').value = now
   // How far along the song is, from 0 to 1: the line of the position control is drawn to there.
   $('seek').style.setProperty('--at', now / player.buffer.duration)
@@ -919,7 +981,7 @@ function show() {
   if (from !== mapFrom) {
     mapFrom = from
     drawMap($('map'), layout, { beats, bars, count: player.count, byHand: player.byHand, lit: litBar, hover: under, range })
-    Object.assign($('map').dataset, { lit: litBar < 0 ? '' : litBar, range: range ? `${range.first} ${range.last}` : '' })
+    Object.assign($('map').dataset, { lit: litBar < 0 ? '' : litBar, range: range ? `${range.first} ${range.last}` : '', tag: under < 0 ? '' : tagOf(under) })
     if (litBar !== litShown && player.playing) follow()
     litShown = litBar
   }
@@ -1068,6 +1130,7 @@ setInterval(() => document.hidden || refresh(), 2000)
 
 // The address may name a song: it opens as soon as the list has it ready.
 linked = wanted = songIn(location.search)
+if (linked && atIn(location.search)) linkedAt = { id: linked, text: new URLSearchParams(location.search).get('at'), place: atIn(location.search) }
 if (!linked && new URLSearchParams(location.search).has('song')) {
   showAddress(null)
   showNothing(NOT_THERE)

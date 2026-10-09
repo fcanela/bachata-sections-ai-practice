@@ -343,9 +343,56 @@ export function clicksUntil(beats, loop, from, until) {
   return { clicks, next: { beat, pass } }
 }
 
+// The place of a beat: its bar, counted from 1 in the order of barsOf(), and which beat
+// of that bar it is, from 1. A short bar has beats 1 to n, whatever their count. null
+// when the song has no such beat. bachata/places.py does the same for the commands, and
+// bachata/places_test.py compares the two.
+export function placeOf(bars, beat) {
+  const bar = barOf(bars, beat)
+  return bar < 0 || beat > bars[bar].last ? null : { bar: bar + 1, beat: beat - bars[bar].first + 1 }
+}
+
+// A place as it is written: 24.3 is bar 24, beat 3.
+export const placeText = (place) => `${place.bar}.${place.beat}`
+
+// The place a text names. "24.3" is { bar, beat }, and "24" the first beat of that bar.
+// "62.4s" is a time, { seconds }: the s is what tells it from a bar. null for anything else.
+export function placeIn(text) {
+  if (typeof text !== 'string') return null
+  const named = /^([1-9][0-9]{0,5})(?:\.([1-9]))?$/.exec(text)
+  if (named) return { bar: Number(named[1]), beat: Number(named[2] ?? 1) }
+  const timed = /^([0-9]{1,5}(?:\.[0-9]{1,3})?)s$/.exec(text)
+  return timed ? { seconds: Number(timed[1]) } : null
+}
+
+// The beat at a place, or -1 when the song has no such place. A time names the beat
+// nearest to it, as a count 1 set by hand does.
+export function beatAt(bars, beats, place, duration) {
+  if ('seconds' in place) return place.seconds <= duration ? nearestBeat(beats, place.seconds) : -1
+  const bar = bars[place.bar - 1]
+  const beat = bar ? bar.first + place.beat - 1 : -1
+  return bar && beat <= bar.last ? beat : -1
+}
+
+// What to say of a place the song does not have.
+export function missing(bars, place) {
+  if ('seconds' in place) return bars.length ? `This song ends before ${place.seconds} s.` : 'This song has no beats.'
+  if (place.bar > bars.length) return `There is no bar ${place.bar} in this song.`
+  return `Bar ${place.bar} has no beat ${place.beat}.`
+}
+
 // The address of a song: what follows the address of the page. Loaded with it, the page
-// opens that song.
-export const addressOf = (id) => `?song=${id}`
+// opens that song. With a place, as it is written, the page opens the song there.
+export const addressOf = (id, at) => (at ? `?song=${id}&at=${at}` : `?song=${id}`)
+
+// A place in a song as one line to hand to someone else: the name of the song, the bar
+// and the beat, the seconds of that beat, which stay true when the bars are counted
+// again, and the address that opens the song there. `page` is the address of the page.
+export const placeLine = (name, id, place, seconds, page) =>
+  `${name}, bar ${placeText(place)} (${seconds.toFixed(2)} s) ${page}${addressOf(id, placeText(place))}`
+
+// The place an address names, as placeIn() gives it, or null.
+export const atIn = (search) => placeIn(new URLSearchParams(search).get('at'))
 
 // The song an address names: its id, as the server checks one, or null when the address
 // names no song or nothing that could be one.
