@@ -2,9 +2,26 @@
 
 Rewritten at the end of every session.
 
+## Where things stand (2026-10-12, after the course week)
+
+Written on 2026-10-12 by an AI coding session at the owner's request, from git and from the owner's session log of the week, which is not in this repository. It changes no earlier line. It adds this block and short notes marked "2026-10-12" under the lines they correct. Everything under "Where things stand (2026-10-08, session 12)" was written on 2026-10-08 or earlier and is kept as it was. Line numbers below are those of `862c23a`. Times with +0700 are the machine's clock, as in git and in `LOG.md`; times ending in Z are UTC, from the session log. Commit identifiers are those after the one rewrite of the history that `README.md` describes; `HISTORY.md` lists the earlier ones.
+
+- **The capstone is merged.** `862c23a` (2026-10-09 14:31 +0700) merged `d5-capstone` (`d418331`) into `master`. Its message says "accepted by the owner". The owner's words in the session log are "accepted, you can merge" (2026-10-09T07:31:54Z). How long he used the feature before he said it is not recorded. The tree of `862c23a` is the tree of `d418331`. The lines that say it is not merged (`NEXT.md` 7, 15, 18 and 322, `LOG.md` 7, `CAPSTONE.md` 3, 77 and 135) were true on 2026-10-08 and are not true of `master` now.
+- **Tests.** The run of 294 tests was made on `8b26728`. `d418331` changes `LOG.md` only (9 lines added). No test was run on `master` after the merge.
+- **Still unconfirmed by the owner:** the items listed in the 2026-10-08 block as "for the owner to look at" (where "Copy place" ended up, the look of the row numbers and of the tag, the wordings). Nothing in the records says that he checked them. The place of the readout stays provisional, by his own words of 2026-10-08.
+- **Slices 1 and 2.** On 2026-10-06 (10:44:27Z) the owner wrote that both were accepted "as it is given the stages limitations". The items of `ACCEPTANCE.md` that name his ear or his confirmation are still unticked. `ACCEPTANCE.md`, block of 2026-10-12, has his words and the list. The lines in this file that call those checks "the owner's" (42, 139, 231) are still right.
+- **Work folders and branches.** Lines 38, 52 and 403 to 407 say the four work folders (`wt/d4-patch`, `wt/d4-bars`, `wt/bars-high`, `wt/bars-xhigh`) and their branches are kept. They were removed on 2026-10-08 between 03:31 and 03:33 +0700 (2026-10-07T20:31:52Z to 20:33:25Z in the session log), about ten minutes after `442abf2`, at the owner's words "clean up, verify first if there is anything worth noting before removing". Before removing, the session checked that nothing was uncommitted and saved a verified git bundle of the four branches, their notes and pictures outside this repository. Line 403 records a request of the owner to keep them (dated 2026-10-08); the order of that request and of the removal is not recorded. This repository has the branches `master`, `d4-graph` and `integrator-stopped`.
+- **The rejected attempt and the build at high.** The rejected first attempt at bars (`289c033`, `6b50c32`, `5b1ed39`) and the build at high (`be94d9b`, `0ba0bd9`, `31df438`, `e0579ff`, `3e17716`) were on the branches `d4-bars` and `bars-high`. Those branches are gone. The commits are kept by two tags of the same names, `d4-bars` on `5b1ed39` and `bars-high` on `3e17716`, created on 2026-10-11.
+- **Files named in these records that are not in git.** `SPEC.md`, `chosen.png`, the pictures under `shots/` and each `NOTES-for-records.md` were in the removed work folders; copies are kept outside this repository. The critique under `.impeccable/critique/` and `fixtures/audio/README.md` are in folders git ignores on purpose.
+- **The failed-analysis experiment** of the night of 2026-10-07 to 08 (branches `d4-graph` and `integrator-stopped`) is not in `master`. Line 147 is right that it is not built here. `NEXT.md` on `d4-graph` says in its line 7 that the feature is "on `master`"; it is not, and a note of 2026-10-12 there says so.
+- **Tests count.** Line 121 says 266 tests. The count at `8b26728` is 294 (`LOG.md` 54).
+
+
 ## Where things stand (2026-10-08, session 12)
 
 **A name for every bar and beat is built on the branch `d5-capstone`, and is not merged.** It is the capstone of the owner's course. A session of another tool reviews it first, then the owner looks at it. `CAPSTONE.md` on that branch is its brief, its acceptance list and the reviewer's file. `LOG.md`, session 12, has the figures.
+
+> 2026-10-12: merged since, at `862c23a` on 2026-10-09. See the first block of this file.
 
 - **What it is.** A place is a bar and a beat from 1, written `24.3`, counted on the bars the page shows, with the count 1s set by hand. A time is written `62.4s`.
   - **The page**: the place at the playing position in the top bar, before "Copy place", provisionally; the number of its first bar beside every row of the song; a tag with its number over the bar under the pointer; `?song=<id>&at=24.3` opens the song paused there; "Copy place", in the top bar, copies the song, the place, its seconds and that address as one line.
@@ -13,9 +30,11 @@ Rewritten at the end of every session.
 - **Its checks were seen to fail.** 79 breaks: 70 caught as the tests stood, 78 after four tests were made stronger and two added. One is left: a tag could pass the right edge of the song by 3 pixels.
 - **Reviewed by a session of another tool**, which asked for four changes. Three are made, with a test each that failed first: an id in capitals, a song whose analysis failed, and the place staying in the address when the same song opens again. The fourth, where the readout sits: on the band it took 23% of the width of the large view at 1100, and the owner had it moved to the top bar, which he calls the least wrong and will redo.
 - **For the owner to look at**, none of it confirmed: where "Copy place" ended up, which is not where the brief had it; the look of the row numbers and of the tag; the wordings. `CAPSTONE.md` lists them.
+  > 2026-10-12: the owner accepted the feature on 2026-10-09. What he looked at is not recorded. See the first block of this file.
 - **Not checked by anything:** that the system's clipboard receives the line (the test puts its own clipboard in the page), and the page in a browser the owner drives.
 - **The library in `data/` of this folder was analysed again by mistake**, 17 of its 18 songs, from version 2 to version 5. See "Rules that are easy to break".
 - **If it is merged:** `ACCEPTANCE.md` has nothing of it yet. Its list is in `CAPSTONE.md`.
+  > 2026-10-12: it is merged. `ACCEPTANCE.md` still has nothing of it; its list is `C1` to `C24` in `CAPSTONE.md`, ticked on 2026-10-08.
 
 Before that, in session 11:
 
@@ -23,7 +42,9 @@ The lower view of the page is in plates, one for each bar, and it is on `master`
 
 - **The plates**, merged from `bars-xhigh` at `918cc78`, with a merge commit, `d2cf0c6`.
   - **The first attempt was rejected.** It is on the branch `d4-bars`. The owner: "It was like it just removed the extra beats, instead of doing a design that makes sense for showing the bars in a way that makes sense on their own".
+    > 2026-10-12: the branch `d4-bars` no longer exists; the tag `d4-bars` keeps its commits. See the first block of this file.
   - **The owner chose the plates from three pictures**, on 2026-10-07. `SPEC.md` was written from that choice. It and the picture, `chosen.png`, are in `wt/bars-xhigh` and `wt/bars-high`, not in git.
+    > 2026-10-12: `SPEC.md` and `chosen.png` are not in this repository. See the first block of this file.
   - **The same spec was built twice**, at high on the branch `bars-high` and at xhigh on `bars-xhigh`, by sessions that did not read each other's folder. The owner could not tell the two pages apart. Both were accepted, and he preferred the xhigh one, which is the one merged.
   - **What it is.** A bar is one thing on the song: a plate with the count of its first beat. The first bar of an ocho has a solid plate and the second a quiet grey one. A row holds eight ochos from about 1200 wide, four under that. The bar that holds the beat that is sounding is lit whole. A count 1 set by hand has a lid over its plate. A drag marks whole bars. The large view above is as it was.
   - **Its checks were seen to fail.** 116 breaks, one at a time: 98 caught as the tests stood, and after nine tests were made stronger and one added, 115. Which numeral is on a plate stays for the eye.
@@ -36,6 +57,7 @@ The lower view of the page is in plates, one for each bar, and it is on `master`
   - **Not run: two commands of the critique, `audit` and `polish`.** See "Left open by the critique" below.
 - **For the owner to look at**, none of it confirmed: the black edge of the lit bar in light and its width; the look of the drawn position control; that the bar is two lines from 1600 down; the nine points `SPEC.md` lists under "Not in the picture"; and the numeral on every plate. Pictures are in `wt/bars-xhigh/shots/`.
 - **The work folders and the branches are all kept**, as the owner asked: see "Housekeeping".
+  > 2026-10-12: no longer so. See the first block of this file.
 
 Before that, in session 10:
 
@@ -50,6 +72,7 @@ Slice 2 is built, in the shape the owner gave it in session 6, and the owner has
   - **Four faults were repaired on the way.** A song that ends within a second after a piece of 30 s failed in the split or was too loud at its end. The program started without the new checkpoint. The cost was written as "some 30 seconds a song". And the watch on what the analysis opens could not see a file behind a link.
   - **Still for the owner:** the licence of the Hybrid Demucs checkpoint, which is not logged; whether the whole song has to be split when 60 seconds of it are listened to; and the argument `fills_of` of `analyse()`, which only a test uses.
   - **The work folder is still there**: `wt/d4-patch`, on the branch `d4-patch`. The owner asked for both to be kept. The notes the records were written from are in it, `NOTES-for-records.md`, which git does not see.
+    > 2026-10-12: no longer so. The work folder and the branch `d4-patch` were removed on 2026-10-08. See the first block of this file.
 
 - **The entry**, on `master` since the owner had the branch `goal-entry` merged and deleted, the same day. The owner listened to 13 songs in full and set a target: count 1 on his mark on at least 4 of 5 songs whose count was four off from the start, and no other song worse. `bachata/entry_test.py` checks it and passes: 5 of 5 since the third part of the session, none worse. `LOG.md`, session 9, has the figures.
   - **What the analysis does now.** It looks at where the sound rises in the first minute: the 4 beats from a beat against the 4 before it, in 16 bands. A rise of 5 dB or more is something coming in, and it starts the nearest bar. The count moves by a bar, for the whole song, when more comes in on the bars between its ochos than on them. A rise out of silence cannot move it. Where nothing comes in, the bass decides: see below. It was version 4. *Since session 10 it is version 5, and where the two sides are under 3 to 1 the fills decide: see "The fills" above.*
@@ -119,6 +142,7 @@ The redesigned page is built, with what slice 1 has. The owner chose its design,
 - The program is a Python one. The Node program is gone.
 - **To run it:** `uv run python -m bachata`, then http://127.0.0.1:8080. `PORT` changes the port and `BACHATA_DATA` the folder of the library. Sessions 3 and 5 used port 8081 for everything they started, as the owner asked in session 3.
 - **To test it:** `uv run pytest`. It runs the unit tests, the song checks and the flows through the page: 266 tests in about 15 and a half minutes since session 11, on the branch that was merged; 242 in about 11 and a half in session 10, and 215 in 5 and a half in session 9. Which tests the time went to was not measured. Since session 9 the entry check is one of them: `uv run pytest bachata/entry_test.py -s` prints a line per song, in about a minute. It needs the owner's 13 songs in the library and `fixtures/audio/by-ear.json`, and skips without the second. Since session 10 the six-song check is one too: `uv run pytest bachata/entry_pairs_test.py -s` prints a line per song, in about 4 minutes. It needs `fixtures/audio/entry-pairs.json` and the six songs in `fixtures/audio/entries/`, and skips without the first.
+  > 2026-10-12: 294 tests since `8b26728`, in 945 seconds (`LOG.md` 54).
 - **A program that is running shows the page it started with.** After a change to the page or to the server, stop it and start it again.
 - **On a new machine, once:**
   - `uv sync`
@@ -145,6 +169,7 @@ The critique of 2026-10-08 is kept in `wt/bars-xhigh/.impeccable/critique/`, whi
 - **`audit`, not run.** For the one major issue that is open: the two canvases, `#now` and `#map`, have no role and cannot take the keyboard, and their labels tell the user to press what a keyboard cannot press. The count, an `<output>`, is said by a screen reader at every beat. The position control gives its value as raw seconds. What the critique proposes: labels that describe, the count said once an ocho or not at all, the time in words on the position control, and the song as one stop of Tab where the arrows move by a bar and Shift marks a range. A ring on a canvas has to be black: the yellow of the focus ring is 1.0 to 1 on the band and 1.1 on the light ground.
 - **`polish`, not run.** The last pass. What the critique left for it: weight 600 is asked for in five places of `web/style.css` and only 500 and 700 are served; in dark the band and the lit bar are `#f2c500` while Play, "Add a song" and the focus ring stay `#ffd200`; "Add a song to see its beats." speaks of beats; and the end of a song has no state of its own.
 - **Needs the server, so not built in a branch for the page:** why an analysis failed, and a way to try it again without deleting the song.
+  > 2026-10-12: built on the branch `d4-graph`, which is not merged. See the first block of this file.
 - **Not tried:** "Add a song" pressed with the pointer still leaves the keyboard on the file control, so Space opens the file window again. Where Tab starts from after a press with the pointer on the bar. The two lines of the message beside "Add a song", in a browser.
 - **The rest of what the critique found**, not asked for: no key for the loop, its ends, "Clear" or count 1; no search in the list; a song's name in the list does not open it; Tab goes through three controls a song before it reaches Play; nothing says the count may be wrong and that "Count 1 here" puts it right; and from three metres nothing says whether the loop is on.
 - **`BRIEF.md`**, under "The interface", says "A beat is a small square, and the one that is sounding gets the large square a sign keeps for its pictogram". That is the large view now. On the song a bar is a plate, and the one that is sounding a yellow block. The brief was not changed: it is the owner's to word.
@@ -320,6 +345,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 ## Open
 
 - **The place of the readout of the bar and the beat is provisional and waits for a design pass.** It is in the top bar before "Copy place" on the branch `d5-capstone`, by the owner's choice of 2026-10-08: "the least wrong" of two, to be redone with the design plugin.
+  > 2026-10-12: `d5-capstone` is merged (`862c23a`). The readout is still in the top bar and still provisional.
 
 **For slice 1**
 
@@ -401,6 +427,7 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **`.claude/` and `.impeccable/` are ignored by git**, on the owner's instruction in session 4. The first holds Claude Code's settings, with paths from the owner's machine. The second is where the design plugin keeps its working files: since session 5, the direction it was given for the page, the screenshots of the three designs under `review/`, which are the only pictures left of the two that went, and in `config.json` one exception for its hook, which is explained in `LOG.md`.
 - **Not in git, and each rebuilt by one command:** `.venv/`, `models/`, `.playwright/`. `data/` is the library and is not rebuilt by anything.
 - **`wt/` holds work folders, one for each task that runs beside another**, each on a branch of its own. `.git/info/exclude` keeps `wt/` out of git's listing, with the three files a task keeps in its folder: `TASK.md`, `incoming.patch` and `NOTES-for-records.md`. `git worktree list` names them. The owner asked on 2026-10-08 that no work folder and no branch be removed. As they stand:
+  > 2026-10-12: lines 403 to 407 describe the state of 2026-10-07 and are not the state now. See the first block of this file ("Work folders and branches").
   - `wt/d4-patch`, branch `d4-patch`: the fills, merged in session 10.
   - `wt/d4-bars`, branch `d4-bars`, at `5b1ed39`: the first attempt at bars, rejected by the owner, not merged.
   - `wt/bars-high`, branch `bars-high`, at `3e17716`: the plates built at high, accepted, not merged. Its notes were not read, and its lit bar is black in light.

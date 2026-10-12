@@ -6,6 +6,17 @@ Items marked *proposed* contain a number or a rule that is not in the brief. The
 
 A ticked item names the check behind it. `uv run pytest` runs all of them; the ones in a browser need a machine where a browser can start and play.
 
+**State on 2026-10-12, after the course week.** Added by an AI coding session at the owner's request. It ticks and unticks nothing, and no earlier line is changed. Line numbers are those of `862c23a`.
+
+- **Count.** 53 items are ticked and 24 are not: G1 to G8 (lines 30 to 37), slice 1 (58, 59, 64), slice 2 (134), slice 3 (194 to 196), slice 4 (200, 201) and slice 5 (205, 206, 213, 221, 224, 230, 231).
+- **What the owner accepted.** On 2026-10-06 (session log, 10:44:27Z) he wrote: "yes, both slice 1 and 2 accepted, there are redesign elements that I may want to apply, or results that I will need to nail, but it is acceptable as it is given the stages limitations". That is his acceptance of the two slices as they stood. It is not a statement that every item of this list holds. By the rule at line 49, slice 1 is not done: the items at lines 58, 59 and 64 (his confirmation of two tempos, and two checks by his ear) are open, and so is the one at line 134 (slice 2, by his ear). The 90 ms of line 17 is still "for the owner to confirm". The records do not show that he ran those checks, so they stay unticked. If he runs one, it is ticked in a commit of its own, with the date.
+- **The early screen of slice 5.** The screen was built after slice 1, before slices 3 and 4 (`BRIEF.md` 69). Its items at lines 213, 221 and 224 are open for his eye.
+- **The feature of 2026-10-08, "a name for every bar and beat".** It is not in this list. Its 24 checks, `C1` to `C24`, are in `CAPSTONE.md`, all ticked on 2026-10-08 from the run of 294 tests. The owner accepted the feature on 2026-10-09 (`862c23a`). See the first block of `NEXT.md`.
+- **Sections are not built.** Slices 3 and 4 (derecho or majao for each ocho, then mambo) have no module of their own in `bachata/`. Their items (194 to 196, 200, 201) are unticked, and G1 to G3 cannot hold until they are built.
+- **Material that is not in git.** Line 11 names `fixtures/audio/README.md`. The folder `fixtures/audio/` is ignored on purpose, so that file is not in git. The song checks print "skipped: no reference material" without it (line 13).
+- **The break count of the fills.** Line 184 says 63 and 62 caught; the run row in `LOG.md` line 539 says 62. See the first entry of `LOG.md`.
+
+
 ## How a song result is judged
 
 Against the reference material in `fixtures/audio/dev/`, which is not committed. Each song from the site has a folder there with a `mix.m4a` and a `labels.json`. `fixtures/audio/README.md` describes the format.
@@ -47,6 +58,8 @@ The owner picks a file, mp3, m4a or opus, or a song from the list of remembered 
 Uploaded songs are remembered in one library on the server, the same for everyone who can reach the application.
 
 Slice 1 is done when every item below holds, on all three mixes and both commercial recordings. Me Emborrachare comes first, and the beats are built before the library.
+
+> 2026-10-12: the owner accepted this slice on 2026-10-06 although the items at lines 58, 59 and 64 are open. By the rule of this line the slice is not done. See the block at the top of this file.
 
 **The three mixes, checked automatically**
 
@@ -112,6 +125,8 @@ What the server never does:
 ### 2. The grid of ochos
 
 The owner decided the shape of this slice on 2026-10-06, in session 6, after an experiment that `LOG.md` records. The analysis hears the bar on every labelled beat of the three mixes. Nothing at hand hears which of two bars is the first of an ocho, or where a bar is extra. So the slice is strict on the bar. The count from 1 to 8 is shown and measured, and becomes strict in slice 4, where a section gives it a place to start again. Until then the user can say where count 1 is.
+
+> 2026-10-12: the owner accepted this slice on 2026-10-06 although the item at line 134 is open. See the block at the top of this file.
 
 **The reference count.** The labels give every section a length in beats, and some sections a list of blocks. Since 2026-10-06, in session 8, a section that holds a phrase shorter than an ocho has the site's own order of its phrases as blocks, so the blocks say where a half phrase is. The count of every labelled beat follows by these rules, which the owner set in session 6. `fixtures/validate.py` applies them.
 

@@ -2,6 +2,8 @@
 
 Written on 2026-10-08, in session 12, from five answers of the owner. Branch `d5-capstone`, from `master` at `442abf2`. `BRIEF.md` and `PRODUCT.md` still hold for everything this does not speak of.
 
+> 2026-10-12: after the course week: `d5-capstone` was merged into `master` at `862c23a` on 2026-10-09 (+0700), after the owner accepted the feature. What he accepted and what is still unconfirmed are in the first block of `NEXT.md`. The sentences "Nothing is merged" (lines 77 and 135) were true on 2026-10-08. A tick in the list below says the check passed, not that the owner accepted what it checks (line 87); his acceptance is of the feature as a whole.
+
 Items marked *proposed* are mine and not the owner's. He confirms or changes them.
 
 ## Goal
@@ -75,6 +77,7 @@ Sus Huellas  3f2a9c…  analysis 5  412 beats  104 bars
 - The bar numbers of the command are made by a Python twin of `countsWith()`, `barsOf()` and `nearestBeat()`, in a file of its own beside `store.py`. A test runs both on the same songs and compares them.
 - The interface stays in English, in short plain sentences.
 - Work on `d5-capstone`. Nothing is merged into `master`.
+  > 2026-10-12: merged at `862c23a`. See the note at the top of this file.
 
 ## Not in this
 
@@ -140,6 +143,8 @@ git diff master...d5-capstone -- web bachata e2e      # the code and its tests
 git diff master...d5-capstone -- LOG.md NEXT.md       # the records
 git log --oneline master..d5-capstone                  # one commit for each step, in the order they were built
 ```
+
+> 2026-10-12: merged at `862c23a`. The four commands above print nothing on `master` now, because `d5-capstone` is inside it. To see the same diff and the same commits, use `git diff 442abf2 862c23a --stat` and `git log --oneline 442abf2..862c23a`; the second lists eleven commits and the merge. The table below is correct for those commits.
 
 | Commit | What |
 | --- | --- |

@@ -2,9 +2,21 @@
 
 Newest session first. Only measured figures go in here.
 
+## 2026-10-12: notes on earlier entries (no run)
+
+Written after the course week by an AI coding session at the owner's request. Nothing was run except reads of git. Paid APIs: none used, $0. Cost of the session itself: not measured. No earlier line is changed. Line numbers are those of `862c23a`.
+
+- **Statements that are no longer true of `master`.** Written correctly on their dates, they are now stale: `LOG.md` 7 (not merged), 176 to 178 and 508 (branches and work folders kept), `NEXT.md` 7, 15, 18, 25, 26, 38, 52, 121, 147, 322 and 403 to 407, `CAPSTONE.md` 3, 77 and 135 to 141. Each has a note under it dated 2026-10-12. The facts are in the first block of `NEXT.md`.
+- **The break count of the fills.** The row at line 539 says 62 breaks. Line 665 and `ACCEPTANCE.md` line 184 say 63. The table that starts at line 667 has 63 break rows. A reading, not a measurement: the row at 539 is the main run of 62 breaks, and the break at line 542, the analysis opening `fixtures/audio/by-ear.json`, was added after it and is the 63rd.
+- **The three-prompt test.** The entry for the skill (line 1087 onward) is the skill-creator's trial on three tasks, made before the owner's last changes to the skill. Line 1108 says the skill as installed was not tried. The three-prompt test of the course was run separately on 2026-10-06 and is not in this log. Its prompts and answers are in `course/skill-three-prompts.md`.
+- **Reviews by another tool.** Lines 35, 1154 and `CAPSTONE.md` 184 say "a session of another tool" and "a fresh reviewer". The two reviews (2026-10-06 and 2026-10-08) are in `course/`, with the model and the effort that the tool's own record shows.
+
+
 ## 2026-10-08, session 12: a name for every bar and beat, on the branch `d5-capstone`
 
 The capstone of the owner's course: a task no session had been given. A place in a song now has a name, a bar and a beat, `24.3`, that the page shows, an address opens, and two commands answer from the library. It is on the branch `d5-capstone`, from `master` at `442abf2`, and is **not merged**: a session of another tool reviews it, and then the owner. `CAPSTONE.md` is its brief, its acceptance list and the reviewer's file.
+
+> 2026-10-12: merged since, at `862c23a` on 2026-10-09. See the first block of `NEXT.md`.
 
 **How it went.** Five questions to the owner, one at a time, each with a default. A brief, shown to him, and his "go" with an order to build in: the place and the commands, the address, the readout and the row numbers, the tag and "Copy place". One commit for each. Then the breaks, with the project's skill.
 
@@ -176,6 +188,7 @@ The lower view of the page shows a plate for each bar now, and no longer a mark 
 - **The first attempt was rejected.** It is on the branch `d4-bars`, in `wt/d4-bars`, at `5b1ed39`. The owner: "It was like it just removed the extra beats, instead of doing a design that makes sense for showing the bars in a way that makes sense on their own".
 - **The owner then chose the plates from three pictures**, "design 1, plates", on 2026-10-07. `SPEC.md` was written from that choice. The spec and the picture, `chosen.png`, are in the work folders and not in git.
 - **The same spec was built twice**, each time by a session that got the spec and the picture and nothing else, and did not read the other's folder: at high on the branch `bars-high`, in `wt/bars-high`, at `3e17716`, and at xhigh on the branch `bars-xhigh`, in `wt/bars-xhigh`.
+  > 2026-10-12: the branches `d4-bars`, `bars-high` and `bars-xhigh` and the work folders named in the three lines above no longer exist (the tags `d4-bars` and `bars-high` keep the commits of the first two), and `SPEC.md` and `chosen.png` are not in this repository. See the first block of `NEXT.md`.
 - **The owner could not tell the two pages apart.** Both were accepted, and he preferred the xhigh one. That one is merged. `bars-high` is not.
 - **A critique of the xhigh page**, by the design plugin, on 2026-10-08: 23 of 40, "Acceptable". Three of its five issues are dealt with in whole or in part, one is open, and two of its commands were not run. See "The critique of the page" below.
 - **The lit bar departs from `SPEC.md` and from `chosen.png`, by the owner's choice** of 2026-10-08: "Yellow on both grounds". In the spec and in the picture the bar that is sounding is a black block with a yellow count in light.
@@ -507,6 +520,8 @@ The owner chose on 2026-10-08: the click switch stays in the bar; "Clear" is hid
 
 **Kept, as the owner asked:** every work folder and every branch. `wt/bars-xhigh` and `bars-xhigh`, `wt/bars-high` and `bars-high`, `wt/d4-bars` and `d4-bars`, `wt/d4-patch` and `d4-patch`.
 
+> 2026-10-12: no longer so. The work folders and the branches were removed on 2026-10-08 at the owner's words; see the first block of `NEXT.md`.
+
 ## 2026-10-07, session 10: the fills rule, brought in, reviewed, broken on purpose and merged
 
 The owner handed over one commit written outside this repository, `incoming.patch`, and asked for it to be applied, read as a reviewer, checked and broken on purpose. The patch adds a third way to say which bar starts an ocho: where what comes in during the first minute is not clear, the fills decide. The work was done in a folder of its own, `wt/d4-patch`, on the branch `d4-patch`, while another task ran in `wt/d4-bars`. The records were not touched there: they are written here, at the merge, from the notes that session kept. **On the six songs the owner heard on 7 October, count 1 is where he heard it on 6 of 6, where version 4 had 0 of 6. The entry check still reads 5 of 5, and no song of the reference by ear or of the three mixes is worse than it was: each has the same beats and the same count.** The review found four faults, and all four are repaired: two in the code of the patch, one in how the program starts, and one in a check of the project that the patch did not touch. The cost is time: a song whose fills are asked takes 30 to 50 seconds to analyse, where it took 3 to 5. The owner then had a program started to review it, accepted it, and had `d4-patch` merged into `master` with a fast-forward. His verdict is under "Decisions".
@@ -537,6 +552,8 @@ Everything ran from `wt/d4-patch`. In this entry `master` is `master` as it was 
 | The same after the fix, `615bdf3`, with `pytest bachata/server_test.py` | 80 passed. The check of the second file takes 0.21 s at the start | 2 s |
 | The checks of the part on the code as it was, before the first break, `615bdf3`: `pytest bachata/fills_test.py bachata/analysis_test.py` | 39 passed, none skipped | 10 s |
 | 62 breaks, one at a time | 38 caught as the tests stood, 24 by nothing. The table is below | 728 s |
+
+> 2026-10-12: this row counts the 62 breaks of the main run. A 63rd break is in line 542. The count of line 665 is 63. See the first entry of this file.
 | The 24 again, after the repairs | 23 caught, each by a test that states what was broken. 1 alters nothing | 264 s |
 | The break that takes the rule out, against `pytest bachata/entry_pairs_test.py` | Failed: `the count is on 1 where he heard it on 0 of 6 songs` | 237 s |
 | The analysis opens `fixtures/audio/by-ear.json`, against `pytest bachata/songs_test.py -k "detected and meemborrachare"` | Passed: caught by nothing in the work folder. After the repair of `fixtures/by_ear.py`: failed, `the analysis read what only a check may read`, with the path | 6 s each |
