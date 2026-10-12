@@ -6,7 +6,7 @@ Rewritten at the end of every session.
 
 A failed song says why it failed and for how long the analysis ran, and "Try again" in its row has it analysed again without deleting it. It is on `master` since 2026-10-08, merged from the branches `server` and `page`. **Every item a program can check is ticked**: a second whole run passed whole, and its checks were seen to fail. What is left is the owner's: the questions below. `LOG.md`, session 12, has the figures, and `ACCEPTANCE.md` the items, under slice 5.
 
-- **How it was built.** From `CONTRACT.md`, which had the owner's six decisions and an example both sides test against, `fixtures/failed_songs.json`. Worker A built the server and the queue in `wt/server`, worker B the page in `wt/page`, at the same time and with no word between them. An integrator checked the join from git, merged both with a merge commit each, `0f28ebb` and `b7db610`, and added one test through the real program, the real page and the real analysis.
+- **How it was built.** From `CONTRACT.md`, which had the owner's six decisions and an example both sides test against, `fixtures/failed_songs.json`. Worker A built the server and the queue in `wt/server`, worker B the page in `wt/page`, at the same time and with no word between them. An integrator checked the join from git, merged both with a merge commit each, `baf50a6` and `252326f`, and added one test through the real program, the real page and the real analysis.
 - **What it is.**
   - The queue stores a failure with a reason, `memory`, `model`, `sound` or `other`, and the seconds the analysis ran.
   - The list sends them as `failure`, for a failed song only.
@@ -16,12 +16,12 @@ A failed song says why it failed and for how long the analysis ran, and "Try aga
   - `ANALYSIS_VERSION` is still 5.
 - **The whole run on `master` after the merge:** 316 tests, 315 passed, 1 failed, none skipped, in 1251 s, where it took 1113 s for 256 in session 11. The one failure is `test_an_opus_file_is_taken_like_an_mp3_or_an_m4a` in Chrome: a file picked a second time was still being read after 5 s. It is a test of adding a song, which this work does not change, and it passed three times of three when run alone afterwards. Every test of this work passed, the flow through the real program in Chrome and in Firefox among them.
 - **Done after the workflow, at the owner's word, the same day:**
-  1. **The workflow's script is committed** as it was, at `61e3cc6`: `.claude/workflows/failed-analysis.js`. It names the base `4390edf` and is for that task only.
-  2. **A second whole run passed whole**, outside the sandbox, on `master` at `61e3cc6`: 316 passed, none failed, none skipped, in 910 s. The opus test passed in Chrome. **Why it failed once in the first run was not found**, and nothing was looked into: it failed once in five runs, late in a run of 21 minutes, on the 5 s it waits for "This song is already in the library.".
+  1. **The workflow's script is committed** as it was, at `0fbc6a1`: `.claude/workflows/failed-analysis.js`. It names the base `b2726d7` and is for that task only.
+  2. **A second whole run passed whole**, outside the sandbox, on `master` at `0fbc6a1`: 316 passed, none failed, none skipped, in 910 s. The opus test passed in Chrome. **Why it failed once in the first run was not found**, and nothing was looked into: it failed once in five runs, late in a run of 21 minutes, on the 5 s it waits for "This song is already in the library.".
   3. **The checks were seen to fail**: 62 breaks. 54 were caught where they should be, and after two tests of `bachata/queue_test.py` were made stronger, 59. The three left: a number that is not finite, which JSON cannot carry; `ANALYSIS_VERSION`, which has no test on purpose; and "Try again" while a row asks "Delete this song?", which is a question below. No break was tried in Chrome.
-  4. **`CONTRACT.md` is deleted**, as it said of itself. It is in git's history, last at `61e3cc6`. The example, `fixtures/failed_songs.json`, stays: tests read it.
+  4. **`CONTRACT.md` is deleted**, as it said of itself. It is in git's history, last at `0fbc6a1`. The example, `fixtures/failed_songs.json`, stays: tests read it.
 - **Not run:** the whole run after the two tests were made stronger. The three server files were: 154 passed.
-- **The integrator ran twice.** The owner stopped the first on purpose, as an exercise of his course. What it left is on the branch `integrator-stopped`, at `4db1e67`: `master` has the same files, by merges of its own and by that branch's test of the flow, taken with `git cherry-pick`.
+- **The integrator ran twice.** The owner stopped the first on purpose, as an exercise of his course. What it left is on the branch `integrator-stopped`, at `76bc893`: `master` has the same files, by merges of its own and by that branch's test of the flow, taken with `git cherry-pick`.
 
 #### Why an analysis failed, and "Try again": for the owner
 
@@ -45,7 +45,7 @@ Before that, in session 11:
 
 The lower view of the page is in plates, one for each bar, and it is on `master` since 2026-10-08. The owner accepted it. A critique of the page followed the same day, and three changes it led to are merged with it. Every check a program can run passed on the branch that was merged: 266 tests, none skipped. No test was run on `master` after the merge. What is open of this work is two commands of the critique that were not run, and what the owner has not yet seen. `LOG.md`, session 11, has the figures.
 
-- **The plates**, merged from `bars-xhigh` at `cbd2241`, with a merge commit, `a1983b2`.
+- **The plates**, merged from `bars-xhigh` at `918cc78`, with a merge commit, `d2cf0c6`.
   - **The first attempt was rejected.** It is on the branch `d4-bars`. The owner: "It was like it just removed the extra beats, instead of doing a design that makes sense for showing the bars in a way that makes sense on their own".
   - **The owner chose the plates from three pictures**, on 2026-10-07. `SPEC.md` was written from that choice. It and the picture, `chosen.png`, are in `wt/bars-xhigh` and `wt/bars-high`, not in git.
   - **The same spec was built twice**, at high on the branch `bars-high` and at xhigh on `bars-xhigh`, by sessions that did not read each other's folder. The owner could not tell the two pages apart. Both were accepted, and he preferred the xhigh one, which is the one merged.
@@ -65,7 +65,7 @@ Before that, in session 10:
 
 Slice 2 is built, in the shape the owner gave it in session 6, and the owner has used it. Since session 9 the analysis also says which of two bars starts an ocho, and since session 10 the fills decide where what comes in is not clear: the owner accepted that on 2026-10-07 and it is on `master`. Every check a program can run passes. What is open is the owner's: to listen to the new count, the checks of slice 1, one by-ear item of slice 2, and the proposals listed below.
 
-- **The fills**, on `master` since 2026-10-07: the owner had the branch `d4-patch` merged with a fast-forward, at `e5dde4b`. Where what comes in during the first minute is under 3 to 1, the song is split into its parts by Hybrid Demucs, and the drums and the bass say which bar starts an ocho: the first bar marks the beats, the second has attacks on the sixteenths next to them. It is version 5: the program analyses every stored song again when it next starts, about 3 minutes for the 18 songs of the library where it was a little over one. `LOG.md`, session 10, has the figures.
+- **The fills**, on `master` since 2026-10-07: the owner had the branch `d4-patch` merged with a fast-forward, at `450a573`. Where what comes in during the first minute is under 3 to 1, the song is split into its parts by Hybrid Demucs, and the drums and the bass say which bar starts an ocho: the first bar marks the beats, the second has attacks on the sixteenths next to them. It is version 5: the program analyses every stored song again when it next starts, about 3 minutes for the 18 songs of the library where it was a little over one. `LOG.md`, session 10, has the figures.
   - **The owner's verdict, on 2026-10-07:** "Overall, I think the first beat detection is better, I have not tested everything but I did the tests review of the algo and it was better. I will accept it". He kept the six-song check at "at least 5 of 6" and the limits as the patch has them.
   - **What it rests on.** The six songs he heard on 7 October: `bachata/entry_pairs_test.py` reads 6 of 6, where version 4 has 0 of 6. They are the songs the rule was built on. And the fills alone on the 17 songs whose count at the start is known: on the right side on all 17, and sure on 16.
   - **No song of the reference changed.** The 18 songs of the library have the beats and the count they had, and the entry check still reads 5 of 5. The fills are asked on 3 of them, Sus Huellas, La Bachata and Héroe Favorito, and say what the vote said.
@@ -106,7 +106,7 @@ Slice 2 is built, in the shape the owner gave it in session 6, and the owner has
   - The last-bar rule stays for a section without blocks, and decides nothing on these three mixes.
   - No code changed but one docstring. `LOG.md`, session 8, and `ACCEPTANCE.md`, slice 2.
 
-- **After a review of the last commit**, the same day, in session 7. A fresh reviewer had four findings in `a775210`, and all four held:
+- **After a review of the last commit**, the same day, in session 7. A fresh reviewer had four findings in `20a13db`, and all four held:
   - **The loop can be switched off and on while the song plays.** The switch did nothing during playback.
   - **A large beat that has sounded is `#7a6500`**, 3.9 to 1 against the band in light and 3.5 in dark. It was the black of the marks at 28%, which is 1.8 to 1. It is less faint than it was: whether it is faint enough is the owner's to say.
   - **Two checks were repaired.** An assertion of `web/song.test.js` looked at a new array and could not fail. And no test read the large view: one now reads its canvas, in light and in dark.
@@ -425,13 +425,13 @@ If the click sounds loose rather than wrong: beat times come in steps of 20 ms, 
 - **Not in git, and each rebuilt by one command:** `.venv/`, `models/`, `.playwright/`. `data/` is the library and is not rebuilt by anything.
 - **`wt/` holds work folders, one for each task that runs beside another**, each on a branch of its own. `.git/info/exclude` keeps `wt/` out of git's listing, with the three files a task keeps in its folder: `TASK.md`, `incoming.patch` and `NOTES-for-records.md`. `git worktree list` names them. The owner asked on 2026-10-08 that no work folder and no branch be removed. As they stand:
   - `wt/d4-patch`, branch `d4-patch`: the fills, merged in session 10.
-  - `wt/d4-bars`, branch `d4-bars`, at `11d19ef`: the first attempt at bars, rejected by the owner, not merged.
-  - `wt/bars-high`, branch `bars-high`, at `9a7c8bf`: the plates built at high, accepted, not merged. Its notes were not read, and its lit bar is black in light.
-  - `wt/bars-xhigh`, branch `bars-xhigh`, at `cbd2241`: the plates built at xhigh, with the three changes after the critique, merged in session 11. It holds `SPEC.md`, `chosen.png`, the pictures in `shots/`, the notes these records were written from, and the critique.
-  - `wt/server`, branch `server`, at `79ca61d`: the server's side of why an analysis failed and "Try again", merged in session 12 at `0f28ebb`. No copy of `data/`.
-  - `wt/page`, branch `page`, at `1e2227e`: the page's side of the same, merged in session 12 at `b7db610`. No copy of `data/`.
-  - No folder, branch `integrator-stopped`, at `4db1e67`: what the first integrator of session 12 left when the owner stopped it. `master` has the same files.
-- **A contract between two builders is for one task and is deleted when that task is accepted.** `CONTRACT.md` of session 12 went that way: it is in git's history, last at `61e3cc6`.
+  - `wt/d4-bars`, branch `d4-bars`, at `5b1ed39`: the first attempt at bars, rejected by the owner, not merged.
+  - `wt/bars-high`, branch `bars-high`, at `3e17716`: the plates built at high, accepted, not merged. Its notes were not read, and its lit bar is black in light.
+  - `wt/bars-xhigh`, branch `bars-xhigh`, at `918cc78`: the plates built at xhigh, with the three changes after the critique, merged in session 11. It holds `SPEC.md`, `chosen.png`, the pictures in `shots/`, the notes these records were written from, and the critique.
+  - `wt/server`, branch `server`, at `425e8b2`: the server's side of why an analysis failed and "Try again", merged in session 12 at `baf50a6`. No copy of `data/`.
+  - `wt/page`, branch `page`, at `e11ab53`: the page's side of the same, merged in session 12 at `252326f`. No copy of `data/`.
+  - No folder, branch `integrator-stopped`, at `76bc893`: what the first integrator of session 12 left when the owner stopped it. `master` has the same files.
+- **A contract between two builders is for one task and is deleted when that task is accepted.** `CONTRACT.md` of session 12 went that way: it is in git's history, last at `0fbc6a1`.
 - **A test of a rule about every failed song tries every reason.** Both tests of "a failed song is not tried again by itself" made one failure, of the reason `other`, and passed while the failures for memory were tried again. The test of the restart now runs once for each reason and once for a failure with none.
 - **The test of what torch says for memory carries each text the code looks for, in the case torch writes it.** It knew one of three, in small letters, so two texts and the lowering of the case could go with no test failing.
 - **`.claude/workflows/` is not in git**: the script of the workflow of session 12. It was left as it is.

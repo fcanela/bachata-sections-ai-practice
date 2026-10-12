@@ -9,7 +9,7 @@ export const meta = {
 }
 
 // The commit of master that holds CONTRACT.md as the workers must build it. Both branches start here.
-const BASE = '4390edfc2fdfcd1f6fdbdec7342ad26f87bee5c8'
+const BASE = 'b2726d76e936b48a3bee16e0292edf6bf6d18657'
 const MAIN = '<repo>'
 const MINUTES = 35
 const INTEGRATOR_MINUTES = 40

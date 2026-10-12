@@ -1,5 +1,5 @@
 {
-  "about": "The example of the contract that why an analysis failed and \"Try again\" were built from (CONTRACT.md, in git's history, last at 61e3cc6): songs as the library stores them, and what the server says of each. The server's tests build a library from `song` and `result` and compare its answers with `listed` and `again`. The page's tests answer the list with `listed` and read the rows. Neither side changes this file.",
+  "about": "The example of the contract that why an analysis failed and \"Try again\" were built from (CONTRACT.md, in git's history, last at 0fbc6a1): songs as the library stores them, and what the server says of each. The server's tests build a library from `song` and `result` and compare its answers with `listed` and `again`. The page's tests answer the list with `listed` and read the rows. Neither side changes this file.",
   "version": 5,
   "songs": [
     {
