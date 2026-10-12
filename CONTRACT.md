@@ -4,7 +4,7 @@ The task is in `NEXT.md`, under "Left open by the critique": why an analysis fai
 
 This file is what the server and the page agree on for that task, and how the work is split. It is for this task only. The integrator deletes it when the work is accepted: by then `ACCEPTANCE.md` has the checks, the header of `bachata/server.py` has the request, and `LOG.md` has the decisions. The example, `fixtures/failed_songs.json`, stays, because tests read it.
 
-Nothing is built yet. Written on 2026-10-08, after `d76b864`, and changed the same day to give each worker a folder and a branch.
+Nothing is built yet. Written on 2026-10-08, after `442abf2`, and changed the same day to give each worker a folder and a branch.
 
 ## Decided by the owner on 2026-10-08
 
