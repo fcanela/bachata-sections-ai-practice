@@ -35,7 +35,7 @@ The second command downloads two model files (81 MB and 335 MB). The app listens
 The test files hold 294 tests. That number is a count of what they contain and the result of the runs in `LOG.md` on my machine. It is not the result of a run on a fresh clone.
 
 - 19 of them need audio, labels and my listening marks, which are not in git. Without that material they skip.
-- The others need the model files, `ffmpeg`, `node`, a browser and sound output. Without the model files about 90 of them fail at start.
+- The others need the model files, `ffmpeg`, `node`, a browser and sound output. Without the model files about 90 of them would fail at start. That figure comes from reading the test files. Nobody ran the tests on a fresh clone.
 - Only those 19 run the beat tracker on real music, so the accuracy figures in the records cannot be reproduced from this repository alone.
 
 ## The records
@@ -49,7 +49,7 @@ The test files hold 294 tests. That number is a count of what they contain and t
 
 The records were written during the work, so some of their statements became wrong later. Notes dated 2026-10-12 correct them. The earlier lines are kept, and those commits delete no line. `SPEC.md` and `fixtures/audio/README.md`, which the records name, are not in git.
 
-The branches `d4-graph` and `integrator-stopped` hold a side experiment with a workflow that is not merged. The tags `d4-bars` and `bars-high` keep two builds that were not merged: a first attempt that I rejected, and the build at effort high of a comparison.
+The branches `d4-graph` and `integrator-stopped` hold a side experiment with a workflow. It is not on `master`: the workflow merged it there, and I had it taken off the same day. The tags `d4-bars` and `bars-high` keep two builds that were not merged: a first attempt that I rejected, and the build at effort high of a comparison.
 
 ## How it was made
 
@@ -70,9 +70,9 @@ What was not changed: the number of commits and their order, their author, their
 
 What follows from it:
 
-- Every commit from the seventh on has a different identifier from the one it had when it was made. `HISTORY.md` lists both for each commit.
+- Every commit from the seventh on has a different identifier from the one it had when it was made. `HISTORY.md` lists both for each commit. (The messages of the three commits that updated the identifiers say "from the sixth on". The first six commits are unchanged, so the seventh is right.)
 - The records were written before that. In their versions of that time they quote the earlier identifiers. The commit `8a76d39` updated the identifiers quoted in the current records.
-- The two tags were created on 2026-10-11. Their messages say so.
+- The two tags were created on 2026-10-11. Their messages say so. They give the day the old branches were removed in UTC (2026-10-07). The notes in the records give the same moment on the machine's clock (2026-10-08, +0700).
 
 ## Third-party material
 

@@ -37,4 +37,4 @@ One claim of a subagent was found wrong in the check of the table and is not in 
 
 One task, one run at each level, and a task with a detailed written spec, which leaves little room for the page itself to differ. The two builds ran at the same time on the same machine, so their run times are not those of a quiet machine.
 
-The build at high is kept by the tag `bars-high` (`3e17716`). The build at xhigh is on `master` (`918cc78`).
+The build at high is kept by the tag `bars-high` (`3e17716`). The build at xhigh, as it was compared, is `b712db3`, which is on `master`. Three changes were made to it after the comparison, up to `918cc78`.
