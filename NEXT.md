@@ -2,6 +2,16 @@
 
 Rewritten at the end of every session.
 
+## Note of 2026-10-12, after the course week
+
+Written on 2026-10-12 by an AI coding session at the owner's request. It changes no earlier line of this file.
+
+- **This branch is not merged, and its feature is not on `master`.** The block below says the feature is "on `master` since 2026-10-08". The workflow's integrator did merge it there. The owner judged it acceptable and chose not to keep it in the project ("The feature is OK and it would be accepted, but I don't think it sums much to the project and I will not merge it", session log, 2026-10-08T05:32:59Z), and `master` was put back to where it was before, at his word. The work of the night of 2026-10-07 to 08 is on this branch only.
+- **Other branches and folders named below.** The branches `server` and `page` and the work folders `wt/server` and `wt/page` are not in this repository; their commits are part of this branch. `integrator-stopped` is here.
+- **The workflow script.** `.claude/workflows/failed-analysis.js` holds `<repo>` where it held the path of the project's working folder. That path was replaced in the one rewrite of the history that `README.md` on `master` describes. The script needs a real path there to run.
+- The current state of the project is in `NEXT.md` on `master`.
+
+
 ## Where things stand (2026-10-08, session 12)
 
 A failed song says why it failed and for how long the analysis ran, and "Try again" in its row has it analysed again without deleting it. It is on `master` since 2026-10-08, merged from the branches `server` and `page`. **Every item a program can check is ticked**: a second whole run passed whole, and its checks were seen to fail. What is left is the owner's: the questions below. `LOG.md`, session 12, has the figures, and `ACCEPTANCE.md` the items, under slice 5.

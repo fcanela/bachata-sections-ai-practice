@@ -2,6 +2,8 @@
 
 Newest session first. Only measured figures go in here.
 
+> 2026-10-12: this branch is not merged and its feature is not on `master`; see the note of 2026-10-12 at the top of `NEXT.md` on this branch. No earlier line of this file is changed.
+
 ## 2026-10-08, session 12: why an analysis failed, and "Try again", built by two workers and joined
 
 A failed song now says why it failed and for how long the analysis ran, and "Try again" in its row has it analysed again without deleting it. It was built from `CONTRACT.md` by two workers that did not speak to each other, each in a work folder and on a branch of its own, and joined on `master` by an integrator. The base of both branches is `b2726d7`.
