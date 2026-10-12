@@ -2,6 +2,8 @@
 
 Rewritten at the end of every session.
 
+> 2026-10-12: this branch holds what the first integrator of the workflow of 2026-10-08 had done when the owner stopped it on purpose. It is kept as it was left, and it is not merged. Its records describe the project before that work and are not the current state, which is in `NEXT.md` on `master`. No earlier line of this file is changed.
+
 ## Where things stand (2026-10-08, session 11)
 
 The lower view of the page is in plates, one for each bar, and it is on `master` since 2026-10-08. The owner accepted it. A critique of the page followed the same day, and three changes it led to are merged with it. Every check a program can run passed on the branch that was merged: 266 tests, none skipped. No test was run on `master` after the merge. What is open of this work is two commands of the critique that were not run, and what the owner has not yet seen. `LOG.md`, session 11, has the figures.
