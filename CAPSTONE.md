@@ -1,6 +1,6 @@
 # Brief: a name for every bar and beat
 
-Written on 2026-10-08, in session 12, from five answers of the owner. Branch `d5-capstone`, from `master` at `d76b864`. `BRIEF.md` and `PRODUCT.md` still hold for everything this does not speak of.
+Written on 2026-10-08, in session 12, from five answers of the owner. Branch `d5-capstone`, from `master` at `442abf2`. `BRIEF.md` and `PRODUCT.md` still hold for everything this does not speak of.
 
 Items marked *proposed* are mine and not the owner's. He confirms or changes them.
 
@@ -84,7 +84,7 @@ A field to type a bar into. Numbers for ochos or sections. A range of bars as on
 
 Each is one claim and names the check behind it. For breaking on purpose, the claims of this part are this list and the two sections above it.
 
-Ticked on 2026-10-08 from the whole run outside the sandbox, on `3021dfd`: 294 passed, none skipped, in Chrome and in Firefox with sound. The checks were seen to fail: 79 breaks, 78 caught, in `LOG.md`, session 12. A tick says the check passed, not that the owner accepted what it checks.
+Ticked on 2026-10-08 from the whole run outside the sandbox, on `492e41f`: 294 passed, none skipped, in Chrome and in Firefox with sound. The checks were seen to fail: 79 breaks, 78 caught, in `LOG.md`, session 12. A tick says the check passed, not that the owner accepted what it checks.
 
 **The place, in `web/song.test.js`** (`node --test web/`)
 
@@ -132,7 +132,7 @@ Ticked on 2026-10-08 from the whole run outside the sandbox, on `3021dfd`: 294 p
 
 **What to judge it against:** "What the owner decided", "The rules that follow", "Constraints" and "Acceptance checks" above. The rules marked *proposed* and the two marked **Changed while building** are the session's and not the owner's: say where you would have decided otherwise.
 
-**The diff.** The branch is `d5-capstone`, and `master` is where it started, at `d76b864`. Nothing is merged.
+**The diff.** The branch is `d5-capstone`, and `master` is where it started, at `442abf2`. Nothing is merged.
 
 ```
 git diff master...d5-capstone --stat
@@ -143,12 +143,12 @@ git log --oneline master..d5-capstone                  # one commit for each ste
 
 | Commit | What |
 | --- | --- |
-| `620bead` | This brief, as the owner said "go" to it |
-| `4aee12a` | The place in `web/song.js`, its twin and the two commands in `bachata/places.py`, `bachata/__main__.py` |
-| `4ca40b7` | The address with `at`, in `web/app.js` |
-| `9b0f6f1` | The readout and the row numbers: `web/app.js`, `web/draw.js`, `web/index.html`, `web/style.css` |
-| `9a06c1e` | The tag and "Copy place" |
-| `3021dfd` | Tests made stronger after the breaks, and this brief brought up to what was built |
+| `f1007a2` | This brief, as the owner said "go" to it |
+| `c6137c6` | The place in `web/song.js`, its twin and the two commands in `bachata/places.py`, `bachata/__main__.py` |
+| `fed68dc` | The address with `at`, in `web/app.js` |
+| `46ded84` | The readout and the row numbers: `web/app.js`, `web/draw.js`, `web/index.html`, `web/style.css` |
+| `b14c60e` | The tag and "Copy place" |
+| `492e41f` | Tests made stronger after the breaks, and this brief brought up to what was built |
 | the last one | The records, and this section |
 
 **To run the checks.**
@@ -181,7 +181,7 @@ node --test web/                                         # under 1 s
 
 ## After the review
 
-A session of another tool reviewed `094dc94` on 2026-10-08 and asked for four changes. Each was reproduced before it was believed, and all four hold.
+A session of another tool reviewed `235adb2` on 2026-10-08 and asked for four changes. Each was reproduced before it was believed, and all four hold.
 
 | Finding | Reproduced | What was done |
 | --- | --- | --- |

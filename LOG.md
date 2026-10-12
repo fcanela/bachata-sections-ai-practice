@@ -4,7 +4,7 @@ Newest session first. Only measured figures go in here.
 
 ## 2026-10-08, session 12: a name for every bar and beat, on the branch `d5-capstone`
 
-The capstone of the owner's course: a task no session had been given. A place in a song now has a name, a bar and a beat, `24.3`, that the page shows, an address opens, and two commands answer from the library. It is on the branch `d5-capstone`, from `master` at `d76b864`, and is **not merged**: a session of another tool reviews it, and then the owner. `CAPSTONE.md` is its brief, its acceptance list and the reviewer's file.
+The capstone of the owner's course: a task no session had been given. A place in a song now has a name, a bar and a beat, `24.3`, that the page shows, an address opens, and two commands answer from the library. It is on the branch `d5-capstone`, from `master` at `442abf2`, and is **not merged**: a session of another tool reviews it, and then the owner. `CAPSTONE.md` is its brief, its acceptance list and the reviewer's file.
 
 **How it went.** Five questions to the owner, one at a time, each with a default. A brief, shown to him, and his "go" with an order to build in: the place and the commands, the address, the readout and the row numbers, the tag and "Copy place". One commit for each. Then the breaks, with the project's skill.
 
@@ -27,12 +27,12 @@ The capstone of the owner's course: a task no session had been given. A place in
 | 8 breaks again from their kept patches, after the repairs | All 8 caught by the test that claims them, with a message about the claim | about 2 min |
 | The commands on the library of this folder, `data/`: `where imitadora 24.3`, `where imitadora 46.9s`, `bars imitadora`, `where a 2`, `where 0a21 999` | The four lines, the same for the time, 124 bars, the 18 songs listed with status 2, "There is no bar 999 in this song." with status 1 | under 1 s each |
 | **By mistake: `.venv/bin/python -m bachata` with no argument and no `BACHATA_DATA`**, at the end of that same line of commands | The server started on `data/` and analysed 17 of its 18 songs again, from version 2 to version 5, until it was stopped. Héroe Favorito is still at version 2. No sound, name or count 1 changed | about 2 min |
-| The whole run, outside the sandbox, which the owner allowed once, on the build with the stronger tests, `3021dfd`: `TMPDIR=/tmp/claude-1000/e2e-c BACHATA_TEST_PORT=8087 .venv/bin/python -m pytest -rs` | 294 passed, none skipped: the tests of the page in Chrome and in Firefox, 88 runs, with sound, and the songs of the reference. Nothing was left listening on 8087 | 932 s |
+| The whole run, outside the sandbox, which the owner allowed once, on the build with the stronger tests, `492e41f`: `TMPDIR=/tmp/claude-1000/e2e-c BACHATA_TEST_PORT=8087 .venv/bin/python -m pytest -rs` | 294 passed, none skipped: the tests of the page in Chrome and in Firefox, 88 runs, with sound, and the songs of the reference. Nothing was left listening on 8087 | 932 s |
 | Pictures of the page, with Playwright's Firefox inside the sandbox, of the test song of 44 s at 1280 by 720 in light and in dark, at 1920 by 1080 and at 1100 by 800 | Looked at by the session: the readout on the band, the numbers beside the rows, the tag over the bar under the pointer, "Copy place" in the top bar, and the bar under the song in the lines it had. Not kept in git | 16 s |
 
 ### After the review
 
-A session of another tool reviewed `094dc94` and asked for four changes. All four were reproduced. Three are fixed in `0a911c4`; the fourth, where the readout sits, waits for the owner's choice. `CAPSTONE.md`, "After the review", has the table.
+A session of another tool reviewed `235adb2` and asked for four changes. All four were reproduced. Three are fixed in `c498fe3`; the fourth, where the readout sits, waits for the owner's choice. `CAPSTONE.md`, "After the review", has the table.
 
 | What was run | Result | Time |
 | --- | --- | --- |
@@ -41,17 +41,17 @@ A session of another tool reviewed `094dc94` and asked for four changes. All fou
 | The width of the large view at 1100 by 800, in Playwright's Firefox, on `master`, on the branch, and with the readout in the top bar and in the lower right corner of the band | 576.5 on `master`, 444.5 on the branch, 576.5 with either of the two. The position control is 613.8 in all four. Finding 3 holds: 23% less | 15 s each |
 | The three tests written or corrected for findings 1, 2 and 4, before the fixes | Each failed on its claim: the id in capitals not found, `KeyError: 'beats'`, the address without `&at=3.2` | under 1 s, and 20 s |
 | The same after the fixes: `bachata/places_test.py`, and the tests of the address, of a place far down and of "Copy place" in Firefox | 14 passed, and 3 passed | under 1 s, and 37 s |
-| The whole run, outside the sandbox, on `0a911c4`: `TMPDIR=/tmp/claude-1000/e2e-c BACHATA_TEST_PORT=8087 .venv/bin/python -m pytest -rs` | 294 passed, none skipped | 1067 s |
+| The whole run, outside the sandbox, on `c498fe3`: `TMPDIR=/tmp/claude-1000/e2e-c BACHATA_TEST_PORT=8087 .venv/bin/python -m pytest -rs` | 294 passed, none skipped | 1067 s |
 | The library in `data/` after all of it | As the mistake of the afternoon left it: no result written since | under 1 s |
 
-**The readout moved to the top bar**, in `7146767`, by the owner's choice of the first of the two places: "I do not think either option is good design; A is the least wrong and I will redo it later with the design plugin."
+**The readout moved to the top bar**, in `8b26728`, by the owner's choice of the first of the two places: "I do not think either option is good design; A is the least wrong and I will redo it later with the design plugin."
 
 | What was run | Result | Time |
 | --- | --- | --- |
 | The tests of the page the move touches, in Firefox, inside the sandbox: the readout, "Copy place", the plates, the bar under the song, the large view, the renaming, the messages, the keyboard | 8 passed, 2 skipped for want of sound | 61 s |
 | The readout put back on the band, as a break, against the test of the readout | Caught: `#title #place + #copy-place` found 0 where 1 was expected | 20 s |
 | `node --test web/` | 41 passed | under 1 s |
-| The whole run, outside the sandbox, on `7146767`: the same command | 294 passed, none skipped | 945 s |
+| The whole run, outside the sandbox, on `8b26728`: the same command | 294 passed, none skipped | 945 s |
 
 The program was started only by the tests, each on a temporary folder of its own.
 
@@ -169,20 +169,20 @@ One break at a time, on the committed build, with `.claude/skills/break-on-purpo
 
 ## 2026-10-07 and 08, session 11: the song in plates, built twice, a critique of the page, and the merge
 
-The lower view of the page shows a plate for each bar now, and no longer a mark for each beat. It is on `master` since 2026-10-08, merged from the branch `bars-xhigh` at `cbd2241`, with three changes a critique of the page led to. The records were not touched in the work folder: they are written here, at the merge, from the notes kept there, `wt/bars-xhigh/NOTES-for-records.md`.
+The lower view of the page shows a plate for each bar now, and no longer a mark for each beat. It is on `master` since 2026-10-08, merged from the branch `bars-xhigh` at `918cc78`, with three changes a critique of the page led to. The records were not touched in the work folder: they are written here, at the merge, from the notes kept there, `wt/bars-xhigh/NOTES-for-records.md`.
 
 **How it came to this, in the owner's words and choices.**
 
-- **The first attempt was rejected.** It is on the branch `d4-bars`, in `wt/d4-bars`, at `11d19ef`. The owner: "It was like it just removed the extra beats, instead of doing a design that makes sense for showing the bars in a way that makes sense on their own".
+- **The first attempt was rejected.** It is on the branch `d4-bars`, in `wt/d4-bars`, at `5b1ed39`. The owner: "It was like it just removed the extra beats, instead of doing a design that makes sense for showing the bars in a way that makes sense on their own".
 - **The owner then chose the plates from three pictures**, "design 1, plates", on 2026-10-07. `SPEC.md` was written from that choice. The spec and the picture, `chosen.png`, are in the work folders and not in git.
-- **The same spec was built twice**, each time by a session that got the spec and the picture and nothing else, and did not read the other's folder: at high on the branch `bars-high`, in `wt/bars-high`, at `9a7c8bf`, and at xhigh on the branch `bars-xhigh`, in `wt/bars-xhigh`.
+- **The same spec was built twice**, each time by a session that got the spec and the picture and nothing else, and did not read the other's folder: at high on the branch `bars-high`, in `wt/bars-high`, at `3e17716`, and at xhigh on the branch `bars-xhigh`, in `wt/bars-xhigh`.
 - **The owner could not tell the two pages apart.** Both were accepted, and he preferred the xhigh one. That one is merged. `bars-high` is not.
 - **A critique of the xhigh page**, by the design plugin, on 2026-10-08: 23 of 40, "Acceptable". Three of its five issues are dealt with in whole or in part, one is open, and two of its commands were not run. See "The critique of the page" below.
 - **The lit bar departs from `SPEC.md` and from `chosen.png`, by the owner's choice** of 2026-10-08: "Yellow on both grounds". In the spec and in the picture the bar that is sounding is a black block with a yellow count in light.
 
 Nothing under `bachata/`, `fixtures/` or `scripts/` changed. The analysis is version 5, as it was.
 
-The parts from "Runs" to "Cost" are the notes of the session that built the plates in `wt/bars-xhigh`, on 2026-10-07, as it wrote them: "this session" in them is that one. Its three commits are `b0440b5`, `2c07dd5` and `f9cd374`. Nothing of the build in `wt/bars-high` is in this log: its notes were not read.
+The parts from "Runs" to "Cost" are the notes of the session that built the plates in `wt/bars-xhigh`, on 2026-10-07, as it wrote them: "this session" in them is that one. Its three commits are `1a65e1a`, `b9a7a86` and `b712db3`. Nothing of the build in `wt/bars-high` is in this log: its notes were not read.
 
 ### Runs
 
@@ -203,7 +203,7 @@ The parts from "Runs" to "Cost" are the notes of the session that built the plat
 
 ### Breaking the code on purpose
 
-One break at a time, on the committed build (`2c07dd5`): the files are changed, the checks run through the skill's `one_break.sh`, and the files are written back as they were. The two lists were written whole before the first run, each break with the test that should catch it. 117 breaks were written and 116 run: 84 from the claims under "What must be tested" in `SPEC.md`, and 33 from what no claim there speaks of. **98 were caught by the test that claims them as the tests stood.** 18 were caught by nothing, and 3 of the 98 were caught without a message about the claim. After the repairs, 115 of the 116 are caught by the test that claims them, with a message about the claim. One is left to the eye by the spec, and one was not tried: its test needs sound.
+One break at a time, on the committed build (`b9a7a86`): the files are changed, the checks run through the skill's `one_break.sh`, and the files are written back as they were. The two lists were written whole before the first run, each break with the test that should catch it. 117 breaks were written and 116 run: 84 from the claims under "What must be tested" in `SPEC.md`, and 33 from what no claim there speaks of. **98 were caught by the test that claims them as the tests stood.** 18 were caught by nothing, and 3 of the 98 were caught without a message about the claim. After the repairs, 115 of the 116 are caught by the test that claims them, with a message about the claim. One is left to the eye by the spec, and one was not tried: its test needs sound.
 
 Every break of the page was run in Firefox. Chrome does not start inside the sandbox.
 
@@ -373,7 +373,7 @@ Nothing was downloaded, and nothing went over the network. One song of the copie
 
 ### The critique of the page
 
-On 2026-10-08, from the main folder, on `wt/bars-xhigh/web/index.html` at `f9cd374`. The design plugin's `critique` command gives the page to two readers that do not see each other's work: one reads the page as a designer would, the other runs the plugin's detector.
+On 2026-10-08, from the main folder, on `wt/bars-xhigh/web/index.html` at `b712db3`. The design plugin's `critique` command gives the page to two readers that do not see each other's work: one reads the page as a designer would, the other runs the plugin's detector.
 
 | What was run | Result |
 | --- | --- |
@@ -416,9 +416,9 @@ The plugin's `polish` command, its last pass, was not run either. The critique i
 
 | Pass, and its commit on `bars-xhigh` | `node --test web/` | The whole run | Breaks by hand |
 | --- | --- | --- | --- |
-| The Space key and the wait for an analysis, `6e4977a` | 35 passed | 264 passed in 906 s | 4, each caught in Chrome and in Firefox |
-| The lit bar in yellow, `3bf2103` | 35 passed | 264 passed in 914 s | 3, each caught in both |
-| The bar under the song, `cbd2241` | 35 passed | 266 passed in 928 s | 4, each caught in both |
+| The Space key and the wait for an analysis, `9d2d030` | 35 passed | 264 passed in 906 s | 4, each caught in Chrome and in Firefox |
+| The lit bar in yellow, `9f6033e` | 35 passed | 264 passed in 914 s | 3, each caught in both |
+| The bar under the song, `918cc78` | 35 passed | 266 passed in 928 s | 4, each caught in both |
 
 The three passes were made in one working tree and committed afterwards, one commit each. The whole runs above are of the tree as it was after each pass. At the two earlier commits as git has them, only `node --test web/` was run again: 35 passed at each. A first whole run was stopped by the session's limit of ten minutes and left nothing on the port.
 
@@ -498,12 +498,12 @@ The owner chose on 2026-10-08: the click switch stays in the bar; "Clear" is hid
 
 | What was run | Result |
 | --- | --- |
-| Three commits on `bars-xhigh`, from one working tree, no trailer | `6e4977a`, `3bf2103`, `cbd2241`. The tree was clean after them |
-| From the main folder: `git merge --no-ff bars-xhigh` | `a1983b2`, by the `ort` strategy, no conflict. `master` was at `1c441ab`, two commits of records after `e5dde4b`, where the branch started |
-| What `master` has that the branch has not | `LOG.md`, `NEXT.md` and `ACCEPTANCE.md` alone. The code of `master` is the code of `cbd2241` |
+| Three commits on `bars-xhigh`, from one working tree, no trailer | `9d2d030`, `9f6033e`, `918cc78`. The tree was clean after them |
+| From the main folder: `git merge --no-ff bars-xhigh` | `d2cf0c6`, by the `ort` strategy, no conflict. `master` was at `e7f485c`, two commits of records after `450a573`, where the branch started |
+| What `master` has that the branch has not | `LOG.md`, `NEXT.md` and `ACCEPTANCE.md` alone. The code of `master` is the code of `918cc78` |
 | For the owner to try the page: `PORT=8089 .venv/bin/python -B -m bachata` from `wt/bars-xhigh`, outside the sandbox, on the copy of the library there | It answered with 18 songs, all ready. Stopped when the records were written. The owner's own program on 8087, from the same folder, was left alone |
 
-**Not run on `master` after the merge:** no test. The whole run of 266 is of `cbd2241`, in the work folder.
+**Not run on `master` after the merge:** no test. The whole run of 266 is of `918cc78`, in the work folder.
 
 **Kept, as the owner asked:** every work folder and every branch. `wt/bars-xhigh` and `bars-xhigh`, `wt/bars-high` and `bars-high`, `wt/d4-bars` and `d4-bars`, `wt/d4-patch` and `d4-patch`.
 
@@ -513,14 +513,14 @@ The owner handed over one commit written outside this repository, `incoming.patc
 
 ### Runs
 
-Everything ran from `wt/d4-patch`. In this entry `master` is `master` as it was before the merge, `0c34455`, with version 4 of the analysis. "As applied" is the patch alone, `6e8bd2b`. "At the end" is `e5dde4b`, the last commit of the branch, where `master` is since the merge.
+Everything ran from `wt/d4-patch`. In this entry `master` is `master` as it was before the merge, `036c71b`, with version 4 of the analysis. "As applied" is the patch alone, `4aacd73`. "At the end" is `450a573`, the last commit of the branch, where `master` is since the merge.
 
 | What was run | Result | Time |
 | --- | --- | --- |
-| On the code of `master`, `0c34455`, before the patch: `pytest bachata/entry_test.py bachata/songs_test.py -s` | 17 passed, none skipped. 5 of 5, 0 other songs worse. 308 of 396, 257 of 505, 416 of 416 | 71 s |
+| On the code of `master`, `036c71b`, before the patch: `pytest bachata/entry_test.py bachata/songs_test.py -s` | 17 passed, none skipped. 5 of 5, 0 other songs worse. 308 of 396, 257 of 505, 416 of 416 | 71 s |
 | The analysis of `master` on the six songs of `fixtures/audio/entry-pairs.json` | Count 5 at `one_at_s` and count 1 at `five_at_s` on all six: 0 of 6, as the patch says of version 4 | 26 s |
 | `sha256sum models/hdemucs_high_trained.pt` against `PARTS_SHA256` of the patch | The same, `a004b279…`. 334,697,255 bytes. torchaudio 2.11.0 has `hdemucs_high` and names the same file | under 1 s |
-| `git am incoming.patch` | Applied clean, as `6e8bd2b`. No trailer | under 1 s |
+| `git am incoming.patch` | Applied clean, as `4aacd73`. No trailer | under 1 s |
 | `pytest bachata/fills_test.py bachata/analysis_test.py`, as applied | 38 passed, none skipped | 8 s |
 | Every song of the reference, analysed on `master` and as applied, with the vote, the bass and the fills of each. The fills were also worked out for the songs where the analysis does not ask them | 29 analyses each. See "Master and the branch, song by song" | 2 min and 18 min |
 | The time of one song, three songs, each in a process of its own, on `master` and as applied | See "The time one song takes" | 1 min and 7 min |
@@ -532,10 +532,10 @@ Everything ran from `wt/d4-patch`. In this entry `master` is `master` as it was 
 | The model itself on pieces of 1 to 44,100 samples | It refuses every piece of 1 to 768 samples, 17.4 ms: `ValueError`. From 769 it takes them | 20 s |
 | `split()` of 30.01 s of sound with the real model, as applied | `ValueError: Spectrogram's last dimension must be 4 + input size divided by stride` | 8 s |
 | A new test of that, as applied | Failed: `the pieces of a song of 30.01 s`, `[30.01, 0.01]` where `[30.01]` is expected | 2 s |
-| The same after the fix, `a8564a2`, and `split()` of 30.01 s and of 30.5 s with the real model | Passed. Parts of 30.01 s and of 30.5 s | 15 s |
+| The same after the fix, `588a840`, and `split()` of 30.01 s and of 30.5 s with the real model | Passed. Parts of 30.01 s and of 30.5 s | 15 s |
 | A new test that the program does not start without one of its two checkpoints, before the fix | 1 of 2 failed: without the checkpoint of the parts `the program went on to start` | under 1 s |
-| The same after the fix, `945c373`, with `pytest bachata/server_test.py` | 80 passed. The check of the second file takes 0.21 s at the start | 2 s |
-| The checks of the part on the code as it was, before the first break, `945c373`: `pytest bachata/fills_test.py bachata/analysis_test.py` | 39 passed, none skipped | 10 s |
+| The same after the fix, `615bdf3`, with `pytest bachata/server_test.py` | 80 passed. The check of the second file takes 0.21 s at the start | 2 s |
+| The checks of the part on the code as it was, before the first break, `615bdf3`: `pytest bachata/fills_test.py bachata/analysis_test.py` | 39 passed, none skipped | 10 s |
 | 62 breaks, one at a time | 38 caught as the tests stood, 24 by nothing. The table is below | 728 s |
 | The 24 again, after the repairs | 23 caught, each by a test that states what was broken. 1 alters nothing | 264 s |
 | The break that takes the rule out, against `pytest bachata/entry_pairs_test.py` | Failed: `the count is on 1 where he heard it on 0 of 6 songs` | 237 s |
@@ -545,7 +545,7 @@ Everything ran from `wt/d4-patch`. In this entry `master` is `master` as it was 
 | At the end: the time of two songs once more, and `master`'s code timed again from a copy | See "The time one song takes" | 4 min |
 | At the end: `TMPDIR=/tmp/claude-1000/e2e-a BACHATA_TEST_PORT=8083 .venv/bin/python -m pytest`, outside the sandbox | 242 passed, none skipped, Chrome and the tests with sound among them. Nothing was left listening on 8083 | 695 s |
 | For the owner's review: `PORT=8083 .venv/bin/python -m bachata` from `wt/d4-patch`, outside the sandbox, on the copy of the library | It answered on `http://127.0.0.1:8083` with 18 songs: 3 ready, 1 being analysed and 14 waiting, version 5 making each again. Inside the sandbox the only network is a loopback of its own, which a browser outside does not reach | not timed |
-| `git merge --ff-only d4-patch`, from the main folder | `master` went from `0c34455` to `e5dde4b`: 12 files, 820 lines added and 49 taken away | under 1 s |
+| `git merge --ff-only d4-patch`, from the main folder | `master` went from `036c71b` to `450a573`: 12 files, 820 lines added and 49 taken away | under 1 s |
 
 **The six songs, as the check reads at the end.**
 
@@ -630,7 +630,7 @@ The count enters on 1 on 5 of 5 songs, at least 4 needed.
 | Nómada: asked | 4:05 | 4.6, 4.6, 4.8 s. First run 6.0 s | 51.7, 49.9, 50.6 s. First run 55.2 s | 44.6 to 46.9 s | 777 MB, then 3,055 MB |
 | Ay, Ay, Ay: asked | 3:28 | 4.5, 4.5, 4.4 s. First run 5.7 s | 46.3, 41.2, 43.3 s. First run 47.5 s | 36.9 to 40.6 s | 729 MB, then 2,953 MB |
 
-At the end, `e5dde4b`, with the machine less busy, at a load of 2.5 to 8.5. `master`'s code was timed again just after, from a copy of its two files, at a load of 6 to 7.
+At the end, `450a573`, with the machine less busy, at a load of 2.5 to 8.5. `master`'s code was timed again just after, from a copy of its two files, at a load of 6 to 7.
 
 | Song | Length | `master`, version 4 | At the end, version 5 | Of that, the split | Memory at its peak |
 | --- | --- | --- | --- | --- | --- |
@@ -766,11 +766,11 @@ None by this session. `models/hdemucs_high_trained.pt` was already in the main f
 **Mine**
 
 - **The four faults that were repaired**, each in a commit of its own after the patch. None of them is a break: each has a check that was seen to fail on the code as it was, before the fix.
-  - **A song that ends within a second after a piece of 30 s.** `split()` made a piece for that end alone. Up to 768 samples, 17 ms, the model refuses the piece and the analysis of the song fails. Up to a second, that piece and the one before it both count in full, and the parts are up to twice as loud there. No song of the reference has such a length. The split now stops at the piece that holds the end. `a8564a2`.
-  - **The program started without the checkpoint of the parts.** It checked the Beat This file and not the new one, so on a machine with only the first, every song whose fills are asked would have failed, and the others not. It now checks both before it starts. `945c373`.
-  - **What the split costs** was written as "some 30 seconds a song". It is about 10 seconds for every minute of a song on this machine, 25 to 47 on these songs, and 3 GB. The docstring says so now. `3e7e3fa`, which also brings a comment in `.gitignore` and one docstring up to date.
-  - **The watch on what the analysis opens could not see a file behind a link.** This one is not in the patch: it is in `reading()` of `fixtures/by_ear.py`, which `bachata/songs_test.py`, `bachata/entry_test.py` and the six-song check all go through. In the main folder it sees what it should, because nothing there is a link. `e5dde4b`.
-- **Of the 25 breaks that nothing caught**, 21 got a test of their own or a stronger one, in the tests only: `86efb5c`. One was repaired in the watch itself, `e5dde4b`. Two were left without a test of their own, because what is right is written nowhere: the floor of a picture and the 5%. One alters nothing.
+  - **A song that ends within a second after a piece of 30 s.** `split()` made a piece for that end alone. Up to 768 samples, 17 ms, the model refuses the piece and the analysis of the song fails. Up to a second, that piece and the one before it both count in full, and the parts are up to twice as loud there. No song of the reference has such a length. The split now stops at the piece that holds the end. `588a840`.
+  - **The program started without the checkpoint of the parts.** It checked the Beat This file and not the new one, so on a machine with only the first, every song whose fills are asked would have failed, and the others not. It now checks both before it starts. `615bdf3`.
+  - **What the split costs** was written as "some 30 seconds a song". It is about 10 seconds for every minute of a song on this machine, 25 to 47 on these songs, and 3 GB. The docstring says so now. `8a2ce2d`, which also brings a comment in `.gitignore` and one docstring up to date.
+  - **The watch on what the analysis opens could not see a file behind a link.** This one is not in the patch: it is in `reading()` of `fixtures/by_ear.py`, which `bachata/songs_test.py`, `bachata/entry_test.py` and the six-song check all go through. In the main folder it sees what it should, because nothing there is a link. `450a573`.
+- **Of the 25 breaks that nothing caught**, 21 got a test of their own or a stronger one, in the tests only: `d4c2d13`. One was repaired in the watch itself, `450a573`. Two were left without a test of their own, because what is right is written nowhere: the floor of a picture and the 5%. One alters nothing.
 - **Left as the patch has them, and still open:**
   - **Where the settings come from** is not in the patch: 3 to 1, sure by 2, 60 seconds, 12 dB, 4 bars, the cut at 3, half weight for a fill. The six songs are the ones the rule was built to put right, so 6 of 6 is not a test of it. The 17 of 17 above is the nearest thing to one.
   - **`analyse()` takes a third argument, `fills_of`, that only a test uses.** The other tests of the file put a made-up function in place of the real one without it.
@@ -1095,13 +1095,13 @@ Three tasks, each run once with the skill and once without it, by a fresh agent 
 | What was run | Result | Time |
 | --- | --- | --- |
 | `one_break.sh` on a copy, seven ways: a file not broken, a break, the same break again from its patch, a break that fails two tests, no command, a name not kept, a run killed | It refused the file that was as committed, with exit 2. Every other time the file was written back, also after the kill | under 5 s |
-| A count 1 kept in memory and not on disk, on a copy at `f34f065`, with the tests of the server and the store | 2 failed, 90 passed. Both are tests of the store; the server's own test passed. As in session 6 | 2 s |
-| `countsWith` writing into the count it is given, on a copy at `a775210`, `node --test web/` | 31 pass. As in session 7 | under 1 s |
-| The page's logic, `web/song.js` at `0491825`, with the skill | 54 breaks. 46 of the 51 that are for the tests of `web/` were caught; three tests were changed. 6 of 7 checks of the trial hold | 1573 s, 197,950 tokens |
+| A count 1 kept in memory and not on disk, on a copy at `aa5fed0`, with the tests of the server and the store | 2 failed, 90 passed. Both are tests of the store; the server's own test passed. As in session 6 | 2 s |
+| `countsWith` writing into the count it is given, on a copy at `20a13db`, `node --test web/` | 31 pass. As in session 7 | under 1 s |
+| The page's logic, `web/song.js` at `bd60198`, with the skill | 54 breaks. 46 of the 51 that are for the tests of `web/` were caught; three tests were changed. 6 of 7 checks of the trial hold | 1573 s, 197,950 tokens |
 | The same without the skill | 128 breaks, by function. 99 caught as the tests stood, 123 after four new tests. 3 of 7 | 935 s, 126,224 tokens |
-| The server's part of count 1, at `f34f065`, with the skill | 25 breaks. It found that the server's own test passes when a count 1 never reaches the disk, and repaired it. 8 of 8 | 820 s, 137,188 tokens |
+| The server's part of count 1, at `aa5fed0`, with the skill | 25 breaks. It found that the server's own test passes when a count 1 never reaches the disk, and repaired it. 8 of 8 | 820 s, 137,188 tokens |
 | The same without the skill | 49 breaks. Its break stopped every write, renamings too, so the server's test failed for another reason and stayed weak: on the narrow break it still passes, 78 of 78. 3 of 8 | 861 s, 124,715 tokens |
-| An assertion said not to fail, at `a775210`, with the skill | Shown by a run, repaired, seen to fail, recorded. 7 of 7 | 149 s, 67,142 tokens |
+| An assertion said not to fail, at `20a13db`, with the skill | Shown by a run, repaired, seen to fail, recorded. 7 of 7 | 149 s, 67,142 tokens |
 | The same without the skill | The same repair to the test. No message of the failure and nothing in `LOG.md`. 3 of 7 | 39 s, 45,678 tokens |
 | The owner's working tree, before and after the six runs: the commit, the status and a hash of every tracked file | Identical | under 1 s |
 
@@ -1151,7 +1151,7 @@ The owner changed the label files in `fixtures/audio/dev/` the same day and hand
 
 ## 2026-10-06, session 7: four findings of a review of the last commit
 
-The owner handed over four findings that a fresh reviewer made in commit `a775210`. Each was first checked against the code, and all four hold. Two are faults of the page: the loop's switch, and the contrast of a large beat that has sounded. Two are faults of its checks: an assertion that cannot fail, and no test that reads the large view.
+The owner handed over four findings that a fresh reviewer made in commit `20a13db`. Each was first checked against the code, and all four hold. Two are faults of the page: the loop's switch, and the contrast of a large beat that has sounded. Two are faults of its checks: an assertion that cannot fail, and no test that reads the large view.
 
 ### The four findings: a check that fails, then the fix
 
